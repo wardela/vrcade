@@ -1262,6 +1262,41 @@ const getSalesByAreaReport = async (req, res) => {
   }
 };
 
+const getSalesByClientDetailedReport = async (req, res) => {
+  try {
+    const {
+      from,
+      to,
+      client_id,
+      limit = 20,
+      offset = 0
+    } = req.query;
+
+    if (!from || !to || !client_id) {
+      return res.status(400).json({
+        message: "from, to, and client_id are required"
+      });
+    }
+
+    const data = await invoiceService.getSalesByClientDetailedReport(
+      req.db,
+      {
+        from,
+        to,
+        client_id: Number(client_id),
+        limit: Number(limit),
+        offset: Number(offset)
+      }
+    );
+
+    res.json(data);
+  } catch (err) {
+    console.error("Sales by client detailed report error:", err);
+    res.status(500).json({
+      message: "Failed to fetch sales by client detailed report"
+    });
+  }
+};
 
 const getSalesByClientReport = async (req, res) => {
   try {
@@ -1614,6 +1649,7 @@ module.exports = {
   uploadCompanyLogoController,
   getGeneralSalesReport,
   getSalesByAreaReport,
+  getSalesByClientDetailedReport,
   getSalesByClientReport,
   getEinvoicingReport,
   getTaxDeclarationReport,

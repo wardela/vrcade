@@ -276,13 +276,11 @@ if (validLines.length === 0) {
       // total INCLUDING tax
       const totalIncl = qty * priceIncl * (1 - discFactor);
 
-      ln._computed_total = Number(totalIncl.toFixed(3));
-      headerTotal += ln._computed_total;
+      ln._computed_total = totalIncl;   // FULL PRECISION
+      headerTotal += totalIncl;
     }
 
 
-
-    headerTotal = Number(headerTotal.toFixed(3));
 
     const headerSql = `
       INSERT INTO invoice_header (
@@ -2109,6 +2107,60 @@ const getSalesByAreaReport = async (db,{
   }
 };
 
+const getSalesByClientDetailedReport = async (db, {
+  from,
+  to,
+  client_id,
+  limit,
+  offset
+}) => {
+  try {
+    // 1️⃣ Paginated detailed rows (invoice lines)
+    const rowsRes = await db.query(
+      `
+      SELECT
+        il.invoice_number,
+        TO_CHAR(ih.date, 'DD-MM-YYYY') AS invoice_date,
+        COALESCE(i.name, il.description) AS item_name,
+        il.qty,
+        il.item_price AS price,
+        il.discount,
+        il.total
+      FROM invoice_lines il
+      JOIN invoice_header ih
+        ON ih.invoice_number = il.invoice_number
+      LEFT JOIN items i
+        ON i.id = il.item_id
+      WHERE
+        ih.client_id = $1
+        AND ih.date::date BETWEEN $2 AND $3
+      ORDER BY ih.date ASC, il.invoice_number ASC, il.item_number ASC
+      LIMIT $4 OFFSET $5
+      `,
+      [client_id, from, to, limit, offset]
+    );
+
+    // 2️⃣ Total count (NO pagination)
+    const countRes = await db.query(
+      `
+      SELECT COUNT(*) AS total_count
+      FROM invoice_lines il
+      JOIN invoice_header ih
+        ON ih.invoice_number = il.invoice_number
+      WHERE
+        ih.client_id = $1
+        AND ih.date::date BETWEEN $2 AND $3
+      `,
+      [client_id, from, to]
+    );
+
+    return {
+      rows: rowsRes.rows,
+      total_count: Number(countRes.rows[0].total_count)
+    };
+  } finally {
+  }
+};
 
 
 const getEinvoicingReport = async (db,{ from, to, status, limit, offset }) => {
@@ -3083,6 +3135,7 @@ module.exports = {
   getGeneralSalesReport,
   getSalesByClientReport,
   getSalesByAreaReport,
+  getSalesByClientDetailedReport,
   getEinvoicingReport,
   getTaxDeclarationReport,
   getRefundsReport,

@@ -1121,56 +1121,62 @@
     }
   },
 
-   "SalesReports": {
-    "filters": {
-      "report": "Report",
-      "from": "From",
-      "to": "To",
-      "area": "Area",
-      "apply": "Apply",
-      "select_client": "Select Client",
-      "selected_client": "Selected Client"
-    },
-
-    "report_types": {
-      "general": "General Sales",
-      "by_client": "Sales by Client",
-      "by_area": "Sales by Area",
-      "by_currency": "Sales by Currency"
-    },
-
-    "areas": {
-      "local": "Local",
-      "export": "Export",
-      "development": "Development"
-    },
-
-    "actions": {
-      "print": "Print",
-      "previous": "Previous",
-      "next": "Next"
-    },
-
-    "table": {
-      "invoice": "Invoice #",
-      "date": "Date",
-      "client": "Client",
-      "type": "Type",
-      "area": "Area",
-      "total": "Total"
-    },
-
-    "states": {
-      "loading": "Loading...",
-      "empty": "No records found",
-      "coming_soon": "Reports by currency coming soon!"
-    },
-
-    "summary": {
-      "showing": "Showing ",
-      "total_sales": "Total Sales"
-    }
+"SalesReports": {
+  "filters": {
+    "report": "Report",
+    "from": "From",
+    "to": "To",
+    "area": "Area",
+    "apply": "Apply",
+    "select_client": "Select Client",
+    "selected_client": "Selected Client"
   },
+
+  "report_types": {
+    "general": "General Sales",
+    "by_client": "Sales by Client",
+    "by_client_detailed": "Sales by Client (Detailed)",
+    "by_area": "Sales by Area",
+    "by_currency": "Sales by Currency"
+  },
+
+  "areas": {
+    "local": "Local",
+    "export": "Export",
+    "development": "Development"
+  },
+
+  "actions": {
+    "print": "Print",
+    "previous": "Previous",
+    "next": "Next"
+  },
+
+  "table": {
+    "invoice": "Invoice #",
+    "date": "Date",
+    "client": "Client",
+    "type": "Type",
+    "area": "Area",
+    "item": "Item",
+    "qty": "Qty",
+    "price": "Price",
+    "discount": "Discount",
+    "total": "Total"
+  },
+
+  "states": {
+    "loading": "Loading...",
+    "empty": "No records found",
+    "coming_soon": "Reports by currency coming soon!"
+  },
+
+  "summary": {
+    "showing": "Showing ",
+    "total_sales": "Total Sales"
+  }
+},
+
 
   "RefundReports": {
     "filters": {
