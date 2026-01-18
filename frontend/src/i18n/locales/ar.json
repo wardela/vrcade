@@ -1124,56 +1124,61 @@
     }
   },
 
-   "SalesReports": {
-    "filters": {
-      "report": "التقرير",
-      "from": "من",
-      "to": "إلى",
-      "area": "المنطقة",
-      "apply": "تطبيق",
-      "select_client": "اختيار عميل",
-      "selected_client": "العميل المحدد"
-    },
-
-    "report_types": {
-      "general": "المبيعات العامة",
-      "by_client": "المبيعات حسب العميل",
-      "by_area": "المبيعات حسب المنطقة",
-      "by_currency": "المبيعات حسب العملة"
-    },
-
-    "areas": {
-      "local": "محلي",
-      "export": "تصدير",
-      "development": "تطوير"
-    },
-
-    "actions": {
-      "print": "طباعة",
-      "previous": "السابق",
-      "next": "التالي"
-    },
-
-    "table": {
-      "invoice": "رقم الفاتورة",
-      "date": "التاريخ",
-      "client": "العميل",
-      "type": "النوع",
-      "area": "المنطقة",
-      "total": "الإجمالي"
-    },
-
-    "states": {
-      "loading": "جاري التحميل...",
-      "empty": "لا توجد سجلات",
-      "coming_soon": "تقارير حسب العملة قريبًا!"
-    },
-
-    "summary": {
-      "showing": "عرض",
-      "total_sales": "إجمالي المبيعات "
-    }
+"SalesReports": {
+  "filters": {
+    "report": "التقرير",
+    "from": "من",
+    "to": "إلى",
+    "area": "المنطقة",
+    "apply": "تطبيق",
+    "select_client": "اختيار عميل",
+    "selected_client": "العميل المحدد"
   },
+
+  "report_types": {
+    "general": "المبيعات العامة",
+    "by_client": "المبيعات حسب العميل",
+    "by_client_detailed": "المبيعات حسب العميل (تفصيلي)",
+    "by_area": "المبيعات حسب المنطقة",
+    "by_currency": "المبيعات حسب العملة"
+  },
+
+  "areas": {
+    "local": "محلي",
+    "export": "تصدير",
+    "development": "تطوير"
+  },
+
+  "actions": {
+    "print": "طباعة",
+    "previous": "السابق",
+    "next": "التالي"
+  },
+
+  "table": {
+    "invoice": "رقم الفاتورة",
+    "date": "التاريخ",
+    "client": "العميل",
+    "type": "النوع",
+    "area": "المنطقة",
+    "item": "الصنف",
+    "qty": "الكمية",
+    "price": "السعر",
+    "discount": "الخصم",
+    "total": "الإجمالي"
+  },
+
+  "states": {
+    "loading": "جاري التحميل...",
+    "empty": "لا توجد سجلات",
+    "coming_soon": "تقارير حسب العملة قريبًا!"
+  },
+
+  "summary": {
+    "showing": "عرض",
+    "total_sales": "إجمالي المبيعات"
+  }
+},
 
   "RefundReports": {
     "filters": {

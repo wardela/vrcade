@@ -38,8 +38,8 @@ app.use("/api/session", sessionRoutes);
 
 // =============================
 // SERVER
-// =============================
-const PORT = process.env.PORT || 3000;
+// ============================= 
+const PORT = process.env.PORT || 3002;
 app.listen(PORT, "localhost", () => {
   console.log(`✅ Server running locally on http://localhost:${PORT}`);
 });

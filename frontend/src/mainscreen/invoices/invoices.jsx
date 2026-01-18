@@ -35,9 +35,17 @@ const [showInvoiceFilter, setShowInvoiceFilter] = useState(false);
 const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 const [popupMessage, setPopupMessage] = useState(null);
 const [notesChanged, setNotesChanged] = useState(false);
+const [showDiscount, setShowDiscount] = useState(true);
 
 const {t} = useTranslation();
 const round3 = (num) => Math.round(num * 1000) / 1000;
+
+// DISPLAY ONLY
+const fmt3 = (num) =>
+  num === null || num === undefined || Number.isNaN(num)
+    ? ""
+    : Number(num).toFixed(3);
+
 const showPopup = (message) => {
   setPopupMessage(message);
 };
@@ -100,13 +108,9 @@ useEffect(() => {
   // If no add permission, screen starts with no invoice selected (view-only until they click one)
 }, []);
 
-const ENTER_FLOW = [
-  "item_id",
-  "notes",
-  "price",
-  "qty",
-  "discount"
-];
+const ENTER_FLOW = showDiscount
+  ? ["item_id", "notes", "price", "qty", "discount"]
+  : ["item_id", "notes", "price", "qty"];
 
 const cellRefs = useRef([]);
 
@@ -201,37 +205,37 @@ const updateItem = (index, field, value) => {
 
   if (field === "discount") {
     const discPrc = Number(value) || 0;
-    item.discount = round3(discPrc);
-    item.discount_value = round3(priceIncl * qty * (discPrc / 100));
+    item.discount = discPrc;
+    item.discount_value = priceIncl * qty * (discPrc / 100);
   }
 
   else if (field === "discount_value") {
     const discVal = Number(value) || 0;
-    item.discount_value = round3(discVal);
+    item.discount_value = discVal;
     item.discount =
       priceIncl === 0 || qty === 0
         ? 0
-        : round3((discVal / (priceIncl * qty)) * 100);
+        : (discVal / (priceIncl * qty)) * 100;
   }
 
   else if (field === "price") {
     const priceInclNew = Number(value) || 0;
-    item.price = round3(priceInclNew);
-    item.price_excl = round3(priceInclNew / (1 + tax / 100));
-    item.discount_value = round3(priceInclNew * qty * (item.discount / 100));
+    item.price = priceInclNew;
+    item.price_excl = priceInclNew / (1 + tax / 100);
+    item.discount_value = priceInclNew * qty * (item.discount / 100);
   }
 
   else if (field === "price_excl") {
     const priceExcl = Number(value) || 0;
-    item.price_excl = round3(priceExcl);
-    item.price = round3(priceExcl * (1 + tax / 100));
-    item.discount_value = round3(item.price * qty * (item.discount / 100));
+item.price_excl = priceExcl;
+item.price = priceExcl * (1 + tax / 100);
+item.discount_value = item.price * qty * (item.discount / 100);
   }
 
   else if (field === "qty") {
     const newQty = Number(value) || 0;
-    item.qty = round3(newQty);
-    item.discount_value = round3(priceIncl * newQty * (item.discount / 100));
+    item.qty = newQty;
+    item.discount_value = priceIncl * newQty * (item.discount / 100);
   }
 
   else if (field === "exempt") {
@@ -241,17 +245,17 @@ const updateItem = (index, field, value) => {
     if (isExempt) {
       item.tax = 0;
       const priceInclNow = Number(item.price) || 0;
-      item.price_excl = round3(priceInclNow);
-      item.discount_value = round3(priceInclNow * qty * (item.discount / 100));
+item.price_excl = priceInclNow;
+item.discount_value = priceInclNow * qty * (item.discount / 100);
     }
   }
 
   else if (field === "tax") {
     const newTax = Number(value) || 0;
-    item.tax = round3(newTax);
-    const priceInclNow = Number(item.price) || 0;
-    item.price_excl = round3(priceInclNow / (1 + newTax / 100));
-    item.discount_value = round3(priceInclNow * qty * (item.discount / 100));
+item.tax = newTax;
+const priceInclNow = Number(item.price) || 0;
+item.price_excl = priceInclNow / (1 + newTax / 100);
+item.discount_value = priceInclNow * qty * (item.discount / 100);
   }
 
   else {
@@ -263,18 +267,17 @@ const updateItem = (index, field, value) => {
 
 
 // Since price includes tax, remove the tax portion before summing
-const totalBeforeTax = round3(invoiceItems.reduce((sum, item) => {
-  const priceExTax = round3(item.price / (1 + item.tax / 100));
-  return sum + round3(item.qty * priceExTax * (1 - item.discount / 100));
-}, 0));
+const totalBeforeTax = invoiceItems.reduce((sum, item) => {
+  const priceExTax = item.price / (1 + item.tax / 100);
+  return sum + item.qty * priceExTax * (1 - item.discount / 100);
+}, 0);
 
-const totalTax = round3(invoiceItems.reduce((sum, item) => {
-  const priceExTax = round3(item.price / (1 + item.tax / 100));
-  const itemTax = round3(priceExTax * (item.tax / 100));
-  return sum + round3(item.qty * itemTax * (1 - item.discount / 100));
-}, 0));
+const totalTax = invoiceItems.reduce((sum, item) => {
+  const priceExTax = item.price / (1 + item.tax / 100);
+  return sum + item.qty * priceExTax * (item.tax / 100) * (1 - item.discount / 100);
+}, 0);
 
-const grandTotal = round3(totalBeforeTax + totalTax);
+const grandTotal = totalBeforeTax + totalTax;
 
 
   const handleInvoiceClick = async (inv) => {
@@ -308,11 +311,11 @@ const grandTotal = round3(totalBeforeTax + totalTax);
 
     // Map invoice lines to your frontend structure
 const formattedItems = data.lines.map((line) => {
-  const priceIncl = round3(Number(line.item_price || 0));
-  const taxRate = round3(Number(line.tax || 0)) / 100;
-  const QTY = round3(Number(line.qty));
-  const discountPercentage = round3(Number(line.discount_percentage || 0));
-  const discountValue = round3(priceIncl * discountPercentage * QTY);
+  const priceIncl = Number(line.item_price || 0);
+  const taxRate = Number(line.tax || 0) / 100;
+  const QTY = Number(line.qty);
+  const discountPercentage = Number(line.discount_percentage || 0);
+  const discountValue = priceIncl * discountPercentage * QTY;
 
   return {
     id: line.item_number,
@@ -382,23 +385,32 @@ return {
   code: item.code,
   desc: item.name,
   notes: item.notes || "",
-  price: round3(Number(item.price_with_tax || 0)),
-  tax: round3(Number(item.tax_percentage || 0)),
-  qty: round3(Number(item.usual_sales_qty || 1)),
-  discount: round3(Number(item.usual_discount_percentage || 0)),
+
+  // 🔥 FULL PRECISION — NO ROUNDING
+  price: Number(item.price_with_tax || 0),
+  tax: Number(item.tax_percentage || 0),
+  qty: Number(item.usual_sales_qty || 1),
+  discount: Number(item.usual_discount_percentage || 0),
+
   unit_number: item.unit,
   unit_name: item.unit_name ?? "",
   exempt: false,
   storage_id: item.is_stocked ? item.default_storage_id || null : null,
-  price_excl: round3(Number(item.price_with_tax || 0) / (1 + Number(item.tax_percentage || 0) / 100)),
-  discount_value: round3(
-    Number(item.price_with_tax || 0) * 
-    Number(item.usual_sales_qty || 1) * 
-    (Number(item.usual_discount_percentage || 0) / 100)
-  ),
+
+  // 🔥 DERIVED VALUES — STILL NO ROUNDING
+  price_excl:
+    Number(item.price_with_tax || 0) /
+    (1 + Number(item.tax_percentage || 0) / 100),
+
+  discount_value:
+    Number(item.price_with_tax || 0) *
+    Number(item.usual_sales_qty || 1) *
+    (Number(item.usual_discount_percentage || 0) / 100),
+
   _isValidItem: true,
   is_stocked: Boolean(item.is_stocked),
 };
+
       })
     );
 
@@ -472,10 +484,10 @@ useEffect(() => {
 }, [clientDetailType, clientDetailValue]);
 
 const handleItemSelected = (item) => {
-  const qty = round3(Number(item.usual_sales_qty || 1));
-  const price = round3(Number(item.price_with_tax || 0));
-  const tax = round3(Number(item.tax_percentage || 0));
-  const discount = round3(Number(item.usual_discount_percentage || 0));
+const qty = Number(item.usual_sales_qty || 1);
+const price = Number(item.price_with_tax || 0);
+const tax = Number(item.tax_percentage || 0);
+const discount = Number(item.usual_discount_percentage || 0);
 
   setInvoiceItems(prev => {
     // Fill existing row
@@ -629,30 +641,31 @@ const commitCalcField = (index, field) => {
     if (evaluated === null) return prev;
 
     // Round the evaluated value
-    item[field] = round3(evaluated);
+    item[field] = evaluated;
 
     const qty = Number(item.qty || 0);
     const tax = Number(item.tax || 0);
     const priceIncl = Number(item.price || 0);
 
     if (field === "price") {
-      item.price_excl = round3(evaluated / (1 + tax / 100));
-      item.discount_value = round3(evaluated * qty * (item.discount / 100));
+      item.price_excl = evaluated / (1 + tax / 100);
+      item.discount_value = evaluated * qty * (item.discount / 100);
     }
 
     if (field === "price_excl") {
-      item.price = round3(evaluated * (1 + tax / 100));
-      item.discount_value = round3(item.price * qty * (item.discount / 100));
+      item.price = evaluated * (1 + tax / 100);
+      item.discount_value = item.price * qty * (item.discount / 100);
     }
 
+
     if (field === "qty") {
-      item.discount_value = round3(priceIncl * evaluated * (item.discount / 100));
+      item.discount_value = priceIncl * evaluated * (item.discount / 100);
     }
 
     if (field === "discount_value") {
       item.discount =
         priceIncl && qty
-          ? round3((evaluated / (priceIncl * qty)) * 100)
+          ? (evaluated / (priceIncl * qty)) * 100
           : 0;
     }
 
@@ -718,7 +731,7 @@ if (hasMissingStorage) {
       item_id: it.item_id || null,
       description: it.desc || "",
       qty: Number(it.qty || 0),
-      item_price: Number(it.price.toFixed(3)),
+      item_price: Number(it.price),
       discount_percentage: Number(it.discount / 100),
       tax: Number(it.tax || 0),
       exempt: it.exempt || false,
@@ -772,7 +785,7 @@ if (hasMissingStorage) {
     item_id: it.item_id || null,
     description: it.desc || "",
     qty: Number(it.qty || 0),
-    item_price: Number(it.price.toFixed(3)),
+    item_price: Number(it.price),
     discount_percentage: Number(it.discount / 100),
     tax: Number(it.tax || 0),
     exempt: it.exempt || false,
@@ -1080,9 +1093,9 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
           transition
         "
       >
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
-  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
-</svg>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+      </svg>
       </button>
     </div>
   </div>
@@ -1116,28 +1129,28 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
             : inv.qr && inv.qr !== "123456789"
               ? "bg-green-50"
               : "bg-white"
-    }
-    hover:bg-[#f1f8fa]
-  `}
->
+              }
+              hover:bg-[#f1f8fa]
+            `}
+          >
 
       <td className="border px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis">
-  <span className="block truncate">
-    {inv.invoice_number}
-  </span>
-</td>
+        <span className="block truncate">
+          {inv.invoice_number}
+        </span>
+      </td>
 
-<td className="border p-2 max-w-[160px]">
-  <div className="truncate whitespace-nowrap overflow-hidden">
-    {inv.client || "—"}
-  </div>
-</td>
-     <td className="border px-2 py-1 whitespace-nowrap text-right">
-  {Number(inv.total).toFixed(3)}
-</td>
-    </tr>
-  ))}
-</tbody>
+      <td className="border p-2 max-w-[160px]">
+        <div className="truncate whitespace-nowrap overflow-hidden">
+          {inv.client || "—"}
+        </div>
+        </td>
+            <td className="border px-2 py-1 whitespace-nowrap text-right">
+          {Number(inv.total).toFixed(3)}
+        </td>
+      </tr>
+        ))}
+      </tbody>
 
     </table>
    {!loading && fetchedInvoices.length >= 100 && (
@@ -1472,7 +1485,7 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
 </div>
 </div>
 <div className={isLocked ? "pointer-events-auto" : ""}>
-<div className="flex items-center justify-end"> 
+<div className="flex items-center justify-end gap-2"> 
 <button
   onClick={() => setIsHeaderCollapsed((prev) => !prev)}
   className="p-2 rounded-md border border-gray-300 hover:bg-gray-100 transition flex items-center justify-center"
@@ -1500,6 +1513,34 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
     />
   </svg>
 </button>
+<button
+  onClick={() => setShowDiscount(prev => !prev)}
+  className="p-2 rounded-md border border-gray-300 hover:bg-gray-100 transition flex items-center justify-center"
+  title={showDiscount ? "Hide discount columns" : "Show discount columns"}
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="w-5 h-5"
+  >
+    {showDiscount ? (
+      // eye-off icon
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+  <path strokeLinecap="round" strokeLinejoin="round" d="m8.99 14.993 6-6m6 3.001c0 1.268-.63 2.39-1.593 3.069a3.746 3.746 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043 3.745 3.745 0 0 1-3.068 1.593c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 0 1-3.296-1.043 3.746 3.746 0 0 1-1.043-3.297 3.746 3.746 0 0 1-1.593-3.068c0-1.268.63-2.39 1.593-3.068a3.746 3.746 0 0 1 1.043-3.297 3.745 3.745 0 0 1 3.296-1.042 3.745 3.745 0 0 1 3.068-1.594c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.297 3.746 3.746 0 0 1 1.593 3.068ZM9.74 9.743h.008v.007H9.74v-.007Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm4.125 4.5h.008v.008h-.008v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+</svg>
+
+    ) : (
+      // eye icon
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+  <path strokeLinecap="round" strokeLinejoin="round" d="m9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185ZM9.75 9h.008v.008H9.75V9Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm4.125 4.5h.008v.008h-.008V13.5Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+</svg>
+
+    )}
+  </svg>
+</button>
 </div>
 </div>
 </div>
@@ -1521,8 +1562,12 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
       <th className="border p-2 text-start w-20">{t("Invoices.items.unit")}</th>
       <th className="border p-2 text-start w-20">{t("Invoices.items.qty")}</th>
       <th className="border p-2 text-start w-40">{t("Invoices.items.storage")}</th>
+      {showDiscount && (
       <th className="border p-2 text-start w-24">{t("Invoices.items.discount_percent")}</th>
+      )}
+      {showDiscount && (
       <th className="border p-2 text-start w-28">{t("Invoices.items.discount_value")}</th>
+      )}
       <th className="border p-2 text-start w-32">{t("Invoices.items.tax_value")}</th>
       <th className="border p-2 text-start w-32">{t("Invoices.items.total_incl")}</th>
       <th className="border p-2 text-center w-12">{t("Invoices.items.delete")}</th>
@@ -1531,16 +1576,18 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
 
   <tbody>
     {invoiceItems.map((item, index) => {
-const priceIncl = round3(Number(item.price) || 0);
-const taxPrc = round3(Number(item.tax) || 0);
-const qty = round3(Number(item.qty) || 0);
-const discPrc = round3(Number(item.discount) || 0);
-const priceExcl = round3(priceIncl / (1 + taxPrc / 100));
-const discVal = round3(Number(item.discount_value || 0));
-const totalIncl = round3(qty * priceIncl - discVal);
-const discValExcl = round3(discVal / (1 + taxPrc / 100));
-const totalExcl = round3(qty * priceExcl - discValExcl);
-const taxVal = round3(totalIncl - totalExcl);
+const priceIncl = Number(item.price) || 0;
+const taxPrc = Number(item.tax) || 0;
+const qty = Number(item.qty) || 0;
+const discPrc = Number(item.discount) || 0;
+const discVal = Number(item.discount_value) || 0;
+
+const priceExcl = priceIncl / (1 + taxPrc / 100);
+const totalIncl = qty * priceIncl - discVal;
+const discValExcl = discVal / (1 + taxPrc / 100);
+const totalExcl = qty * priceExcl - discValExcl;
+const taxVal = totalIncl - totalExcl;
+
 
       return (
         <tr key={index} className="hover:bg-gray-50">
@@ -1559,9 +1606,9 @@ const taxVal = round3(totalIncl - totalExcl);
                   wantExempt &&
                   (clientDetailType !== "TN" || !clientDetailValue?.trim())
                 ) {
-showPopup(
-  t("Invoices.messages.exempt_requires_tax")
-);
+                showPopup(
+                  t("Invoices.messages.exempt_requires_tax")
+                );
                   return; // ⛔ block change
                 }
 
@@ -1679,15 +1726,14 @@ onKeyDown={async (e) => {
 </td>
 
 {/* Unit Price Incl. */}
-{/* Unit Price Incl. */}
 <td className="border p-2">
   <input
     ref={el => {
       cellRefs.current[index] ??= {};
-      cellRefs.current[index].price = el; // ✅ REQUIRED
+      cellRefs.current[index].price = el; 
     }}
     type="text"
-    value={item._price_raw ?? round3(item.price)}
+    value={item._price_raw ?? item.price}
     disabled={!isEditable}
     className="w-full border rounded px-2 py-1"
     onFocus={selectAllOnFocus}
@@ -1724,7 +1770,7 @@ onKeyDown={async (e) => {
 <td className="border p-2">
 <input
   type="text"
-  value={item._price_excl_raw ?? round3(item.price_excl)}
+  value={item._price_excl_raw ?? fmt3(item.price_excl)}
   disabled={!isEditable}
   className="w-full border rounded px-2 py-1"
   onFocus={selectAllOnFocus}
@@ -1760,7 +1806,7 @@ onKeyDown={async (e) => {
     cellRefs.current[index].qty = el;
   }}
   type="text"
-  value={item._qty_raw ?? round3(item.qty)}
+  value={item._qty_raw ?? fmt3(item.qty)}
   disabled={!isEditable}
   className="w-full border rounded px-2 py-1"
   onFocus={selectAllOnFocus}
@@ -1801,55 +1847,58 @@ className={`w-full border rounded px-2 py-1
     ))}
   </select>
 </td>
-
+        
           {/* Discount % */}
+          {showDiscount && (
+
           <td className="border p-2">
-<input
-  ref={el => {
-    cellRefs.current[index] ??= {};
-    cellRefs.current[index].discount = el;
-  }}
-  type="number"
-  step="0.1"
-  value={item.discount}
-  onChange={(e) =>
-    updateItem(index, "discount", parseFloat(e.target.value) || 0)
-  }
-  disabled={!isEditable}
-  className="w-full border rounded px-2 py-1"
-  onFocus={selectAllOnFocus}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleEnterNavigation(index, "discount");
-    }
-  }}
-/>
+          <input
+            ref={el => {
+              cellRefs.current[index] ??= {};
+              cellRefs.current[index].discount = el;
+            }}
+            type="number"
+            step="0.1"
+            value={item.discount}
+            onChange={(e) =>
+              updateItem(index, "discount", parseFloat(e.target.value) || 0)
+            }
+            disabled={!isEditable}
+            className="w-full border rounded px-2 py-1"
+            onFocus={selectAllOnFocus}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleEnterNavigation(index, "discount");
+              }
+            }}
+          />
           </td>
+          )}
 
-{/* Discount Value */}
-<td className="border p-2">
-<input
-  type="text"
- value={item._discount_value_raw ?? round3(item.discount_value)}
-  disabled={!isEditable}
-  className="w-full border rounded px-2 py-1"
-  onFocus={selectAllOnFocus}
-  onChange={(e) =>
-    handleCalcField(index, "discount_value", e.target.value)
-  }
-  onBlur={() => commitCalcField(index, "discount_value")}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      commitCalcField(index, "discount_value");
-      handleEnterNavigation(index, "discount_value");
-    }
-  }}
-/>
-
-</td>
-
+          {/* Discount Value */}
+          {showDiscount && (
+          <td className="border p-2">
+          <input
+            type="text"
+            value={item._discount_value_raw ?? fmt3(item.discount_value)}
+            disabled={!isEditable}
+            className="w-full border rounded px-2 py-1"
+            onFocus={selectAllOnFocus}
+            onChange={(e) =>
+              handleCalcField(index, "discount_value", e.target.value)
+            }
+            onBlur={() => commitCalcField(index, "discount_value")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitCalcField(index, "discount_value");
+                handleEnterNavigation(index, "discount_value");
+              }
+            }}
+          />
+          </td>
+          )}
           {/* Tax Value */}
           <td className="border p-2 font-semibold text-gray-700">
             {taxVal.toFixed(3)}
@@ -2024,18 +2073,18 @@ className={`w-full border rounded px-2 py-1
         <div className="flex justify-between mb-2">
           <span className="text-gray-600">{t("Invoices.totals.total_before_tax")}</span>
           <span className="font-semibold text-gray-800">
-            JD {totalBeforeTax.toFixed(3)}
+            JD JD {fmt3(totalBeforeTax)}
           </span>
         </div>
         <div className="flex justify-between mb-2">
           <span className="text-gray-600">{t("Invoices.totals.total_tax")}</span>
           <span className="font-semibold text-gray-800">
-            JD {totalTax.toFixed(3)}
+            JD {fmt3(totalTax)}
           </span>
         </div>
         <div className="flex justify-between border-t pt-2 text-lg font-bold text-[#2f788a]">
           <span>{t("Invoices.totals.grand_total")}</span>
-          <span>JD {grandTotal.toFixed(3)}</span>
+          <span>JD {fmt3(grandTotal)}</span>
         </div>
       </div>
     </div>

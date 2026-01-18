@@ -89,6 +89,7 @@ router.delete("/clients/:id", invoiceController.deleteClient);
 router.get("/reports/sales/general", invoiceController.getGeneralSalesReport);
 router.get("/reports/sales/by-client", invoiceController.getSalesByClientReport);
 router.get("/reports/sales/by-area", invoiceController.getSalesByAreaReport);
+router.get("/reports/sales/by-client-detailed", invoiceController.getSalesByClientDetailedReport);
 router.get("/reports/einvoicing", invoiceController.getEinvoicingReport);
 router.get("/reports/einvoicing/tax-declaration", invoiceController.getTaxDeclarationReport);
 router.get("/reports/refunds/general", invoiceController.getRefundsReport);
