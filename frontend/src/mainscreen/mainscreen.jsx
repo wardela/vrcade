@@ -68,7 +68,7 @@ const raw = localStorage.getItem("permissions");
         {/* Sidebar */}
         <div
           className={`absolute top-0 flex flex-col bg-gray-600 text-white border-[#2f788a] h-full transition-all duration-150 z-50
-            ${isCollapsed ? "w-[70px]" : "w-60"} start-0 border-e`}
+            ${isCollapsed ? "w-[70px]" : "w-60"} start-0 border-e overflow-hidden`}
           onMouseEnter={() => setIsCollapsed(false)}
           onMouseLeave={() => setIsCollapsed(true)}
         >
