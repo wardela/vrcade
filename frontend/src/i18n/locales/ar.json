@@ -1,0 +1,1536 @@
+{
+  "sidebar": {
+    "dashboard": "لوحة التحكم",
+    "invoices": "الفواتير",
+    "refunds": "فواتير المرتجعات",
+    "unshared": "فواتير غير مرسلة",
+    "items": "الأصناف",
+    "storage": "المخزون",
+    "clients": "إدارة العملاء",
+    "reports": "التقارير",
+    "users": "إدارة المستخدمين",
+    "company": "إعدادات الشركة",
+    "logout": " الخروج"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "subtitle": "تفضيلات التطبيق",
+
+    "tabs": {
+      "language": "اللغة",
+      "zoom": "التكبير",
+      "about": "التواصل والمعلومات"
+    },
+
+    "language": {
+      "title": "اللغة",
+      "description": "اختر اللغة المستخدمة في جميع أجزاء النظام",
+
+      "english": {
+        "name": "English",
+        "description": "اللغة الافتراضية للنظام"
+      },
+
+      "arabic": {
+        "name": "العربية",
+        "description": "واجهة عربية كاملة"
+      },
+
+      "active": "فعالة"
+    },
+
+    "zoom": {
+      "title": "التكبير",
+      "description": "زيادة حجم العرض لتحسين وضوح القراءة",
+      "level": "مستوى التكبير",
+      "footer": "يبدأ من 100٪ ويزداد فقط"
+    },
+
+    "about": {
+      "app_name": "منصة فوترتك للإدارة المالية",
+
+      "powered_by": "تطوير شركة عناصر الابتكار للحلول البرمجية",
+
+      "sections": {
+        "about": "عن التطبيق",
+        "contact": "معلومات التواصل",
+        "version": "إصدار التطبيق"
+      },
+
+      "description": "فوترتك™ منصة إدارة مالية مصممة للفوترة الدقيقة، التقارير، والالتزام بالأنظمة.",
+
+      "contact": {
+        "email": "البريد الإلكتروني",
+        "phone": "الهاتف"
+      }
+    }
+  },
+  "kpi": {
+    "title": "مؤشرات الأداء",
+    "total_sales": "إجمالي المبيعات",
+    "total_refunds": "إجمالي المرتجعات",
+    "net_profit": "صافي الربح",
+    "invoices": "عدد الفواتير"
+  },
+  "SalesDash": {
+    "title": "المبيعات",
+    "prev_year": "السنة السابقة",
+    "next_year": "السنة التالية",
+
+    "months_label": "آخر 12 شهر",
+
+    "sales_total_amount": "المبيعات (إجمالي المبلغ)",
+    "sales_count": "المبيعات (عدد الفواتير)",
+    "sales_by_type": "المبيعات حسب النوع",
+    "refunds_total_amount": "المرتجعات (إجمالي المبلغ)"
+  },
+  "DashOverview": {
+    "title": "نظرة عامة",
+
+    "prev_year": "السنة السابقة",
+    "next_year": "السنة التالية",
+
+    "months_12": "آخر 12 شهر",
+
+    "net_title": "الصافي (المبيعات − المرتجعات)",
+
+    "low_stock_title": "تنبيهات انخفاض المخزون",
+    "low_stock_items": " أصناف",
+    "low_stock_empty": "لا توجد تنبيهات انخفاض مخزون.",
+    "low_stock_min": "الحد الأدنى",
+    "low_stock_current": "المتوفر",
+    "low_stock_deficit": "العجز",
+
+    "recent_sales_title": "أحدث المبيعات",
+    "recent_sales_last": "آخر 10",
+    "table_invoice": "الفاتورة",
+    "table_client": "العميل",
+    "table_total": "الإجمالي",
+    "table_actions": "الإجراءات",
+    "preview": "معاينة",
+    "print": "طباعة",
+
+    "avg_invoice_title": "متوسط إجمالي الفاتورة / شهريًا",
+    "avg_invoice_hint": "المتوسط = (إجمالي مبيعات الشهر) ÷ (عدد فواتير الشهر)"
+  },
+  "DashInventory": {
+    "title": "المخزون",
+
+    "prev_year": "السنة السابقة",
+    "next_year": "السنة التالية",
+
+    "months_12": "آخر 12 شهر",
+
+    "top_items_title": "أكثر 3 أصناف مبيعًا",
+
+    "dead_items_title": "الأصناف الراكدة",
+    "dead_items_hint": "أصناف لم يتم بيعها خلال السنة المحددة",
+    "dead_items_empty": "لا توجد أصناف راكدة.",
+    "dead_items_zero": "0 مبيعات",
+
+    "stock_movement_title": "حركة المخزون (إدخال مقابل إخراج)",
+    "stock_movement_sub": "الإجماليات الشهرية",
+
+    "stock_in": "إدخال مخزون",
+    "stock_out": "إخراج مخزون"
+  },
+    "DashClients": {
+    "title": "العملاء",
+
+    "prev_year": "السنة السابقة",
+    "next_year": "السنة التالية",
+
+    "months_12": "آخر 12 شهر",
+
+    "top_spending_title": "أعلى العملاء إنفاقًا",
+    "top_spending_hint": "إجمالي المبلغ المصروف خلال السنة",
+
+    "top_sales_count_title": "أعلى العملاء من حيث عدد الفواتير",
+    "top_sales_count_hint": "عدد الفواتير الصادرة"
+  },
+
+  "Invoices": {
+    "recent_invoices": "آخر الفواتير",
+    "hide_invoice_list": "إخفاء قائمة الفواتير",
+    "show_invoice_list": "إظهار قائمة الفواتير",
+
+    "search_placeholder": "بحث…",
+    "search": "بحث",
+    "filter": "تصفية",
+    "load_more": "تحميل المزيد",
+    "loading": "جاري التحميل...",
+
+    "table": {
+      "number": "#",
+      "client": "العميل",
+      "total": "الإجمالي"
+    },
+
+    "create_view_invoice": "إنشاء / عرض فاتورة",
+    "new_invoice": "فاتورة جديدة",
+    "calculator": "آلة حاسبة",
+
+    "invoice_number": "رقم الفاتورة",
+    "invoice_number_placeholder": "أدخل رقم الفاتورة",
+
+    "client_name": "اسم العميل",
+    "client_name_placeholder": "أدخل اسم العميل",
+
+    "date": "التاريخ",
+
+    "payment_type": "طريقة الدفع",
+    "payment_credit": "ذمم",
+    "payment_cash": "نقدي",
+
+    "currency": "العملة",
+
+    "client_detail": "بيانات العميل",
+    "client_detail_tax": "الرقم الضريبي",
+    "client_detail_national": "الرقم الوطني",
+    "client_detail_personal": "الرقم الشخصي",
+    "client_detail_placeholder": "أدخل البيانات ",
+
+    "invoice_type": "نوع الفاتورة",
+    "invoice_type_local": "محلي",
+    "invoice_type_export": "تصدير",
+    "invoice_type_development": "منطقة تنموية",
+
+    "client_phone": "هاتف العميل",
+    "client_phone_placeholder": "رقم هاتف اختياري",
+
+    "notes": "ملاحظات",
+    "notes_placeholder": "أضف ملاحظات...",
+
+    "expand_header": "توسيع العنوان",
+    "collapse_header": "طي العنوان",
+
+    "items": {
+      "exempt": "معفى",
+      "serial": "#",
+      "item_id": "رقم الصنف",
+      "name": "الاسم",
+      "item_notes": "ملاحظات",
+      "unit_price_incl": "سعر الوحدة (شامل)",
+      "tax_percent": "الضريبة %",
+      "unit_price_excl": "سعر الوحدة (غير شامل)",
+      "unit": "الوحدة",
+      "qty": "الكمية",
+      "storage": "المستودع",
+      "discount_percent": "خصم %",
+      "discount_value": "قيمة الخصم",
+      "tax_value": "قيمة الضريبة",
+      "total_incl": "الإجمالي شامل",
+      "delete": "حذف",
+      "select_storage": "اختر..."
+    },
+
+    "add_empty_line": "+ سطر فارغ",
+    "add_item": "+ إضافة صنف",
+    "calculator_copy": "نسخ النتيجة و الاغلاق",
+    "actions": {
+      "save": "حفظ",
+      "save_and_share": "حفظ ومشاركة",
+      "share": "مشاركة",
+      "print": "طباعة",
+      "delete_line": "حذف السطر"
+    },
+
+    "totals": {
+      "total_before_tax": "الإجمالي قبل الضريبة",
+      "total_tax": "إجمالي الضريبة",
+      "grand_total": "الإجمالي الكلي"
+    },
+
+    "messages": {
+      "invoice_saved": "تم حفظ الفاتورة بنجاح",
+      "invoice_shared": "تمت مشاركة الفاتورة بنجاح",
+      "cannot_save": "لا يمكن حفظ الفاتورة",
+      "failed_save": "فشل حفظ الفاتورة",
+      "failed_search": "فشل البحث عن الفواتير",
+      "failed_init": "فشل إنشاء فاتورة جديدة",
+
+      "client_required_credit": "يجب اختيار عميل لفواتير الذمم",
+      "invalid_exempt": "الأصناف المعفاة تتطلب رقم ضريبي صحيح",
+      "no_items": "يجب أن تحتوي الفاتورة على صنف واحد على الأقل",
+      "invalid_items": "يجب اختيار جميع الأصناف من القائمة",
+      "missing_storage": "يجب تحديد مستودع لجميع الأصناف المخزنة",
+
+      "item_required": "رقم الصنف مطلوب",
+      "item_not_found": "الصنف غير موجود",
+      "exempt_requires_tax": "لتحديد الصنف كمعفى، يجب إدخال رقم ضريبي صحيح"
+    }
+  },
+
+   "ClientList": {
+    "title": "اختيار عميل",
+    "add_client": "إضافة عميل",
+
+    "search_placeholder": "بحث بالرقم، الاسم، أو البيانات ...",
+
+    "table": {
+      "id": "الرقم",
+      "name": "الاسم",
+      "phone": "الهاتف",
+      "type": "النوع",
+      "value": "القيمة",
+      "select": "اختيار"
+    },
+
+    "detail_types": {
+      "TN": "الرقم الضريبي",
+      "NIN": "الرقم الوطني",
+      "PN": "الرقم الشخصي"
+    },
+
+    "select_button": "اختيار",
+
+    "no_phone": "-",
+    "no_value": "-",
+
+    "empty": "لا يوجد عملاء"
+  },
+
+  "InvoiceFilter": {
+    "title": "فلترة الفواتير",
+    "subtitle": "تصفية، البحث، واستعراض الفواتير",
+
+    "from": "من",
+    "to": "إلى",
+
+    "search_label": "بحث برقم الفاتورة",
+    "search_placeholder": "6XXXXX",
+
+    "apply": "تطبيق",
+    "export_excel": "تصدير إلى إكسل",
+
+    "only_unshared": "غير المرحلة فقط",
+
+    "loading": "جاري التحميل...",
+    "no_results": "لا توجد فواتير مطابقة للتصفية",
+
+    "table": {
+      "invoice_number": "رقم الفاتورة",
+      "pos": "نقطة البيع",
+      "date": "التاريخ",
+      "total": "الإجمالي",
+      "status": "الحالة"
+    },
+
+    "status": {
+      "shared": "مرحلة",
+      "unshared": "غير مرحلة"
+    },
+
+    "footer": {
+      "showing": "عرض",
+      "grand_total": "الإجمالي الكلي"
+    },
+
+    "excel": {
+      "invoice_number": "رقم الفاتورة",
+      "pos": "نقطة البيع",
+      "date": "التاريخ",
+      "total": "الإجمالي (د.أ)",
+      "status": "الحالة",
+      "sheet_name": "الفواتير",
+      "file_name": "Invoices_{{from}}_to_{{to}}.xlsx"
+    },
+
+    "messages": {
+      "fetch_failed": "فشل في جلب الفواتير",
+      "no_export_data": "لا توجد فواتير للتصدير"
+    }
+  },
+
+
+  "RefundInvoices": {
+    "sidebar": {
+      "title": "الفواتير",
+      "hide_list": "إخفاء القائمة",
+      "show_list": "إظهار القائمة",
+
+      "mode_original_full": "الفواتير الأصلية",
+      "mode_original_short": "الفواتير",
+
+      "mode_refund_full": "فواتير المرتجعات",
+      "mode_refund_short": "المرتجعات",
+
+      "search_placeholder": "بحث برقم الفاتورة…",
+      "search_button": "بحث",
+
+      "load_more": "تحميل المزيد",
+      "loading": "جاري التحميل..."
+    },
+
+    "table": {
+      "invoice": "فاتورة",
+      "client": "العميل",
+      "total": "الإجمالي",
+
+      "refund_number": "رقم المرتجع",
+      "original_invoice": "الفاتورة الأصلية"
+    },
+
+    "builder": {
+      "title": "فاتورة مرتجع",
+
+      "save": "حفظ المرتجع",
+      "saving": "جاري الحفظ...",
+
+      "empty_hint": "اختر فاتورة من القائمة لبدء عملية الإرجاع.",
+
+      "original_invoice": "الفاتورة الأصلية",
+      "invoice_date": "تاريخ الفاتورة",
+      "client": "العميل",
+      "original_total": "إجمالي الفاتورة الأصلية",
+
+      "refund_reason": "سبب الإرجاع",
+      "refund_reason_placeholder": "اكتب سبب الإرجاع...",
+
+      "refund_date": "تاريخ الإرجاع",
+
+      "return_to_storage": "إرجاع الأصناف المرتجعة إلى المستودع"
+    },
+
+    "lines": {
+      "lines": "#",
+      "item": "الصنف",
+      "price": "السعر",
+      "discount_pct": "خصم %",
+      "tax_pct": "ضريبة %",
+      "net_per_unit": "الصافي / وحدة",
+      "original_qty": "الكمية الأصلية",
+      "refunded_qty": "المرتجع",
+      "available_qty": "المتاح",
+      "refund_qty": "كمية الإرجاع",
+      "refund_value": "قيمة الإرجاع"
+    },
+
+    "footer": {
+      "refunding_from": "الإرجاع من",
+      "no_invoice": "لم يتم اختيار فاتورة",
+      "refund_total": "إجمالي الإرجاع"
+    },
+
+    "messages": {
+      "search_failed": "فشل البحث عن الفواتير",
+      "open_failed": "فشل فتح الفاتورة",
+
+      "select_invoice": "يرجى اختيار فاتورة أولاً",
+      "enter_qty": "يرجى إدخال كمية إرجاع واحدة على الأقل",
+      "reason_required": "سبب الإرجاع مطلوب",
+
+      "save_failed": "فشل حفظ المرتجع",
+
+      "saved_success": "تم حفظ المرتجع",
+      "saved_total": "الإجمالي"
+    }
+  },
+
+   "RefundView": {
+    "subtitle": "فاتورة مرتجع",
+
+    "buttons": {
+      "print": "طباعة",
+      "share": "مشاركة",
+      "close": "إغلاق"
+    },
+
+    "loading": "جاري تحميل فاتورة المرتجع...",
+
+    "info": {
+      "refund_date": "تاريخ الإرجاع",
+      "original_invoice": "الفاتورة الأصلية",
+      "reason": "السبب"
+    },
+
+    "table": {
+      "serial": "#",
+      "item": "الصنف",
+      "orig_qty": "الكمية الأصلية",
+      "refund_qty": "كمية الإرجاع",
+      "price": "السعر",
+      "tax_pct": "الضريبة %",
+      "disc_pct": "الخصم %",
+      "line_total": "إجمالي ",
+      "empty_value": "—"
+    },
+
+    "totals": {
+      "refund_total": "إجمالي المرتجع"
+    },
+
+    "share": {
+      "success": "تمت مشاركة فاتورة المرتجع  بنجاح",
+      "failed": "فشلت مشاركة فاتورة المرتجع",
+
+      "confirm_title": "مشاركة فاتورة مرتجع",
+      "confirm_message": "سيتم مشاركة فاتورة المرتجع مع دائرة الضريبة.\nبعد المشاركة لا يمكن تعديل الفاتورة.",
+      "confirm_yes": "نعم، مشاركة",
+      "confirm_no": "لا"
+    }
+  },
+ "SelectItem": {
+    "title": "اختيار صنف",
+    "subtitle": "اختر صنفًا لإضافته إلى الفاتورة",
+
+    "search_placeholder": "بحث بالاسم، الرمز، أو الرقم",
+
+    "category_all": "جميع التصنيفات",
+
+    "favorites": "مفضل",
+
+    "item": {
+      "id": "الرقم",
+      "code": "الرمز",
+      "price": "السعر",
+      "currency": "د.أ",
+
+      "not_stocked": "صنف غير مخزّن",
+      "stock": "المخزون: "
+    },
+
+    "badges": {
+      "favorite": "★ مفضل"
+    },
+
+    "empty": "لا توجد أصناف",
+
+    "actions": {
+      "cancel": "إلغاء",
+      "select": "اختيار الصنف"
+    }
+  },
+
+    "ShareConfirm": {
+    "title": "مشاركة الفاتورة: ",
+
+    "confirm_title": "تأكيد مشاركة الفاتورة؟",
+    "confirm_message": "بعد المشاركة مع دائرة الضريبة، سيتم قفل الفاتورة ولن يمكن تعديلها أو تغييرها.",
+
+    "actions": {
+      "no": "لا",
+      "yes": "نعم، مشاركة"
+    }
+  },
+
+   "UnsharedInvoices": {
+    "title": "الفواتير غير المرحلة",
+
+    "controls": {
+      "select_date": "اختيار التاريخ",
+      "search_invoice": "بحث برقم الفاتورة",
+      "search_placeholder": "اكتب للتصفية…",
+      "load": "تحميل"
+    },
+
+    "loading": "جاري التحميل…",
+
+    "empty": {
+      "no_date": "لا توجد فواتير غير مرحلة لهذا التاريخ",
+      "no_selected": "لم يتم اختيار أي فواتير"
+    },
+
+    "table": {
+      "invoice_number": "رقم الفاتورة",
+      "pos": "نقطة البيع",
+      "total": "الإجمالي",
+      "time": "الوقت"
+    },
+
+    "right_panel": {
+      "title": "الفواتير المختارة",
+      "remove": "إزالة",
+      "share_selected": "مشاركة المختار"
+    },
+
+    "messages": {
+      "fetch_failed": "فشل في جلب الفواتير غير المرسلة",
+      "select_one": "يرجى اختيار فاتورة واحدة على الأقل",
+      "share_success": "تمت مشاركة الفواتير بنجاح",
+      "share_failed": "فشلت مشاركة الفواتير"
+    }
+  },
+
+  "ItemsScreen": {
+    "title": "الأصناف والتصنيفات",
+
+    "buttons": {
+      "units": "الوحدات",
+      "add_item": "+ إضافة صنف",
+      "manage_categories": "إدارة",
+      "favorites": "المفضلة",
+      "search_all": "بحث في جميع الأصناف"
+    },
+
+    "sections": {
+      "categories": "التصنيفات",
+      "items": "الأصناف",
+      "items_in_category": "الأصناف ضمن التصنيف",
+      "favorite_items": "الأصناف المفضلة"
+    },
+
+    "search": {
+      "category_placeholder": "بحث داخل هذا التصنيف…",
+      "favorites_placeholder": "بحث في المفضلة…"
+    },
+
+    "table": {
+      "id": "الرقم",
+      "code": "الرمز",
+      "name": "الاسم",
+      "unit": "الوحدة",
+      "price": "السعر",
+      "tax": "الضريبة %",
+      "category": "التصنيف",
+      "stock": "المخزون",
+      "favorite": "مفضل"
+    },
+
+    "empty": {
+      "no_items": "لا توجد أصناف ضمن هذا التصنيف."
+    }
+  },
+
+   "CategoryModal": {
+    "title": "إدارة التصنيفات",
+
+    "form": {
+      "name_placeholder": "اسم التصنيف",
+      "add": "إضافة",
+      "update": "تحديث"
+    },
+
+    "table": {
+      "id": "الرقم",
+      "name": "الاسم"
+    },
+
+    "empty": {
+      "no_categories": "لا توجد تصنيفات."
+    }
+  },
+
+  "UnitsModal": {
+    "title": "إدارة الوحدات",
+
+    "form": {
+      "name_placeholder": "اسم الوحدة",
+      "description_placeholder": "الوصف",
+      "add": "إضافة",
+      "update": "تحديث"
+    },
+
+    "table": {
+      "id": "الرقم",
+      "name": "الاسم",
+      "description": "الوصف"
+    },
+
+    "empty": {
+      "no_units": "لا توجد وحدات متاحة"
+    }
+    
+  },
+   "ItemCard": {
+    "title_add": "إضافة صنف جديد",
+    "title_edit": "تعديل الصنف",
+
+    "sections": {
+      "basics": "البيانات الأساسية",
+      "classification": "التصنيف",
+      "financials": "البيانات المالية",
+      "initial_stock": "المخزون الأولي لكل مستودع",
+      "stock_controls": "إعدادات المخزون",
+      "standard_settings": "الإعدادات الاساسية",
+      "notes": "ملاحظات"
+    },
+
+    "fields": {
+      "item_id": "رقم الصنف",
+      "item_id_auto": "يتم التوليد تلقائيًا",
+
+      "name": "الاسم",
+      "code": "الرمز / الباركود (اختياري)",
+
+      "category": "التصنيف",
+      "unit": "الوحدة",
+
+      "price_incl": "السعر (شامل الضريبة)",
+      "price_excl": "السعر (غير شامل الضريبة)",
+      "tax_pct": "نسبة الضريبة %",
+
+      "stock_managed": "صنف خاضع لإدارة المخزون",
+      "stock_hint": "اقف هذا الخيار للخدمات أو الأصناف غير المحدودة",
+
+      "min_qty": "تنبيه الحد الأدنى للكمية",
+      "min_qty_hint": "تنبيه عند وصول المخزون إلى هذه الكمية",
+
+      "default_storage": "المستودع الاساسي",
+      "default_storage_hint": "يُستخدم كمستودع أساسي للبيع والتعديلات",
+
+      "standard_discount": "نسبة الخصم الاساسية %",
+      "standard_qty": "الكمية الاساسية",
+
+      "favorite": "تعيين كصنف مفضل"
+    },
+
+    "actions": {
+      "save": "حفظ الصنف",
+      "save_changes": "حفظ التعديلات",
+      "select": "اختر...",
+      "select_storage": "اختر المستودع..."
+    },
+
+    "errors": {
+      "name_required": "اسم الصنف مطلوب",
+      "category_required": "التصنيف مطلوب",
+      "unit_required": "الوحدة مطلوبة",
+      "price_required": "يجب أن يكون السعر أكبر من صفر",
+      "default_storage_required": "المستودع الافتراضي مطلوب للأصناف المخزنة"
+    },
+
+    "messages": {
+      "load_failed": "فشل تحميل بيانات الصنف",
+      "save_failed": "فشل الحفظ"
+    }
+  },
+
+  "ItemSearchModal": {
+    "title": "بحث عن صنف",
+    "subtitle": "البحث بالرقم أو الاسم أو الرمز في جميع التصنيفات",
+
+    "search": {
+      "placeholder": "اكتب الاسم أو جزء منه",
+      "button": "بحث"
+    },
+
+    "table": {
+      "id": "الرقم",
+      "code": "الرمز",
+      "name": "الاسم",
+      "category": "التصنيف",
+      "price": "السعر",
+      "stock": "المخزون"
+    },
+
+    "states": {
+      "loading": "جاري البحث عن الأصناف…",
+      "empty": "لا توجد أصناف"
+    },
+
+    "footer": {
+      "hint": "اضغط على أي صنف لفتحه للتعديل"
+    }
+  },
+
+  "StorageMonitor": {
+    "title": "إدارة المستودعات",
+
+    "actions": {
+      "adjust_stock": "تعديل المخزون",
+      "manage_storages": "إدارة المستودعات",
+      "apply": "تطبيق",
+      "print": "طباعة",
+      "load_more": "تحميل المزيد"
+    },
+
+    "tabs": {
+      "storages": "المستودعات",
+      "movements": "الحركات"
+    },
+
+    "storages": {
+      "items": "عدد الأصناف",
+      "total_qty": "إجمالي الكمية",
+      "location": "الموقع",
+      "items_in": "الأصناف في",
+      "search_placeholder": "بحث بالرقم أو الرمز أو الاسم..."
+    },
+
+    "table": {
+      "id": "الرقم",
+      "code": "الرمز",
+      "item_name": "اسم الصنف",
+      "quantity": "الكمية",
+      "unit": "الوحدة",
+
+      "date": "التاريخ",
+      "storage": "المستودع",
+      "direction": "الاتجاه",
+      "type": "النوع",
+      "reference": "المرجع",
+      "action": "الإجراء",
+      "price": "السعر"
+    },
+
+    "filters": {
+      "from": "من",
+      "to": "إلى"
+    },
+
+    "states": {
+      "no_items": "لا توجد أصناف مطابقة",
+      "no_movements": "لا توجد حركات مسجلة"
+    }
+  },
+
+  "StorageTransactionModal": {
+    "title": "تعديل المخزون يدويًا",
+    "subtitle": "تعديل المخزون يدويًا (إدخال / إخراج / تحويل)",
+
+    "search": {
+      "placeholder": "بحث بالاسم أو الرمز أو الرقم",
+      "all_categories": "جميع التصنيفات",
+      "favorites": "المفضلة"
+    },
+
+    "transaction": {
+      "type_in": "إدخال – إضافة مخزون",
+      "type_out": "إخراج – خصم مخزون",
+      "type_transfer": "تحويل – نقل بين المستودعات",
+      "from_storage": "من مستودع",
+      "to_storage": "إلى مستودع",
+      "quantity": "الكمية",
+      "notes": "ملاحظات (اختياري)"
+    },
+
+    "actions": {
+      "confirm": "تأكيد التعديل"
+    },
+
+    "messages": {
+      "missing_item_qty": "يرجى اختيار الصنف وإدخال الكمية"
+    }
+  },
+
+  "QuickStorageAdjustModal": {
+    "title": "تعديل المخزون",
+
+    "fields": {
+      "direction": "الاتجاه",
+      "quantity": "الكمية",
+      "notes": "ملاحظات"
+    },
+
+    "directions": {
+      "in": "إدخال",
+      "out": "إخراج"
+    },
+
+    "actions": {
+      "cancel": "إلغاء",
+      "confirm": "تأكيد"
+    }
+  },
+
+  "ManageStoragesModal": {
+    "title": "إدارة المستودعات",
+    "subtitle": "إنشاء وتعديل مواقع المستودعات",
+
+    "list": {
+      "empty": "لا توجد مستودعات بعد"
+    },
+
+    "form": {
+      "name_placeholder": "اسم المستودع",
+      "location_placeholder": "الموقع (اختياري)"
+    },
+
+    "actions": {
+      "cancel": "إلغاء",
+      "add": "إضافة مستودع",
+      "update": "تحديث المستودع"
+    }
+  },
+    "ClientCard": {
+    "phone_title": "الهاتف",
+    "no_phone": "لا يوجد رقم هاتف"
+  },
+
+  "ClientsScreen": {
+    "title": "العملاء",
+    "subtitle": "إدارة وعرض جميع العملاء المسجلين",
+
+    "actions": {
+      "add_client": "إضافة عميل"
+    },
+
+    "search": {
+      "placeholder": "البحث عن العملاء بالاسم أو رقم الهاتف"
+    },
+
+    "states": {
+      "loading": "جاري تحميل العملاء…",
+      "empty": "لا يوجد عملاء."
+    }
+  },
+
+  "CreateClientModal": {
+    "title": "إضافة عميل",
+    "subtitle": "بيانات تعريف العميل ومعلومات التواصل",
+
+    "sections": {
+      "required": "المعلومات الأساسية",
+      "optional": "المعلومات الاختيارية"
+    },
+
+    "fields": {
+      "name": "اسم العميل",
+      "phone": "رقم الهاتف",
+      "phone_hint": "رقم الهاتف يبدأ دائمًا بـ 07. يمكنك إدخال باقي الأرقام فقط.",
+
+      "detail_type": "نوع المعرف",
+      "detail_value": "قيمة المعرف",
+
+      "email": "البريد الإلكتروني",
+      "location": "الموقع",
+      "notes": "ملاحظات"
+    },
+
+    "detail_types": {
+      "nin": "الرقم الوطني",
+      "tn": "الرقم الضريبي",
+      "pn": "رقم جواز السفر"
+    },
+
+    "placeholders": {
+      "phone": "XXXXXXXX",
+      "email": "البريد الإلكتروني",
+      "location": "الموقع",
+      "notes": "ملاحظات"
+    },
+
+    "hints": {
+      "detail_value_required": "مطلوب فقط عند اختيار الرقم الضريبي."
+    },
+
+    "actions": {
+      "cancel": "إلغاء",
+      "create": "إنشاء عميل",
+      "saving": "جاري الحفظ..."
+    },
+
+    "errors": {
+      "name_required": "اسم العميل مطلوب",
+      "tax_required": "الرقم الضريبي مطلوب عند اختيار نوع المعرف رقم ضريبي",
+      "submit_failed": "فشل إنشاء العميل. يرجى المحاولة مرة أخرى."
+    }
+  },
+
+  "ClientProfileScreen": {
+    "actions": {
+      "back": "→ رجوع"
+    },
+
+    "title": {
+      "default": "ملف العميل",
+      "subtitle": "نظرة عامة على ملف العميل"
+    },
+
+    "tabs": {
+      "main": "الرئيسية",
+      "history": "السجل",
+      "stats": "الإحصائيات"
+    }
+  },
+
+  "ProfileMainTab": {
+    "states": {
+      "loading_client": "جاري تحميل بيانات العميل...",
+      "client_not_found": "العميل غير موجود",
+      "loading_chart": "جاري تحميل الرسم البياني...",
+      "loading_invoices": "جاري تحميل الفواتير...",
+      "no_invoices": "لا توجد فواتير"
+    },
+
+    "actions": {
+      "edit": "تعديل"
+    },
+
+    "placeholders": {
+      "no_phone": "لا يوجد رقم هاتف",
+      "no_notes": "لا توجد ملاحظات."
+    },
+
+    "sections": {
+      "personal_info": "المعلومات الشخصية",
+      "identification": "بيانات التعريف",
+      "notes": "ملاحظات"
+    },
+
+    "fields": {
+      "email": "البريد الإلكتروني",
+      "location": "الموقع",
+      "dob": "تاريخ الميلاد",
+      "detail_type": "نوع المعرف",
+      "detail_value": "قيمة المعرف"
+    },
+
+    "meta": {
+      "created_on": "تاريخ الإنشاء"
+    },
+
+    "charts": {
+      "spending_title": "الإنفاق الشهري",
+      "spending_subtitle": "إجمالي {{year}}: {{total}} دينار",
+      "sales_count_title": "عدد المبيعات شهريًا",
+      "sales_count_subtitle": "عدد الفواتير الصادرة"
+    },
+
+    "recent_sales": {
+      "title": "آخر المبيعات",
+      "subtitle": "آخر 10 فواتير لهذا العميل"
+    },
+
+    "table": {
+      "invoice": "الفاتورة",
+      "date": "التاريخ",
+      "total": "الإجمالي (دينار)",
+      "actions": "الإجراءات"
+    }
+  },
+
+  "EditClientModal": {
+    "title": "تعديل العميل",
+    "subtitle": "تحديث بيانات تعريف العميل ومعلومات التواصل",
+
+    "sections": {
+      "required": "المعلومات الأساسية",
+      "optional": "المعلومات الاختيارية"
+    },
+
+    "fields": {
+      "name": "اسم العميل",
+      "phone": "رقم الهاتف",
+      "phone_hint": "رقم الهاتف يبدأ دائمًا بـ 07. يمكنك تعديل باقي الأرقام فقط.",
+
+      "detail_type": "نوع المعرف",
+      "detail_value": "قيمة المعرف",
+
+      "email": "البريد الإلكتروني",
+      "location": "الموقع",
+      "notes": "ملاحظات"
+    },
+
+    "detail_types": {
+      "nin": "الرقم الوطني",
+      "tn": "الرقم الضريبي",
+      "pn": "رقم جواز السفر"
+    },
+
+    "placeholders": {
+      "phone": "XXXXXXXX",
+      "email": "البريد الإلكتروني",
+      "location": "الموقع",
+      "notes": "ملاحظات"
+    },
+
+    "hints": {
+      "detail_value_required": "مطلوب فقط عند اختيار الرقم الضريبي."
+    },
+
+    "actions": {
+      "cancel": "إلغاء",
+      "save": "حفظ التعديلات",
+      "saving": "جاري الحفظ..."
+    },
+
+    "errors": {
+      "name_required": "اسم العميل مطلوب",
+      "tax_required": "الرقم الضريبي مطلوب عند اختيار نوع المعرف رقم ضريبي",
+      "submit_failed": "فشل تحديث بيانات العميل. يرجى المحاولة مرة أخرى."
+    }
+  },
+
+    "ProfileHistoryTab": {
+    "header": {
+      "title": "سجل الفواتير",
+      "subtitle": "تصفية وعرض جميع فواتير هذا العميل"
+    },
+
+    "filters": {
+      "from": "من",
+      "to": "إلى",
+      "apply": "تطبيق",
+      "clear": "مسح"
+    },
+
+    "actions": {
+      "export_excel": "تصدير إلى إكسل",
+      "view": "عرض",
+      "print": "طباعة"
+    },
+
+    "states": {
+      "loading": "جاري تحميل الفواتير...",
+      "empty": "لا توجد فواتير",
+      "no_export": "لا توجد فواتير للتصدير"
+    },
+
+    "table": {
+      "invoice": "الفاتورة",
+      "date": "التاريخ",
+      "total": "الإجمالي (دينار)",
+      "actions": "الإجراءات"
+    }
+  },
+
+  "InvoiceViewPopup": {
+    "header": {
+      "preview": "معاينة"
+    },
+
+    "actions": {
+      "close": "إغلاق"
+    },
+
+    "states": {
+      "loading": "جاري تحميل الفاتورة..."
+    },
+
+    "info": {
+      "date": "التاريخ",
+      "payment": "طريقة الدفع",
+      "type": "النوع",
+      "currency": "العملة",
+      "empty": "—"
+    },
+
+    "table": {
+      "index": "#",
+      "item": "الصنف",
+      "qty": "الكمية",
+      "unit": "السعر",
+      "tax": "الضريبة %",
+      "discount": "الخصم %",
+      "total": "الإجمالي"
+    },
+
+    "totals": {
+      "grand_excl": "الإجمالي بدون ضريبة",
+      "tax_total": "إجمالي الضريبة",
+      "grand": "الإجمالي الكلي"
+    }
+  },
+    "ReportsScreen": {
+    "title": "التقارير",
+
+    "tabs": {
+      "sales": "المبيعات",
+      "refunds": "المرتجعات",
+      "tax": "الضريبة",
+      "storage": "المستودعات والأصناف"
+    }
+  },
+
+   "SalesReports": {
+    "filters": {
+      "report": "التقرير",
+      "from": "من",
+      "to": "إلى",
+      "area": "المنطقة",
+      "apply": "تطبيق",
+      "select_client": "اختيار عميل",
+      "selected_client": "العميل المحدد"
+    },
+
+    "report_types": {
+      "general": "المبيعات العامة",
+      "by_client": "المبيعات حسب العميل",
+      "by_area": "المبيعات حسب المنطقة",
+      "by_currency": "المبيعات حسب العملة"
+    },
+
+    "areas": {
+      "local": "محلي",
+      "export": "تصدير",
+      "development": "تطوير"
+    },
+
+    "actions": {
+      "print": "طباعة",
+      "previous": "السابق",
+      "next": "التالي"
+    },
+
+    "table": {
+      "invoice": "رقم الفاتورة",
+      "date": "التاريخ",
+      "client": "العميل",
+      "type": "النوع",
+      "area": "المنطقة",
+      "total": "الإجمالي"
+    },
+
+    "states": {
+      "loading": "جاري التحميل...",
+      "empty": "لا توجد سجلات",
+      "coming_soon": "تقارير حسب العملة قريبًا!"
+    },
+
+    "summary": {
+      "showing": "عرض",
+      "total_sales": "إجمالي المبيعات "
+    }
+  },
+
+  "RefundReports": {
+    "filters": {
+      "report_type": "نوع التقرير",
+      "from": "من",
+      "to": "إلى",
+      "client": "العميل",
+      "select_client": "اختيار عميل",
+      "apply": "تطبيق"
+    },
+
+    "report_types": {
+      "general": "المرتجعات العامة",
+      "by_client": "المرتجعات حسب العميل"
+    },
+
+    "actions": {
+      "print": "طباعة"
+    },
+
+    "table": {
+      "refund": "رقم المرتجع",
+      "original_invoice": "رقم الفاتورة الأصلية",
+      "date": "التاريخ",
+      "client": "العميل",
+      "type": "النوع",
+      "total": "الإجمالي"
+    },
+
+    "states": {
+      "loading": "جاري التحميل..."
+    },
+
+    "summary": {
+      "showing": "عرض ",
+      "total_refunds": "إجمالي المرتجعات"
+    }
+  },
+
+  "EInvoicingReports": {
+    "filters": {
+      "report": "التقرير",
+      "from": "من",
+      "to": "إلى",
+      "status": "الحالة",
+      "apply": "تطبيق"
+    },
+
+    "report_types": {
+      "shared": "المشاركة / غير المشاركة",
+      "tax": "الإقرار الضريبي"
+    },
+
+    "status_types": {
+      "shared": "مشاركة",
+      "unshared": "غير مشاركة"
+    },
+
+    "actions": {
+      "print": "طباعة"
+    },
+
+    "table": {
+      "invoice": "رقم الفاتورة",
+      "date": "التاريخ",
+      "client": "العميل",
+      "total": "الإجمالي",
+      "status": "الحالة",
+
+      "percent": "%",
+      "total_no_tax": "الإجمالي بدون ضريبة",
+      "tax": "الضريبة",
+      "total_incl": "الإجمالي مع الضريبة"
+    },
+
+    "states": {
+      "loading": "جاري التحميل..."
+    },
+
+    "footer": {
+      "showing": "عرض ",
+      "total": "الإجمالي"
+    },
+
+    "tax_sections": {
+      "local": "محلي",
+      "exempt": "معفى",
+      "export": "تصدير",
+      "grand_total": "الإجمالي الكلي"
+    }
+  },
+
+ "StorageItemReports": {
+    "filters": {
+      "report": "التقرير",
+      "from": "من",
+      "to": "إلى",
+      "storage": "المستودع",
+      "direction": "الاتجاه",
+      "apply": "تطبيق",
+      "select_item": "اختيار صنف",
+      "select_storage": "اختيار مستودع"
+    },
+
+    "report_types": {
+      "items_sales": "ملخص مبيعات الأصناف",
+      "item_sales_details": "مبيعات صنف واحد",
+      "storage_inventory": "مخزون المستودع",
+      "storage_transactions": "حركات المستودع"
+    },
+
+    "directions": {
+      "both": "إدخال وإخراج",
+      "in": "إدخال فقط",
+      "out": "إخراج فقط"
+    },
+
+    "actions": {
+      "print": "طباعة",
+      "previous": "السابق",
+      "next": "التالي"
+    },
+
+    "tables": {
+      "items_sales": {
+        "item": "الصنف",
+        "unit": "الوحدة",
+        "total_qty": "إجمالي الكمية",
+        "total_sales": "إجمالي المبيعات"
+      },
+
+      "item_sales_details": {
+        "date": "التاريخ",
+        "invoice": "رقم الفاتورة",
+        "client": "العميل",
+        "qty": "الكمية",
+        "unit": "الوحدة",
+        "total": "الإجمالي"
+      },
+
+      "storage_inventory": {
+        "item": "الصنف",
+        "qty": "الكمية",
+        "unit": "الوحدة"
+      },
+
+      "storage_transactions": {
+        "date": "التاريخ",
+        "item": "الصنف",
+        "storage": "المستودع",
+        "dir": "الاتجاه",
+        "qty": "الكمية",
+        "unit": "الوحدة",
+        "ref": "المرجع"
+      }
+    },
+
+    "states": {
+      "loading": "جاري التحميل...",
+      "no_records": "لا توجد سجلات",
+      "no_items": "لا توجد أصناف",
+      "no_transactions": "لا توجد حركات"
+    },
+
+    "summary": {
+      "showing_items": "عرض ",
+      "showing_records": "عرض ",
+      "total_sales": "إجمالي المبيعات",
+      "qty_total": "الك الإجمالي"
+    }
+  },
+
+    "UsersScreen": {
+    "title": "إدارة المستخدمين",
+
+    "actions": {
+      "add": "إضافة مستخدم",
+      "view": "عرض",
+      "delete": "حذف",
+      "confirm_delete": "هل تريد حذف هذا المستخدم؟"
+    },
+
+    "table": {
+      "id": "الرقم",
+      "full_name": "الاسم الكامل",
+      "username": "اسم المستخدم",
+      "last_login": "آخر تسجيل دخول",
+      "actions": "الإجراءات"
+    },
+
+    "states": {
+      "no_users": "لا يوجد مستخدمون",
+      "never": "أبدًا"
+    }
+  },
+
+  "UserModal": {
+    "title": {
+      "add": "إضافة مستخدم",
+      "edit": "تعديل المستخدم"
+    },
+
+    "sections": {
+      "personal": "البيانات الشخصية وتسجيل الدخول",
+      "permissions": "الصلاحيات"
+    },
+
+    "fields": {
+      "full_name": "الاسم الكامل",
+      "username": "اسم المستخدم",
+      "password": "كلمة المرور",
+      "new_password": "كلمة مرور جديدة (اختياري)"
+    },
+
+    "permissions": {
+      "module": "الوحدة",
+      "view": "عرض",
+      "create": "إضافة",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "all": "الكل"
+    },
+
+    "modules": {
+      "sales": "المبيعات",
+      "refunds": "المرتجعات",
+      "items": "الأصناف",
+      "clients": "العملاء",
+      "users": "إدارة المستخدمين",
+      "company_config": "إعدادات الشركة",
+      "stock_management": "إدارة المخزون"
+    },
+
+    "toggles": {
+      "dashboard": "الوصول إلى لوحة التحكم",
+      "reports": "الوصول إلى التقارير",
+      "einvoicing": "تفعيل الفوترة الإلكترونية"
+    },
+
+    "annotations": {
+      "dashboard": "يسمح للمستخدم بعرض لوحة التحكم الرئيسية بما في ذلك الإحصائيات والمخططات وملخصات النظام.",
+      "reports": "يسمح للمستخدم بعرض وطباعة وإنشاء تقارير النظام مثل المبيعات والمرتجعات والتحليلات.",
+      "einvoicing": "يسمح للمستخدم بمشاركة الفواتير مع منصة ضريبة الدخل (فواتير)، بما في ذلك الفواتير والمرتجعات ومتابعة عملية الفوترة الإلكترونية."
+    },
+
+    "actions": {
+      "cancel": "إلغاء",
+      "create": "إنشاء مستخدم",
+      "save": "حفظ التعديلات"
+    }
+  },
+
+   "SystemConfig": {
+    "header": {
+      "title": "إعدادات النظام",
+      "subtitle": "تحديث بيانات الشركة وبيانات الربط مع واجهة البرمجة"
+    },
+
+    "sections": {
+      "company_info": "معلومات الشركة",
+      "api_credentials": "بيانات الربط مع منصة ضريبة الدخل"
+    },
+
+    "fields": {
+      "company_name": "اسم الشركة",
+      "tax_number": "الرقم الضريبي",
+      "tax_serial": "الرقم التسلسلي الضريبي",
+      "phone": "رقم الهاتف",
+      "email": "البريد الإلكتروني للشركة",
+      "location": "موقع الشركة",
+      "client_id": "معرّف العميل",
+      "secret_key": "المفتاح السري",
+      "invoice_terms": "شروط الفاتورة"
+    },
+
+    "placeholders": {
+      "company_name": "أدخل اسم الشركة",
+      "tax_number": "أدخل الرقم الضريبي",
+      "tax_serial": "أدخل الرقم التسلسلي الضريبي",
+      "phone": "أدخل رقم هاتف الشركة",
+      "email": "أدخل البريد الإلكتروني للشركة",
+      "location": "أدخل موقع الشركة",
+      "client_id": "أدخل معرّف العميل",
+      "secret_key": "أدخل المفتاح السري",
+      "invoice_terms": "أدخل الشروط التي ستظهر في الفاتورة"
+    },
+
+    "logo": {
+      "upload_hint": "اسحب الشعار هنا أو اضغط للتحميل",
+      "formats": "PNG أو JPG أو JPEG فقط",
+      "alt": "شعار الشركة",
+      "upload_failed": "فشل رفع الشعار"
+    },
+
+    "actions": {
+      "save": "حفظ الإعدادات",
+      "saving": "جاري الحفظ..."
+    },
+
+    "messages": {
+      "load_failed": "فشل تحميل بيانات الشركة",
+      "save_success": "تم حفظ إعدادات الشركة بنجاح!",
+      "save_failed": "فشل حفظ إعدادات الشركة"
+    }
+  },
+  "LogoutConfirm": {
+    "title": "تسجيل الخروج",
+    "message": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+
+    "states": {
+      "logging_out": "جاري تسجيل الخروج..."
+    },
+
+    "actions": {
+      "confirm": "نعم، تسجيل الخروج",
+      "cancel": "إلغاء"
+    }
+  },
+
+    "Login": {
+    "placeholders": {
+      "tenant_code": "رمز الشركة",
+      "username": "اسم المستخدم",
+      "password": "كلمة المرور"
+    },
+
+    "actions": {
+      "login": "تسجيل الدخول",
+      "remember_me": "تذكرني",
+      "ok": "موافق"
+    },
+
+    "errors": {
+      "tenant_required": "رمز الشركة مطلوب",
+      "username_required": "اسم المستخدم مطلوب",
+      "password_required": "كلمة المرور مطلوبة",
+      "invalid_credentials": "رمز الشركة أو اسم المستخدم أو كلمة المرور غير صحيحة",
+      "no_access": "لا تملك صلاحية الوصول إلى أي وحدة."
+    },
+
+    "states": {
+      "logging_in": "جاري تسجيل الدخول..."
+    },
+
+    "plan_expired": {
+      "title": "انتهى الاشتراك",
+      "message": "انتهت صلاحية الاشتراك أو تم تعطيله. يرجى التواصل مع الدعم لإعادة تفعيل الحساب."
+    },
+
+    "language": {
+      "title": "اللغة",
+      "subtitle": "اختر اللغة المفضلة"
+    },
+
+    "branding": {
+      "powered_by": "بدعم من"
+    }
+  }
+
+}

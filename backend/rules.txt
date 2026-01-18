@@ -1,0 +1,109 @@
+SELECT
+  'EXPORT' AS tax_category,
+
+  -- Total sales BEFORE tax
+  ROUND(
+    SUM(
+      CASE
+        WHEN il.tax = 0 THEN il.total
+        ELSE il.total / (1 + il.tax / 100)
+      END
+    ),
+    3
+  ) AS total_sales,
+
+  -- Total tax amount
+  ROUND(
+    SUM(
+      CASE
+        WHEN il.tax = 0 THEN 0
+        ELSE il.total - (il.total / (1 + il.tax / 100))
+      END
+    ),
+    3
+  ) AS total_tax,
+
+  -- Total sales INCLUDING tax
+  ROUND(
+    SUM(il.total),
+    3
+  ) AS total_with_tax
+
+FROM invoice_header ih
+JOIN invoice_lines il
+  ON il.invoice_number = ih.invoice_number
+
+WHERE ih.type2 = 'export'
+  AND ih.date >= $1
+  AND ih.date <  $2;
+
+
+=====================================================================================
+
+
+
+/* ===============================
+   LOCAL INVOICES – NORMAL TAX
+   =============================== */
+SELECT
+  il.tax AS tax_percentage,
+  'LOCAL' AS tax_category,
+
+  ROUND(
+    SUM(
+      CASE
+        WHEN il.tax = 0 THEN il.total
+        ELSE il.total / (1 + il.tax / 100)
+      END
+    ),
+    3
+  ) AS total_sales,
+
+  ROUND(
+    SUM(
+      CASE
+        WHEN il.tax = 0 THEN 0
+        ELSE il.total - (il.total / (1 + il.tax / 100))
+      END
+    ),
+    3
+  ) AS total_tax,
+
+  ROUND(SUM(il.total), 3) AS total_with_tax
+
+FROM invoice_header ih
+JOIN invoice_lines il
+  ON il.invoice_number = ih.invoice_number
+
+WHERE ih.type2 = 'local'
+  AND ih.date >= $1
+  AND ih.date <  $2
+
+GROUP BY il.tax
+
+
+UNION ALL
+
+
+/************************************
+  NON-LOCAL EXEMPT SALES (SEPARATE ROW)
+ ************************************/
+SELECT
+  0 AS tax_percentage,
+  'NON_LOCAL_EXEMPT' AS tax_category,
+
+  ROUND(SUM(il.total), 3) AS total_sales,
+  0 AS total_tax,
+  ROUND(SUM(il.total), 3) AS total_with_tax
+
+FROM invoice_header ih
+JOIN invoice_lines il
+  ON il.invoice_number = ih.invoice_number
+
+WHERE ih.type2 <> 'local'
+  AND il.exempt = true
+  AND ih.date >= $1
+  AND ih.date <  $2
+
+
+ORDER BY tax_percentage DESC, tax_category;

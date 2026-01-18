@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure consistent box model behavior */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+ html[dir="rtl"] {
+  direction: rtl;
+}
+
+html[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+  input, select,  .datepicker-input {
+    width: 100%;
+    display: block;
+    box-sizing: border-box;
+  }
+
+  @media print {
+  body {
+    margin: 0;
+    color: black;
+  }
+
+  .page {
+    page-break-after: always;
+  }
+
+  .printable {
+    font-family: Arial, sans-serif;
+    color: black;
+  }
+
+  .bg-quote-cover {
+    background-image: url('/assets/quote-bg.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: top center;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+  

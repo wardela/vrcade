@@ -1,0 +1,1532 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "invoices": "Invoices",
+    "refunds": "Refund Invoices",
+    "unshared": "Unshared Invoices",
+    "items": "Items",
+    "storage": "Storage",
+    "clients": "Clients Management",
+    "reports": "Reports",
+    "users": "User Management",
+    "company": "Company Config",
+    "logout": "Logout"
+  },
+ "settings": {
+    "title": "Settings",
+    "subtitle": "Application preferences",
+
+    "tabs": {
+      "language": "Language",
+      "zoom": "Zoom",
+      "about": "Contact & About"
+    },
+
+    "language": {
+      "title": "Language",
+      "description": "Choose the language used across the entire system",
+
+      "english": {
+        "name": "English",
+        "description": "Default system language"
+      },
+
+      "arabic": {
+        "name": "Arabic",
+        "description": "Full Arabic interface"
+      },
+
+      "active": "ACTIVE"
+    },
+
+    "zoom": {
+      "title": "Magnification",
+      "description": "Increase visual size for better readability",
+      "level": "Magnification level",
+      "footer": "Starts at 100% and increases only"
+    },
+
+    "about": {
+      "app_name": "Fawtrtak Financial Management Platform",
+
+      "powered_by": "Powered by",
+
+      "sections": {
+        "about": "About the Application",
+        "contact": "Contact Information",
+        "version": "Application Version"
+      },
+
+      "description": "Fawtrtak™ is a financial management platform built for accurate invoicing, reporting, and regulatory compliance.",
+
+      "contact": {
+        "email": "Email",
+        "phone": "Phone"
+      }
+    }
+  },
+  "kpi": {
+    "title": "Insights",
+    "total_sales": "Total Sales",
+    "total_refunds": "Total Refunds",
+    "net_profit": "Net Profit",
+    "invoices": "Invoices"
+    },
+      "SalesDash": {
+    "title": "Sales",
+    "prev_year": "Previous year",
+    "next_year": "Next year",
+
+    "months_label": "12 months",
+
+    "sales_total_amount": "Sales (Total Amount)",
+    "sales_count": "Sales (Count)",
+    "sales_by_type": "Sales by Type",
+    "refunds_total_amount": "Refunds (Total Amount)"
+  },
+  "DashOverview": {
+    "title": "Overview",
+
+    "prev_year": "Previous year",
+    "next_year": "Next year",
+
+    "months_12": "12 months",
+
+    "net_title": "Net (Sales − Refunds)",
+
+    "low_stock_title": "Low Stock Alerts",
+    "low_stock_items": " items",
+    "low_stock_empty": "No low stock alerts.",
+    "low_stock_min": "Min",
+    "low_stock_current": "Current",
+    "low_stock_deficit": "Deficit",
+
+    "recent_sales_title": "Recent Sales",
+    "recent_sales_last": "Last 10",
+    "table_invoice": "Invoice",
+    "table_client": "Client",
+    "table_total": "Total",
+    "table_actions": "Actions",
+    "preview": "Preview",
+    "print": "Print",
+
+    "avg_invoice_title": "Avg Invoice Total / Month",
+    "avg_invoice_hint": "Avg = (month sales total) ÷ (month invoices count)"
+  },
+   "DashInventory": {
+    "title": "Inventory",
+
+    "prev_year": "Previous year",
+    "next_year": "Next year",
+
+    "months_12": "12 months",
+
+    "top_items_title": "Top 3 Selling Items",
+
+    "dead_items_title": "Dead Items",
+    "dead_items_hint": "Items with no sales during the selected year",
+    "dead_items_empty": "No dead items detected.",
+    "dead_items_zero": "0 sold",
+
+    "stock_movement_title": "Stock Movement (IN vs OUT)",
+    "stock_movement_sub": "Monthly totals",
+
+    "stock_in": "Stock In",
+    "stock_out": "Stock Out"
+  },
+    "DashClients": {
+    "title": "Clients",
+
+    "prev_year": "Previous year",
+    "next_year": "Next year",
+
+    "months_12": "12 months",
+
+    "top_spending_title": "Top Clients by Spending",
+    "top_spending_hint": "Total amount spent this year",
+
+    "top_sales_count_title": "Top Clients by Sales Count",
+    "top_sales_count_hint": "Number of invoices issued"
+  },
+
+  
+   "Invoices": {
+    "recent_invoices": "Recent Invoices",
+    "hide_invoice_list": "Hide invoice list",
+    "show_invoice_list": "Show invoice list",
+
+    "search_placeholder": "Search…",
+    "search": "Search",
+    "filter": "Filter",
+    "load_more": "Load More",
+    "loading": "Loading...",
+
+    "table": {
+      "number": "#",
+      "client": "Client",
+      "total": "Total (JD)"
+    },
+
+    "create_view_invoice": "Create / View Invoice",
+    "new_invoice": "New Invoice",
+    "calculator": "Calculator",
+
+    "invoice_number": "Invoice Number",
+    "invoice_number_placeholder": "ReadOnly",
+
+    "client_name": "Client Name",
+    "client_name_placeholder": "Enter client name",
+
+    "date": "Date",
+
+    "payment_type": "Payment Type",
+    "payment_credit": "Credit",
+    "payment_cash": "Cash",
+
+    "currency": "Currency",
+
+    "client_detail": "Client Detail",
+    "client_detail_tax": "Tax Number",
+    "client_detail_national": "National ID",
+    "client_detail_personal": "Personal Number",
+    "client_detail_placeholder": "Enter ID value",
+
+    "invoice_type": "Invoice Type",
+    "invoice_type_local": "Local",
+    "invoice_type_export": "Export",
+    "invoice_type_development": "Development Area",
+
+    "client_phone": "Client Phone",
+    "client_phone_placeholder": "Optional phone number",
+
+    "notes": "Notes",
+    "notes_placeholder": "Add notes...",
+
+    "expand_header": "Expand header",
+    "collapse_header": "Collapse header",
+
+    "items": {
+      "exempt": "Ex.",
+      "serial": "#",
+      "item_id": "Item ID",
+      "name": "Name",
+      "item_notes": "Notes",
+      "unit_price_incl": "Unit Price (Incl.)",
+      "tax_percent": "Tax %",
+      "unit_price_excl": "Unit Price (Excl.)",
+      "unit": "Unit",
+      "qty": "Qty",
+      "storage": "Storage",
+      "discount_percent": "Disc %",
+      "discount_value": "Disc Value",
+      "tax_value": "Tax Value",
+      "total_incl": "Total Incl.",
+      "delete": "Del",
+      "select_storage": "Select..."
+    },
+
+    "add_empty_line": "+ Empty line",
+    "add_item": "+ Add Item",
+    "calculator_copy": "Copy Result & Close",
+    "actions": {
+      "save": "Save",
+      "save_and_share": "Save & Share",
+      "share": "Share",
+      "print": "Print",
+      "delete_line": "Delete line"
+    },
+
+    "totals": {
+      "total_before_tax": "Total Before Tax",
+      "total_tax": "Total Tax",
+      "grand_total": "Grand Total"
+    },
+
+    "messages": {
+      "invoice_saved": "Invoice saved successfully",
+      "invoice_shared": "Invoice shared successfully",
+      "cannot_save": "Cannot save invoice",
+      "failed_save": "Failed to save invoice",
+      "failed_search": "Failed to search invoices",
+      "failed_init": "Failed to initialize new invoice",
+
+      "client_required_credit": "A client must be selected for credit invoices",
+      "invalid_exempt": "Exempt items require Client Detail to be a Tax Number and filled.",
+      "no_items": "Invoice must contain at least one item",
+      "invalid_items": "All items must be selected from the item list",
+      "missing_storage": "All stocked items must have a storage selected",
+
+      "item_required": "Item ID is required ",
+      "item_not_found": "Item not found ",
+      "exempt_requires_tax": "To mark an item as exempt, Client Detail must be a Tax Number and must be filled."
+    }
+  },
+
+   "ClientList": {
+    "title": "Select Client",
+    "add_client": "Add Client",
+
+    "search_placeholder": "Search by ID, Name, or ID Value...",
+
+    "table": {
+      "id": "ID",
+      "name": "Name",
+      "phone": "Phone",
+      "type": "Type",
+      "value": "Value",
+      "select": "Select"
+    },
+
+    "detail_types": {
+      "TN": "Tax Number",
+      "NIN": "National ID",
+      "PN": "Personal Number"
+    },
+
+    "select_button": "Select",
+
+    "no_phone": "-",
+    "no_value": "-",
+
+    "empty": "No clients found"
+  },
+  "InvoiceFilter": {
+    "title": "Invoice Filter",
+    "subtitle": "Filter, search and inspect invoices",
+
+    "from": "From",
+    "to": "To",
+
+    "search_label": "Search Invoice #",
+    "search_placeholder": "6XXXXX",
+
+    "apply": "Apply",
+    "export_excel": "Export to Excel",
+
+    "only_unshared": "Only unshared",
+
+    "loading": "Loading...",
+    "no_results": "No invoices match the filter",
+
+    "table": {
+      "invoice_number": "Invoice #",
+      "pos": "POS",
+      "date": "Date",
+      "total": "Total",
+      "status": "Status"
+    },
+
+    "status": {
+      "shared": "Shared",
+      "unshared": "Unshared"
+    },
+
+    "footer": {
+      "showing": "Showing ",
+      "grand_total": "Grand Total"
+    },
+
+    "excel": {
+      "invoice_number": "Invoice Number",
+      "pos": "POS",
+      "date": "Date",
+      "total": "Total (JD)",
+      "status": "Status",
+      "sheet_name": "Invoices",
+      "file_name": "Invoices_{{from}}_to_{{to}}.xlsx"
+    },
+
+    "messages": {
+      "fetch_failed": "Failed to fetch invoices",
+      "no_export_data": "No invoices to export"
+    }
+  },
+
+   "RefundInvoices": {
+    "sidebar": {
+      "title": "Invoices",
+      "hide_list": "Hide list",
+      "show_list": "Show list",
+
+      "mode_original_full": "Original Invoices",
+      "mode_original_short": "Original",
+
+      "mode_refund_full": "Refund Invoices",
+      "mode_refund_short": "Refund",
+
+      "search_placeholder": "Search invoice number…",
+      "search_button": "Search",
+
+      "load_more": "Load More",
+      "loading": "Loading..."
+    },
+
+    "table": {
+      "invoice": "Invoice",
+      "client": "Client",
+      "total": "Total",
+
+      "refund_number": "Refund #",
+      "original_invoice": "Original"
+    },
+
+    "builder": {
+      "title": "Refund Invoice",
+
+      "save": "Save Refund",
+      "saving": "Saving...",
+
+      "empty_hint": "Select an invoice from the left to start refunding it.",
+
+      "original_invoice": "Original Invoice",
+      "invoice_date": "Invoice Date",
+      "client": "Client",
+      "original_total": "Original Total",
+
+      "refund_reason": "Refund Reason",
+      "refund_reason_placeholder": "Write the reason for refund...",
+
+      "refund_date": "Refund Date",
+
+      "return_to_storage": "Return refunded items to storage"
+    },
+
+    "lines": {
+      "line": "#",
+      "item": "Item",
+      "price": "Price",
+      "discount_pct": "Disc %",
+      "tax_pct": "Tax %",
+      "net_per_unit": "Net / Unit",
+      "original_qty": "Orig Qty",
+      "refunded_qty": "Refunded",
+      "available_qty": "Available",
+      "refund_qty": "Refund Qty",
+      "refund_value": "Refund Value"
+    },
+
+    "footer": {
+      "refunding_from": "Refunding from",
+      "no_invoice": "No invoice selected",
+      "refund_total": "Refund Total"
+    },
+
+    "messages": {
+      "search_failed": "Failed to search invoices",
+      "open_failed": "Failed to open invoice",
+
+      "select_invoice": "Select an invoice first",
+      "enter_qty": "Enter at least one refund quantity",
+      "reason_required": "Refund reason is required",
+
+      "save_failed": "Failed to save refund",
+
+  "saved_success": "Refund saved successfully"
+    }
+  },
+
+   "RefundView": {
+    "subtitle": "Refund Invoice",
+
+    "buttons": {
+      "print": "Print",
+      "share": "Share",
+      "close": "Close"
+    },
+
+    "loading": "Loading refund invoice...",
+
+    "info": {
+      "refund_date": "Refund Date",
+      "original_invoice": "Original Invoice",
+      "reason": "Reason"
+    },
+
+    "table": {
+      "serial": "#",
+      "item": "Item",
+      "orig_qty": "Orig Qty",
+      "refund_qty": "Refund Qty",
+      "price": "Price",
+      "tax_pct": "Tax %",
+      "disc_pct": "Disc %",
+      "line_total": "Line Total",
+      "empty_value": "—"
+    },
+
+    "totals": {
+      "refund_total": "Refund Total"
+    },
+
+    "share": {
+      "success": "Refund invoice {{number}} shared successfully",
+      "failed": "Failed to share refund invoice",
+
+      "confirm_title": "Share Refund Invoice",
+      "confirm_message": "Sharing refund invoice {{number}} with ISTD.\nAfter sharing, edits cannot be made.",
+      "confirm_yes": "Yes, Share",
+      "confirm_no": "No"
+    }
+  },
+
+
+   "SelectItem": {
+    "title": "Select Item",
+    "subtitle": "Choose an item to add to the invoice",
+
+    "search_placeholder": "Search by name, code, or ID",
+
+    "category_all": "All Categories",
+
+    "favorites": "Favorite",
+
+    "item": {
+      "id": "ID",
+      "code": "Code",
+      "price": "Price",
+      "currency": "JOD",
+
+      "not_stocked": "Not stocked item",
+      "stock": "Stock: "
+    },
+
+    "badges": {
+      "favorite": "★ Favorite"
+    },
+
+    "empty": "No items found",
+
+    "actions": {
+      "cancel": "Cancel",
+      "select": "Select Item"
+    }
+  },
+
+    "ShareConfirm": {
+    "title": "Sharing Invoice ",
+
+    "confirm_title": "Confirm Invoice Sharing?",
+    "confirm_message": "After sharing with ISTD, this invoice will be locked and cannot be edited or modified.",
+
+    "actions": {
+      "no": "No",
+      "yes": "Yes, Share"
+    }
+  },
+
+  "UnsharedInvoices": {
+    "title": "Unshared Invoices",
+
+    "controls": {
+      "select_date": "Select Date",
+      "search_invoice": "Search Invoice",
+      "search_placeholder": "Type to filter…",
+      "load": "Load"
+    },
+
+    "loading": "Loading…",
+
+    "empty": {
+      "no_date": "No unshared invoices for this date",
+      "no_selected": "No invoices selected"
+    },
+
+    "table": {
+      "invoice_number": "Invoice #",
+      "pos": "POS",
+      "total": "Total",
+      "time": "Time"
+    },
+
+    "right_panel": {
+      "title": "Selected Invoices",
+      "remove": "remove",
+      "share_selected": "Share Selected"
+    },
+
+    "messages": {
+      "fetch_failed": "Failed to fetch unshared invoices",
+      "select_one": "Select at least one invoice",
+      "share_success": "Invoices shared successfully",
+      "share_failed": "Failed to share invoices"
+    }
+  },
+
+  "ItemsScreen": {
+    "title": "Items & Categories",
+
+    "buttons": {
+      "units": "Units",
+      "add_item": "+ Add Item",
+      "manage_categories": "Manage",
+      "favorites": "Favorites",
+      "search_all": "Search all items"
+    },
+
+    "sections": {
+      "categories": "Categories",
+      "items": "Items",
+      "items_in_category": "Items in Category",
+      "favorite_items": "Favorite Items"
+    },
+
+    "search": {
+      "category_placeholder": "Search in this category…",
+      "favorites_placeholder": "Search favorites…"
+    },
+
+    "table": {
+      "id": "ID",
+      "code": "Code",
+      "name": "Name",
+      "unit": "Unit",
+      "price": "Price",
+      "tax": "Tax %",
+      "category": "Category",
+      "stock": "Stock",
+      "favorite": "Fav"
+    },
+
+    "empty": {
+      "no_items": "No items in this category."
+    }
+  },
+
+   "CategoryModal": {
+    "title": "Manage Categories",
+
+    "form": {
+      "name_placeholder": "Category Name",
+      "add": "Add",
+      "update": "Update"
+    },
+
+    "table": {
+      "id": "ID",
+      "name": "Name"
+    },
+
+    "empty": {
+      "no_categories": "No categories found."
+    }
+  },
+
+  "UnitsModal": {
+    "title": "Manage Units",
+
+    "form": {
+      "name_placeholder": "Unit Name",
+      "description_placeholder": "Description",
+      "add": "Add",
+      "update": "Update"
+    },
+
+    "table": {
+      "id": "ID",
+      "name": "Name",
+      "description": "Description"
+    },
+
+    "empty": {
+      "no_units": "No units available"
+    }
+  },
+   "ItemCard": {
+    "title_add": "Add New Item",
+    "title_edit": "Edit Item",
+
+    "sections": {
+      "basics": "Basics",
+      "classification": "Classification",
+      "financials": "Financials",
+      "initial_stock": "Initial Stock per Storage",
+      "stock_controls": "Stock Controls",
+      "standard_settings": "Standard Settings",
+      "notes": "Notes"
+    },
+
+    "fields": {
+      "item_id": "Item ID",
+      "item_id_auto": "Auto-Generated",
+
+      "name": "Name",
+      "code": "Code / Barcode (Optional)",
+
+      "category": "Category",
+      "unit": "Unit",
+
+      "price_incl": "Price (Incl. Tax)",
+      "price_excl": "Price (Excl. Tax)",
+      "tax_pct": "Tax %",
+
+      "stock_managed": "Stock Managed Item",
+      "stock_hint": "Disable for services or unlimited items",
+
+      "min_qty": "Minimum Qty Alert",
+      "min_qty_hint": "Notify when stock reaches this value",
+
+      "default_storage": "Default Storage",
+      "default_storage_hint": "Used as the primary storage for sales & adjustments",
+
+      "standard_discount": "Standard Discount %",
+      "standard_qty": "Standard Qty",
+
+      "favorite": "Mark as Favorite Item"
+    },
+
+    "actions": {
+      "save": "Save Item",
+      "save_changes": "Save Changes",
+      "select": "Select...",
+      "select_storage": "Select storage..."
+    },
+
+    "errors": {
+      "name_required": "Item name is required",
+      "category_required": "Category is required",
+      "unit_required": "Unit is required",
+      "price_required": "Price must be greater than zero",
+      "default_storage_required": "Default storage is required for stocked items"
+    },
+
+    "messages": {
+      "load_failed": "Failed to load item data",
+      "save_failed": "Failed to save"
+    }
+  },
+   "ItemSearchModal": {
+    "title": "Item Search",
+    "subtitle": "Search by ID, name, or code across all categories",
+
+    "search": {
+      "placeholder": "Type item ID, name, or code",
+      "button": "Search"
+    },
+
+    "table": {
+      "id": "ID",
+      "code": "Code",
+      "name": "Name",
+      "category": "Category",
+      "price": "Price",
+      "stock": "Stock"
+    },
+
+    "states": {
+      "loading": "Searching items…",
+      "empty": "No items found"
+    },
+
+    "footer": {
+      "hint": "Click any item to open it for editing"
+    }
+  },
+  "StorageMonitor": {
+    "title": "Storage Management",
+
+    "actions": {
+      "adjust_stock": "Adjust Stock",
+      "manage_storages": "Manage Storages",
+      "apply": "Apply",
+      "print": "Print",
+      "load_more": "Load more"
+    },
+
+    "tabs": {
+      "storages": "Storages",
+      "movements": "Movements"
+    },
+
+    "storages": {
+      "items": "Items",
+      "total_qty": "Total Qty",
+      "location": "Location",
+      "items_in": "Items in",
+      "search_placeholder": "Search by ID, code, or name..."
+    },
+
+    "table": {
+      "id": "ID",
+      "code": "Code",
+      "item_name": "Item Name",
+      "quantity": "Quantity",
+      "unit": "Unit",
+
+      "date": "Date",
+      "storage": "Storage",
+      "direction": "Dir",
+      "type": "Type",
+      "reference": "Ref",
+      "action": "Action",
+      "price": "Price"
+    },
+
+    "filters": {
+      "from": "From",
+      "to": "To"
+    },
+
+    "states": {
+      "no_items": "No items matched",
+      "no_movements": "No movements recorded"
+    }
+  },
+
+   "StorageTransactionModal": {
+    "title": "Manual Storage Adjustment",
+    "subtitle": "Adjust inventory manually (IN / OUT / TRANSFER)",
+
+    "search": {
+      "placeholder": "Search by name, code, or ID",
+      "all_categories": "All Categories",
+      "favorites": "Favorites"
+    },
+
+    "transaction": {
+      "type_in": "IN – Add Stock",
+      "type_out": "OUT – Remove Stock",
+      "type_transfer": "TRANSFER – Move Between Storages",
+      "from_storage": "From storage",
+      "to_storage": "To storage",
+      "quantity": "Quantity",
+      "notes": "Notes (optional)"
+    },
+
+    "actions": {
+      "confirm": "Confirm Adjustment"
+    },
+
+    "messages": {
+      "missing_item_qty": "Please select item and quantity"
+    }
+  },
+
+  "QuickStorageAdjustModal": {
+    "title": "Adjust Stock",
+
+    "fields": {
+      "direction": "Direction",
+      "quantity": "Quantity",
+      "notes": "Notes"
+    },
+
+    "directions": {
+      "in": "IN",
+      "out": "OUT"
+    },
+
+    "actions": {
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
+  },
+
+    "ManageStoragesModal": {
+    "title": "Manage Storages",
+    "subtitle": "Create and edit storage locations",
+
+    "list": {
+      "empty": "No storages yet"
+    },
+
+    "form": {
+      "name_placeholder": "Storage name",
+      "location_placeholder": "Location (optional)"
+    },
+
+    "actions": {
+      "cancel": "Cancel",
+      "add": "Add Storage",
+      "update": "Update Storage"
+    }
+  },
+    "ClientCard": {
+    "phone_title": "Phone",
+    "no_phone": "No phone provided"
+  },
+
+    "ClientsScreen": {
+    "title": "Clients",
+    "subtitle": "Manage and view all registered clients",
+
+    "actions": {
+      "add_client": "Add Client"
+    },
+
+    "search": {
+      "placeholder": "Search clients by name or phone"
+    },
+
+    "states": {
+      "loading": "Loading clients…",
+      "empty": "No clients found."
+    }
+  },
+  "CreateClientModal": {
+    "title": "Add Client",
+    "subtitle": "Client identification and contact information",
+
+    "sections": {
+      "required": "Required Information",
+      "optional": "Optional Information"
+    },
+
+    "fields": {
+      "name": "Client Name",
+      "phone": "Phone Number",
+      "phone_hint": "Phone always starts with 07. You can add the remaining digits only.",
+
+      "detail_type": "Detail Type",
+      "detail_value": "Detail Value",
+
+      "email": "Email",
+      "location": "Location",
+      "notes": "Notes"
+    },
+
+    "detail_types": {
+      "nin": "National ID",
+      "tn": "Tax Number",
+      "pn": "Passport Number"
+    },
+
+    "placeholders": {
+      "phone": "XXXXXXXX",
+      "email": "Email",
+      "location": "Location",
+      "notes": "Notes"
+    },
+
+    "hints": {
+      "detail_value_required": "Required only when detail type is Tax Number."
+    },
+
+    "actions": {
+      "cancel": "Cancel",
+      "create": "Create Client",
+      "saving": "Saving..."
+    },
+
+    "errors": {
+      "name_required": "Client name is required",
+      "tax_required": "Tax Number is required when detail type is Tax Number",
+      "submit_failed": "Failed to create client. Please try again."
+    }
+  },
+
+  "ClientProfileScreen": {
+    "actions": {
+      "back": "← Back"
+    },
+
+    "title": {
+      "default": "Client Profile",
+      "subtitle": "Client profile overview"
+    },
+
+    "tabs": {
+      "main": "Main",
+      "history": "History",
+      "stats": "Statistics"
+    }
+  },
+
+  "ProfileMainTab": {
+    "states": {
+      "loading_client": "Loading client...",
+      "client_not_found": "Client not found",
+      "loading_chart": "Loading chart...",
+      "loading_invoices": "Loading invoices...",
+      "no_invoices": "No invoices found"
+    },
+
+    "actions": {
+      "edit": "Edit"
+    },
+
+    "placeholders": {
+      "no_phone": "No phone",
+      "no_notes": "No notes added."
+    },
+
+    "sections": {
+      "personal_info": "Personal Information",
+      "identification": "Identification",
+      "notes": "Notes"
+    },
+
+    "fields": {
+      "email": "Email",
+      "location": "Location",
+      "dob": "Date of Birth",
+      "detail_type": "Detail Type",
+      "detail_value": "Detail Value"
+    },
+
+    "meta": {
+      "created_on": "Created on"
+    },
+
+    "charts": {
+      "spending_title": "Spending by Month",
+      "spending_subtitle": "Total {{year}}: {{total}} JD",
+      "sales_count_title": "Sales Count by Month",
+      "sales_count_subtitle": "Number of invoices issued"
+    },
+
+    "recent_sales": {
+      "title": "Recent Sales",
+      "subtitle": "Last 10 invoices for this client"
+    },
+
+    "table": {
+      "invoice": "Invoice",
+      "date": "Date",
+      "total": "Total (JD)",
+      "actions": "Actions"
+    }
+  },
+
+  "EditClientModal": {
+    "title": "Edit Client",
+    "subtitle": "Update client identification and contact information",
+
+    "sections": {
+      "required": "Required Information",
+      "optional": "Optional Information"
+    },
+
+    "fields": {
+      "name": "Client Name",
+      "phone": "Phone Number",
+      "phone_hint": "Phone always starts with 07. You can edit the remaining digits only.",
+
+      "detail_type": "Detail Type",
+      "detail_value": "Detail Value",
+
+      "email": "Email",
+      "location": "Location",
+      "notes": "Notes"
+    },
+
+    "detail_types": {
+      "nin": "National ID",
+      "tn": "Tax Number",
+      "pn": "Passport Number"
+    },
+
+    "placeholders": {
+      "phone": "XXXXXXXX",
+      "email": "Email",
+      "location": "Location",
+      "notes": "Notes"
+    },
+
+    "hints": {
+      "detail_value_required": "Required only when detail type is Tax Number."
+    },
+
+    "actions": {
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saving": "Saving..."
+    },
+
+    "errors": {
+      "name_required": "Client name is required",
+      "tax_required": "Tax Number is required when detail type is Tax Number",
+      "submit_failed": "Failed to update client. Please try again."
+    }
+  },
+
+    "ProfileHistoryTab": {
+    "header": {
+      "title": "Invoice History",
+      "subtitle": "Filter and view all invoices for this client"
+    },
+
+    "filters": {
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "clear": "Clear"
+    },
+
+    "actions": {
+      "export_excel": "Export to Excel",
+      "view": "View",
+      "print": "Print"
+    },
+
+    "states": {
+      "loading": "Loading invoices...",
+      "empty": "No invoices found",
+      "no_export": "No invoices to export"
+    },
+
+    "table": {
+      "invoice": "Invoice",
+      "date": "Date",
+      "total": "Total (JD)",
+      "actions": "Actions"
+    }
+  },
+
+  "InvoiceViewPopup": {
+    "header": {
+      "preview": "Preview"
+    },
+
+    "actions": {
+      "close": "Close"
+    },
+
+    "states": {
+      "loading": "Loading invoice..."
+    },
+
+    "info": {
+      "date": "Date",
+      "payment": "Payment",
+      "type": "Type",
+      "currency": "Currency",
+      "empty": "—"
+    },
+
+    "table": {
+      "index": "#",
+      "item": "Item",
+      "qty": "Qty",
+      "unit": "Unit Price",
+      "tax": "Tax %",
+      "discount": "Disc %",
+      "total": "Total"
+    },
+
+    "totals": {
+      "grand_excl": "Grand Total Excl.",
+      "tax_total": "Tax Total",
+      "grand": "Grand Total"
+    }
+  },
+
+  "ReportsScreen": {
+    "title": "Reports",
+
+    "tabs": {
+      "sales": "Sales",
+      "refunds": "Refunds",
+      "tax": "Tax",
+      "storage": "Storage & Items"
+    }
+  },
+
+   "SalesReports": {
+    "filters": {
+      "report": "Report",
+      "from": "From",
+      "to": "To",
+      "area": "Area",
+      "apply": "Apply",
+      "select_client": "Select Client",
+      "selected_client": "Selected Client"
+    },
+
+    "report_types": {
+      "general": "General Sales",
+      "by_client": "Sales by Client",
+      "by_area": "Sales by Area",
+      "by_currency": "Sales by Currency"
+    },
+
+    "areas": {
+      "local": "Local",
+      "export": "Export",
+      "development": "Development"
+    },
+
+    "actions": {
+      "print": "Print",
+      "previous": "Previous",
+      "next": "Next"
+    },
+
+    "table": {
+      "invoice": "Invoice #",
+      "date": "Date",
+      "client": "Client",
+      "type": "Type",
+      "area": "Area",
+      "total": "Total"
+    },
+
+    "states": {
+      "loading": "Loading...",
+      "empty": "No records found",
+      "coming_soon": "Reports by currency coming soon!"
+    },
+
+    "summary": {
+      "showing": "Showing ",
+      "total_sales": "Total Sales"
+    }
+  },
+
+  "RefundReports": {
+    "filters": {
+      "report_type": "Report Type",
+      "from": "From",
+      "to": "To",
+      "client": "Client",
+      "select_client": "Select Client",
+      "apply": "Apply"
+    },
+
+    "report_types": {
+      "general": "General Refunds",
+      "by_client": "Refunds by Client"
+    },
+
+    "actions": {
+      "print": "Print"
+    },
+
+    "table": {
+      "refund": "Refund #",
+      "original_invoice": "Original Invoice #",
+      "date": "Date",
+      "client": "Client",
+      "type": "Type",
+      "total": "Total"
+    },
+
+    "states": {
+      "loading": "Loading..."
+    },
+
+    "summary": {
+      "showing": "Showing",
+      "total_refunds": "Total Refunds"
+    }
+  },
+
+  "EInvoicingReports": {
+    "filters": {
+      "report": "Report",
+      "from": "From",
+      "to": "To",
+      "status": "Status",
+      "apply": "Apply"
+    },
+
+    "report_types": {
+      "shared": "Shared / Unshared",
+      "tax": "Tax Declaration"
+    },
+
+    "status_types": {
+      "shared": "Shared",
+      "unshared": "Unshared"
+    },
+
+    "actions": {
+      "print": "Print"
+    },
+
+    "table": {
+      "invoice": "Invoice #",
+      "date": "Date",
+      "client": "Client",
+      "total": "Total",
+      "status": "Status",
+
+      "percent": "%",
+      "total_no_tax": "Total (No Tax)",
+      "tax": "Tax",
+      "total_incl": "Total (Incl.)"
+    },
+
+    "states": {
+      "loading": "Loading..."
+    },
+
+    "footer": {
+      "showing": "Showing ",
+      "total": "Total"
+    },
+
+    "tax_sections": {
+      "local": "LOCAL",
+      "exempt": "EXEMPT",
+      "export": "EXPORT",
+      "grand_total": "GRAND TOTAL"
+    }
+  },
+
+  "StorageItemReports": {
+    "filters": {
+      "report": "Report",
+      "from": "From",
+      "to": "To",
+      "storage": "Storage",
+      "direction": "Direction",
+      "apply": "Apply",
+      "select_item": "Select Item",
+      "select_storage": "Select a storage"
+    },
+
+    "report_types": {
+      "items_sales": "Items Sales Summary",
+      "item_sales_details": "Single Item Sales",
+      "storage_inventory": "Storage Inventory",
+      "storage_transactions": "Storage Transactions"
+    },
+
+    "directions": {
+      "both": "IN & OUT",
+      "in": "IN only",
+      "out": "OUT only"
+    },
+
+    "actions": {
+      "print": "Print",
+      "previous": "Previous",
+      "next": "Next"
+    },
+
+    "tables": {
+      "items_sales": {
+        "item": "Item",
+        "unit": "Unit",
+        "total_qty": "Total Qty",
+        "total_sales": "Total Sales"
+      },
+
+      "item_sales_details": {
+        "date": "Date",
+        "invoice": "Invoice #",
+        "client": "Client",
+        "qty": "Qty",
+        "unit": "Unit",
+        "total": "Total"
+      },
+
+      "storage_inventory": {
+        "item": "Item",
+        "qty": "Qty",
+        "unit": "Unit"
+      },
+
+      "storage_transactions": {
+        "date": "Date",
+        "item": "Item",
+        "storage": "Storage",
+        "dir": "Dir",
+        "qty": "Qty",
+        "unit": "Unit",
+        "ref": "Ref"
+      }
+    },
+
+    "states": {
+      "loading": "Loading...",
+      "no_records": "No records found",
+      "no_items": "No items found",
+      "no_transactions": "No transactions found"
+    },
+
+    "summary": {
+      "showing_items": "Showing ",
+      "showing_records": "Showing ",
+      "total_sales": "Total Sales: ",
+      "qty_total": "Qty: | Total: "
+    }
+  },
+
+    "UsersScreen": {
+    "title": "User Management",
+
+    "actions": {
+      "add": "Add User",
+      "view": "View",
+      "delete": "Delete",
+      "confirm_delete": "Delete this user?"
+    },
+
+    "table": {
+      "id": "ID",
+      "full_name": "Full Name",
+      "username": "Username",
+      "last_login": "Last Login",
+      "actions": "Actions"
+    },
+
+    "states": {
+      "no_users": "No users found",
+      "never": "Never"
+    }
+  },
+
+    "UserModal": {
+    "title": {
+      "add": "Add User",
+      "edit": "Edit User"
+    },
+
+    "sections": {
+      "personal": "Personal and Login",
+      "permissions": "Permissions"
+    },
+
+    "fields": {
+      "full_name": "Full Name",
+      "username": "Username",
+      "password": "Password",
+      "new_password": "New Password (optional)"
+    },
+
+    "permissions": {
+      "module": "Module",
+      "view": "View",
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete",
+      "all": "All"
+    },
+
+    "modules": {
+      "sales": "Sales",
+      "refunds": "Refunds",
+      "items": "Items",
+      "clients": "Clients",
+      "users": "User Management",
+      "company_config": "Company Config.",
+      "stock_management": "Stock Management"
+    },
+
+    "toggles": {
+      "dashboard": "Dashboard Access",
+      "reports": "Reports Access",
+      "einvoicing": "E-Invoicing Enabled"
+    },
+
+    "annotations": {
+      "dashboard": "Allows the user to view the main dashboard, including statistics, charts, and overall system summaries.",
+      "reports": "Allows the user to view, print and generate system reports such as sales, refunds, and analytics.",
+      "einvoicing": "Allows the user to share invoices with the ISTD platform (Fawtara), including invoices, refunds, and monitoring the E-Invoicing process."
+    },
+
+    "actions": {
+      "cancel": "Cancel",
+      "create": "Create User",
+      "save": "Save Changes"
+    }
+  },
+
+  "SystemConfig": {
+    "header": {
+      "title": "System Configuration",
+      "subtitle": "Update your company details and API credentials"
+    },
+
+    "sections": {
+      "company_info": "Company Information",
+      "api_credentials": "ISTD API Credentials"
+    },
+
+    "fields": {
+      "company_name": "Company Name",
+      "tax_number": "Tax Number",
+      "tax_serial": "Tax Serial",
+      "phone": "Phone Number",
+      "email": "Company Email",
+      "location": "Company Location",
+      "client_id": "Client ID",
+      "secret_key": "Secret Key",
+       "invoice_terms": "Invoice Terms"
+    },
+
+    "placeholders": {
+      "company_name": "Enter company name",
+      "tax_number": "Enter tax number",
+      "tax_serial": "Enter tax serial",
+      "phone": "Enter company phone",
+      "email": "Enter company email",
+      "location": "Enter company location",
+      "client_id": "Enter client ID",
+      "secret_key": "Enter secret key",
+      "invoice_terms": "Enter the terms that will appear on invoices"
+    },
+
+    "logo": {
+      "upload_hint": "Drag & drop your logo here, or click to upload",
+      "formats": "PNG, JPG, or JPEG only",
+      "alt": "Company Logo",
+      "upload_failed": "Logo upload failed"
+    },
+
+    "actions": {
+      "save": "Save Configuration",
+      "saving": "Saving..."
+    },
+
+    "messages": {
+      "load_failed": "Failed to load company data",
+      "save_success": "Company configuration saved successfully!",
+      "save_failed": "Failed to save company configuration"
+    }
+  },
+    "LogoutConfirm": {
+    "title": "Logout?",
+    "message": "Are you sure you want to logout?",
+
+    "states": {
+      "logging_out": "Logging out..."
+    },
+
+    "actions": {
+      "confirm": "Yes, Logout",
+      "cancel": "Cancel"
+    }
+  },
+
+    "Login": {
+    "placeholders": {
+      "tenant_code": "Company Code",
+      "username": "Username",
+      "password": "Password"
+    },
+
+    "actions": {
+      "login": "Login",
+      "remember_me": "Remember me",
+      "ok": "OK"
+    },
+
+    "errors": {
+      "tenant_required": "Company code is required",
+      "username_required": "Username is required",
+      "password_required": "Password is required",
+      "invalid_credentials": "Invalid tenant code, username, or password",
+      "no_access": "You do not have access to any module."
+    },
+
+    "states": {
+      "logging_in": "Logging in..."
+    },
+
+    "plan_expired": {
+      "title": "Subscription Expired",
+      "message": "Your subscription has expired or has been disabled. Please contact support to reactivate your account."
+    },
+
+    "language": {
+      "title": "Language",
+      "subtitle": "Choose your preferred language"
+    },
+
+    "branding": {
+      "powered_by": "Powered by"
+    }
+  }
+}
