@@ -12,6 +12,7 @@ const ROUTE_PRIORITY = [
   { module: "items", path: "/items" },
   { module: "stock_management", path: "/storage" },
   { module: "clients", path: "/clients" },
+  { module: "receipts", path: "/receipts" },
   { module: "reports", path: "/reports" },
   { module: "users", path: "/activity" },
   { module: "company_config", path: "/company" }

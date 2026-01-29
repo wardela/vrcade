@@ -230,7 +230,9 @@ const createInvoice = async (db,{
   client_contact,
   client_detail,
   client_det_code,
-  client_id
+  client_id,
+
+  create_due_balance
 }) => {
   try {
     await db.query("BEGIN");
@@ -323,6 +325,30 @@ if (validLines.length === 0) {
 
 
     const headerRes = await db.query(headerSql, headerVals);
+
+    // 🔥 CREATE DUE BALANCE (IF REQUESTED)
+if (
+  create_due_balance === true &&
+  type === "credit" &&
+  client_id &&
+  headerTotal > 0
+) {
+  await db.query(
+    `
+    INSERT INTO due_balances
+      (reason, date, amount, client_id, notes)
+    VALUES ($1, $2, $3, $4, $5)
+    `,
+    [
+      invoice_number,                    // reason
+      date || new Date(),                // invoice date
+      headerTotal,                       // grand total
+      client_id,                         // client
+      `ذمة للفاتورة رقم ${invoice_number}` // notes
+    ]
+  );
+}
+
 const lineSql = `
   INSERT INTO invoice_lines (
     invoice_number,
@@ -396,16 +422,18 @@ const vals = [
       insertedLines.push(r.rows[0]);
 
       if (ln.item_id && storageId) {
-  await db.query(
-    `SELECT adjust_stock($1,$2,$3,$4,'OUT','invoice',$5)`,
-    [
-      invoice_number,       // transaction_id
-      ln.item_id,           // item
-      storageId,            // storage
-      ln.qty,               // quantity
-      `Invoice ${invoice_number}` // notes
-    ]
-  );
+        await db.query(
+      `SELECT adjust_stock($1,$2,$3,$4,'OUT','invoice',$5,$6)`,
+      [
+        invoice_number,           // transaction_id
+        ln.item_id,               // item
+        storageId,                // storage
+        ln.qty,                   // qty
+        date,                     // ✅ invoice date
+        `Invoice ${invoice_number}` // notes
+      ]
+    );
+
 }
 
     }
@@ -883,16 +911,17 @@ const updateInvoiceFull = async (db, invoice_number, header, lines) => {
 
     for (const ln of oldLines.rows) {
       if (ln.item_id && ln.storage_id) {
-        await db.query(
-          `SELECT adjust_stock($1,$2,$3,$4,'IN','invoice-edit',$5)`,
-          [
-            `${invoice_number}-REV`,
-            ln.item_id,
-            ln.storage_id,
-            ln.qty,
-            `Revert invoice ${invoice_number}`
-          ]
-        );
+      await db.query(
+        `SELECT adjust_stock($1,$2,$3,$4,'IN','invoice-edit',$5,$6)`,
+        [
+          `${invoice_number}-REV`,
+          ln.item_id,
+          ln.storage_id,
+          ln.qty,
+          header.date,                         // ✅ invoice date
+          `Revert invoice ${invoice_number}`
+        ]
+      );
       }
     }
 
@@ -975,16 +1004,17 @@ const updateInvoiceFull = async (db, invoice_number, header, lines) => {
 
       // 🔻 APPLY NEW STOCK (OUT)
       if (ln.item_id && storageId) {
-        await db.query(
-          `SELECT adjust_stock($1,$2,$3,$4,'OUT','invoice-edit',$5)`,
-          [
-            invoice_number,
-            ln.item_id,
-            storageId,
-            qty,
-            `Updated invoice ${invoice_number}`
-          ]
-        );
+      await db.query(
+        `SELECT adjust_stock($1,$2,$3,$4,'OUT','invoice-edit',$5,$6)`,
+        [
+          invoice_number,
+          ln.item_id,
+          storageId,
+          qty,
+          header.date,                         // ✅ same invoice date
+          `Updated invoice ${invoice_number}`
+        ]
+      );
       }
     }
 
@@ -1164,25 +1194,28 @@ const createItem = async (db,data) => {
 
     const item = itemRes.rows[0];
 
-    // Initial stock per storage (ONLY if stocked)
-    if (item.is_stocked && Array.isArray(data.storages)) {
-      for (const s of data.storages) {
-        if (!s.qty || s.qty <= 0) continue;
+// Initial stock per storage (ONLY if stocked)
+if (item.is_stocked && Array.isArray(data.storages)) {
+  const initDate =
+    data.initial_stock_date || new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
-        await db.query(
-          `SELECT adjust_stock($1,$2,$3,$4,$5,$6,$7)`,
-          [
-            `INIT-${item.id}`,
-            item.id,
-            s.storage_id,
-            s.qty,
-            "IN",
-            "init",
-            "Initial stock on item creation"
-          ]
-        );
-      }
-    }
+  for (const s of data.storages) {
+    if (!s.qty || s.qty <= 0) continue;
+
+    await db.query(
+      `SELECT adjust_stock($1,$2,$3,$4,'IN','init',$5,$6)`,
+      [
+        `INIT-${item.id}`,
+        item.id,
+        s.storage_id,
+        s.qty,
+        initDate, // ✅ NEW (date)
+        "Initial stock on item creation"
+      ]
+    );
+  }
+}
+
 
     await db.query("COMMIT");
     return item;
@@ -1385,39 +1418,41 @@ const adjustStorageManually = async (db,{
   type,               // IN | OUT | TRANSFER
   from_storage_id,
   to_storage_id,
-  notes
+  notes,
+  date                // ✅ NEW
 }) => {
   try {
     await db.query("BEGIN");
 
     const txId = `MAN-${Date.now()}`;
+    const txDate = date || new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
     if (type === "IN") {
       await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'IN','manual',$5)`,
-        [txId, item_id, to_storage_id, qty, notes]
+        `SELECT adjust_stock($1,$2,$3,$4,'IN','manual',$5,$6)`,
+        [txId, item_id, to_storage_id, qty, txDate, notes]
       );
     }
 
     if (type === "OUT") {
       await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'OUT','manual',$5)`,
-        [txId, item_id, from_storage_id, qty, notes]
+        `SELECT adjust_stock($1,$2,$3,$4,'OUT','manual',$5,$6)`,
+        [txId, item_id, from_storage_id, qty, txDate, notes]
       );
     }
 
     if (type === "TRANSFER") {
-      // OUT
-      await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'OUT','transfer',$5)`,
-        [txId, item_id, from_storage_id, qty, notes]
-      );
+        // OUT
+        await db.query(
+          `SELECT adjust_stock($1,$2,$3,$4,'OUT','transfer',$5,$6)`,
+          [txId, item_id, from_storage_id, qty, txDate, notes]
+        );
 
-      // IN
-      await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'IN','transfer',$5)`,
-        [txId, item_id, to_storage_id, qty, notes]
-      );
+        // IN
+        await db.query(
+          `SELECT adjust_stock($1,$2,$3,$4,'IN','transfer',$5,$6)`,
+          [txId, item_id, to_storage_id, qty, txDate, notes]
+        );
     }
 
     await db.query("COMMIT");
@@ -1876,12 +1911,13 @@ const createRefundInvoice = async (db,{
       orig.storage_id
     ) {
       await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'IN','refund',$5)`,
+        `SELECT adjust_stock($1,$2,$3,$4,'IN','refund',$5,$6)`,
         [
           refund_invoice_number,
           orig.item_id,
           orig.storage_id,
           ln.refund_qty,
+          refund_date, // ✅ refund date
           `Refund of ${original_invoice_number} (line ${ln.item_number})`
         ]
       );
@@ -2162,6 +2198,68 @@ const getSalesByClientDetailedReport = async (db, {
   }
 };
 
+const getItemsSoldForClientTotals = async (db, {
+  from,
+  to,
+  client_id,
+  limit,
+  offset
+}) => {
+  try {
+    // 1️⃣ Aggregated rows (paginated)
+    const rowsRes = await db.query(
+      `
+      SELECT
+        il.item_id,
+        COALESCE(i.name, il.description) AS item_name,
+        u.name AS unit,
+        SUM(il.qty) AS total_qty
+      FROM invoice_lines il
+      JOIN invoice_header ih
+        ON ih.invoice_number = il.invoice_number
+      LEFT JOIN items i
+        ON i.id = il.item_id
+      LEFT JOIN units u
+        ON u.id = i.unit
+      WHERE
+        ih.client_id = $1
+        AND ih.date::date BETWEEN $2 AND $3
+      GROUP BY
+        il.item_id,
+        item_name,
+        u.name
+      ORDER BY
+        item_name ASC
+      LIMIT $4 OFFSET $5
+      `,
+      [client_id, from, to, limit, offset]
+    );
+
+    // 2️⃣ Total distinct items count (NO pagination)
+    const countRes = await db.query(
+      `
+      SELECT COUNT(*) AS total_count
+      FROM (
+        SELECT il.item_id
+        FROM invoice_lines il
+        JOIN invoice_header ih
+          ON ih.invoice_number = il.invoice_number
+        WHERE
+          ih.client_id = $1
+          AND ih.date::date BETWEEN $2 AND $3
+        GROUP BY il.item_id
+      ) t
+      `,
+      [client_id, from, to]
+    );
+
+    return {
+      rows: rowsRes.rows,
+      total_count: Number(countRes.rows[0].total_count)
+    };
+  } finally {
+  }
+};
 
 const getEinvoicingReport = async (db,{ from, to, status, limit, offset }) => {
   try {
@@ -3070,6 +3168,913 @@ ORDER BY month;
   };
 };
 
+const deleteStorageTransaction = async (db, log_id) => {
+  try {
+    await db.query("BEGIN");
+
+    await db.query(
+      `SELECT delete_stock_transaction($1)`,
+      [log_id]
+    );
+
+    await db.query("COMMIT");
+  } catch (err) {
+    await db.query("ROLLBACK");
+    throw err;
+  }
+};
+
+const getNextReceiptVoucherNumber = async (db) => {
+  const res = await db.query(`
+    SELECT
+      'RV-' || LPAD(
+        (
+          COALESCE(
+            MAX(CAST(SUBSTRING(receipt_number FROM 4) AS INTEGER)),
+            0
+          ) + 1
+        )::TEXT,
+        4,
+        '0'
+      ) AS next_number
+    FROM receipt_voucher
+  `);
+
+  return res.rows[0].next_number;
+};
+
+const createDueBalance = async (
+  db,
+  { reason, date, amount, client_id, notes }
+) => {
+  try {
+    const dueDate =
+      date && !Number.isNaN(Date.parse(date))
+        ? date
+        : new Date().toISOString().slice(0, 10);
+
+    const result = await db.query(
+      `
+      INSERT INTO due_balances
+        (reason, date, amount, client_id, notes)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+      `,
+      [reason, dueDate, amount, client_id, notes || null]
+    );
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const updateDueBalance = async (
+  db,
+  dueBalanceId,
+  { reason, date, amount, notes }
+) => {
+  try {
+    const result = await db.query(
+      `
+      UPDATE due_balances
+      SET
+        reason = COALESCE($1, reason),
+        date   = COALESCE($2, date),
+        amount = COALESCE($3, amount),
+        notes  = COALESCE($4, notes),
+        updated_at = NOW()
+      WHERE id = $5
+      RETURNING *;
+      `,
+      [reason, date, amount, notes, dueBalanceId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Due balance not found");
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const deleteDueBalance = async (db, dueBalanceId) => {
+  try {
+    const result = await db.query(
+      `
+      DELETE FROM due_balances
+      WHERE id = $1
+      RETURNING *;
+      `,
+      [dueBalanceId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Due balance not found");
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const getDueBalanceById = async (db, dueBalanceId) => {
+  try {
+    const result = await db.query(
+      `
+      SELECT
+        db.id,
+        db.reason,
+        TO_CHAR(db.date, 'YYYY-MM-DD') AS date,
+        db.amount,
+        db.client_id,
+        c.name AS client_name,
+        db.notes
+      FROM due_balances db
+      LEFT JOIN dev_sales.clients c
+        ON c.id = db.client_id
+      WHERE db.id = $1;
+      `,
+      [dueBalanceId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Due balance not found");
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const createReceiptVoucher = async (
+  db,
+  {
+    due_balance_id,
+    date,
+    type,
+    amount,
+    reason,
+    notes
+  }
+) => {
+  try {
+    // 1️⃣ get client_id from due balance
+    const dueRes = await db.query(
+      `
+      SELECT client_id
+      FROM due_balances
+      WHERE id = $1
+      `,
+      [due_balance_id]
+    );
+
+    if (dueRes.rows.length === 0) {
+      throw new Error("Due balance not found");
+    }
+
+    const client_id = dueRes.rows[0].client_id;
+
+    // 2️⃣ generate RV number
+    const receipt_number = await getNextReceiptVoucherNumber(db);
+
+    // 3️⃣ normalize date
+    const rvDate =
+      date && !Number.isNaN(Date.parse(date))
+        ? date
+        : new Date().toISOString().slice(0, 10);
+
+    // 4️⃣ insert
+    const result = await db.query(
+      `
+      INSERT INTO receipt_voucher
+        (due_balance_id, client_id, receipt_number, date, type, amount, reason, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *;
+      `,
+      [
+        due_balance_id,
+        client_id,
+        receipt_number,
+        rvDate,
+        type,
+        amount,
+        reason || null,
+        notes || null
+      ]
+    );
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const updateReceiptVoucher = async (
+  db,
+  receiptVoucherId,
+  { date, type, amount, reason, notes }
+) => {
+  try {
+    const rvDate =
+      date && !Number.isNaN(Date.parse(date)) ? date : null;
+
+    const result = await db.query(
+      `
+      UPDATE receipt_voucher
+      SET
+        date   = COALESCE($1, date),
+        type   = COALESCE($2, type),
+        amount = COALESCE($3, amount),
+        reason = COALESCE($4, reason),
+        notes  = COALESCE($5, notes)
+      WHERE id = $6
+      RETURNING *;
+      `,
+      [
+        rvDate,
+        type,
+        amount,
+        reason,
+        notes,
+        receiptVoucherId
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Receipt voucher not found");
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const deleteReceiptVoucher = async (db, receiptVoucherId) => {
+  try {
+    const result = await db.query(
+      `
+      DELETE FROM receipt_voucher
+      WHERE id = $1
+      RETURNING *;
+      `,
+      [receiptVoucherId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Receipt voucher not found");
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const createReceiptCheque = async (
+  db,
+  {
+    receipt_voucher_id,
+    cheque_number,
+    cheque_amount,
+    due_date,
+    beneficiary_bank
+  }
+) => {
+  try {
+    const chequeDueDate =
+      due_date && !Number.isNaN(Date.parse(due_date))
+        ? due_date
+        : new Date().toISOString().slice(0, 10);
+
+    const result = await db.query(
+      `
+      INSERT INTO receipt_cheques
+        (receipt_voucher_id, cheque_number, cheque_amount, due_date, beneficiary_bank)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+      `,
+      [
+        receipt_voucher_id,
+        cheque_number,
+        cheque_amount,
+        chequeDueDate,
+        beneficiary_bank
+      ]
+    );
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const updateReceiptCheque = async (
+  db,
+  chequeId,
+  { cheque_number, cheque_amount, due_date, beneficiary_bank }
+) => {
+  try {
+    const result = await db.query(
+      `
+      UPDATE receipt_cheques
+      SET
+        cheque_number     = COALESCE($1, cheque_number),
+        cheque_amount     = COALESCE($2, cheque_amount),
+        due_date          = COALESCE($3, due_date),
+        beneficiary_bank  = COALESCE($4, beneficiary_bank)
+      WHERE id = $5
+      RETURNING *;
+      `,
+      [
+        cheque_number,
+        cheque_amount,
+        due_date,
+        beneficiary_bank,
+        chequeId
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Receipt cheque not found");
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const deleteReceiptCheque = async (db, chequeId) => {
+  try {
+    const result = await db.query(
+      `
+      DELETE FROM receipt_cheques
+      WHERE id = $1
+      RETURNING *;
+      `,
+      [chequeId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Receipt cheque not found");
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    throw err;
+  }
+};
+
+const getDueBalances = async (
+  db,
+  {
+    page = 1,
+    limit = 20,
+    client_id,
+    from_date,
+    to_date
+  }
+) => {
+  const offset = (page - 1) * limit;
+
+  const filters = [];
+  const values = [];
+
+  // Dynamic filters
+  if (client_id) {
+    values.push(client_id);
+    filters.push(`db.client_id = $${values.length}`);
+  }
+
+  if (from_date) {
+    values.push(from_date);
+    filters.push(`db.date >= $${values.length}`);
+  }
+
+  if (to_date) {
+    values.push(to_date);
+    filters.push(`db.date <= $${values.length}`);
+  }
+
+  const whereClause =
+    filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
+
+  // Main query
+  const dataQuery = `
+SELECT
+  db.id,
+  db.reason,
+  db.amount,
+  db.date,                      -- ✅ ADD THIS
+
+  COALESCE(SUM(rv.amount), 0) AS paid,
+
+  CASE
+    WHEN COALESCE(SUM(rv.amount), 0) = 0 THEN 'outstanding'
+    WHEN COALESCE(SUM(rv.amount), 0) < db.amount THEN 'pending'
+    ELSE 'completed'
+  END AS state,
+
+  c.name AS client
+
+    FROM due_balances db
+
+    LEFT JOIN receipt_voucher rv
+      ON rv.due_balance_id = db.id
+
+    LEFT JOIN dev_sales.clients c
+      ON c.id = db.client_id
+
+    ${whereClause}
+
+GROUP BY
+  db.id,
+  db.date,        -- ✅ ADD THIS
+  c.name
+
+
+    ORDER BY db.id DESC, db.id DESC
+
+    LIMIT $${values.length + 1}
+    OFFSET $${values.length + 2};
+  `;
+
+  const countQuery = `
+    SELECT COUNT(*) AS total
+    FROM due_balances db
+    ${whereClause};
+  `;
+
+  const dataValues = [...values, limit, offset];
+
+  const [dataRes, countRes] = await Promise.all([
+    db.query(dataQuery, dataValues),
+    db.query(countQuery, values)
+  ]);
+
+  return {
+    data: dataRes.rows,
+    pagination: {
+      page,
+      limit,
+      total: Number(countRes.rows[0].total),
+      totalPages: Math.ceil(countRes.rows[0].total / limit)
+    }
+  };
+};
+
+const getReceiptVouchersByDueBalance = async (db, dueBalanceId) => {
+  try {
+    const result = await db.query(
+      `
+      SELECT
+        rv.id,
+        rv.receipt_number,
+        TO_CHAR(rv.date, 'YYYY-MM-DD') AS date,
+        rv.amount,
+        rv.type,
+        rv.reason
+      FROM receipt_voucher rv
+      WHERE rv.due_balance_id = $1
+      ORDER BY rv.date ASC, rv.id ASC;
+      `,
+      [dueBalanceId]
+    );
+
+    return result.rows;
+  } catch (err) {
+    throw err;
+  }
+};
+
+const getReceiptVoucherDetails = async (db, receiptVoucherId) => {
+  try {
+    const rvRes = await db.query(
+      `
+      SELECT
+        rv.id,
+        rv.receipt_number,
+        rv.type,
+        rv.amount,
+        rv.reason,
+        rv.notes,
+        TO_CHAR(rv.date, 'YYYY-MM-DD') AS date,
+        c.name AS client
+      FROM receipt_voucher rv
+      LEFT JOIN dev_sales.clients c
+        ON c.id = rv.client_id
+      WHERE rv.id = $1;
+      `,
+      [receiptVoucherId]
+    );
+
+    if (rvRes.rows.length === 0) {
+      throw new Error("Receipt voucher not found");
+    }
+
+    const receipt = rvRes.rows[0];
+
+    let cheques = [];
+
+    if (receipt.type === "cheque") {
+      const chequeRes = await db.query(
+        `
+        SELECT
+          id,
+          cheque_number,
+          cheque_amount,
+          TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date,
+          beneficiary_bank
+        FROM receipt_cheques
+        WHERE receipt_voucher_id = $1
+        ORDER BY id ASC;
+        `,
+        [receiptVoucherId]
+      );
+
+      cheques = chequeRes.rows;
+    }
+
+    return {
+      receipt_number: receipt.receipt_number,
+      type: receipt.type,
+      amount: receipt.amount,
+      client: receipt.client,
+      date: receipt.date,
+      reason: receipt.reason,
+      notes: receipt.notes,
+      cheques
+    };
+  } catch (err) {
+    throw err;
+  }
+};
+
+const createStandaloneReceipt = async (
+  db,
+  {
+    client_id,
+    date,
+    amount,
+    type,
+    reason,
+    notes,
+    cheques = []
+  }
+) => {
+  try {
+    await db.query("BEGIN");
+
+    // normalize date (DO NOT override user input)
+    const finalDate = date;
+
+    // 1️⃣ Create due balance
+    const dueRes = await db.query(
+      `
+      INSERT INTO due_balances
+        (reason, date, amount, client_id, notes)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id;
+      `,
+      [reason, finalDate, amount, client_id, notes || null]
+    );
+
+    const due_balance_id = dueRes.rows[0].id;
+
+    // 2️⃣ Generate RV number
+    const receipt_number = await getNextReceiptVoucherNumber(db);
+
+    // 3️⃣ Create receipt voucher
+    const rvRes = await db.query(
+      `
+      INSERT INTO receipt_voucher
+        (due_balance_id, client_id, receipt_number, date, type, amount, reason, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id;
+      `,
+      [
+        due_balance_id,
+        client_id,
+        receipt_number,
+        finalDate,
+        type,
+        amount,
+        reason || null,
+        notes || null
+      ]
+    );
+
+    const receipt_voucher_id = rvRes.rows[0].id;
+
+    // 4️⃣ Create cheques if needed
+    if (type === "cheque") {
+      for (const ch of cheques) {
+        await db.query(
+          `
+          INSERT INTO receipt_cheques
+            (receipt_voucher_id, cheque_number, cheque_amount, due_date, beneficiary_bank)
+          VALUES ($1, $2, $3, $4, $5)
+          `,
+          [
+            receipt_voucher_id,
+            ch.cheque_number,
+            ch.cheque_amount,
+            ch.due_date,
+            ch.beneficiary_bank
+          ]
+        );
+      }
+    }
+
+    await db.query("COMMIT");
+
+    return {
+      due_balance_id,
+      receipt_voucher_id
+    };
+  } catch (err) {
+    await db.query("ROLLBACK");
+    throw err;
+  }
+};
+
+const getClientReceiptsTotals = async (
+  db,
+  { client_id, from_date, to_date }
+) => {
+  if (!client_id) {
+    throw new Error("client_id is required");
+  }
+
+  const filters = [];
+  const values = [];
+
+  values.push(client_id);
+  filters.push(`db.client_id = $${values.length}`);
+
+  if (from_date) {
+    values.push(from_date);
+    filters.push(`db.date >= $${values.length}`);
+  }
+
+  if (to_date) {
+    values.push(to_date);
+    filters.push(`db.date <= $${values.length}`);
+  }
+
+  const whereClause =
+    filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
+
+  const query = `
+    SELECT
+      COALESCE(SUM(db.amount), 0)          AS total_balance,
+      COALESCE(SUM(rv.amount), 0)          AS total_paid,
+      COALESCE(SUM(db.amount), 0)
+        - COALESCE(SUM(rv.amount), 0)      AS total_outstanding
+    FROM due_balances db
+    LEFT JOIN receipt_voucher rv
+      ON rv.due_balance_id = db.id
+    ${whereClause};
+  `;
+
+  const res = await db.query(query, values);
+
+  return {
+    total_balance: Number(res.rows[0].total_balance),
+    total_paid: Number(res.rows[0].total_paid),
+    total_outstanding: Number(res.rows[0].total_outstanding)
+  };
+};
+
+// ===== receipts dashboard block =====
+
+const getReceiptsMonthlyDueVsPaid = async (db, year) => {
+  const query = `
+    WITH months AS (
+      SELECT generate_series(1, 12) AS month_index
+    )
+    SELECT
+      m.month_index,
+      COALESCE(SUM(db.amount), 0) AS due,
+      COALESCE(SUM(rv.amount), 0) AS paid
+    FROM months m
+    LEFT JOIN due_balances db
+      ON EXTRACT(MONTH FROM db.date) = m.month_index
+     AND EXTRACT(YEAR FROM db.date) = $1
+    LEFT JOIN receipt_voucher rv
+      ON rv.due_balance_id = db.id
+     AND EXTRACT(YEAR FROM rv.date) = $1
+    GROUP BY m.month_index
+    ORDER BY m.month_index;
+  `;
+
+  const res = await db.query(query, [year]);
+  return res.rows;
+};
+
+const getTopClientsByOutstanding = async (db, year) => {
+  const query = `
+    SELECT
+      c.id,
+      c.name,
+      SUM(db.amount) - COALESCE(SUM(rv.amount), 0) AS outstanding
+    FROM due_balances db
+    LEFT JOIN receipt_voucher rv
+      ON rv.due_balance_id = db.id
+    LEFT JOIN dev_sales.clients c
+      ON c.id = db.client_id
+    WHERE EXTRACT(YEAR FROM db.date) = $1
+    GROUP BY c.id, c.name
+    HAVING SUM(db.amount) - COALESCE(SUM(rv.amount), 0) > 0
+    ORDER BY outstanding DESC
+    LIMIT 5;
+  `;
+
+  return (await db.query(query, [year])).rows;
+};
+
+const getTopOutstandingBalances = async (db, year) => {
+  const query = `
+    SELECT
+      db.id,
+      db.reason,
+      db.date,
+      c.name AS client,
+      db.amount,
+      COALESCE(SUM(rv.amount), 0) AS paid
+    FROM due_balances db
+    LEFT JOIN receipt_voucher rv
+      ON rv.due_balance_id = db.id
+    LEFT JOIN dev_sales.clients c
+      ON c.id = db.client_id
+    WHERE EXTRACT(YEAR FROM db.date) = $1
+    GROUP BY db.id, c.name
+    HAVING COALESCE(SUM(rv.amount), 0) < db.amount
+    ORDER BY (db.amount - COALESCE(SUM(rv.amount), 0)) DESC
+    LIMIT 10;
+  `;
+
+  return (await db.query(query, [year])).rows;
+};
+ 
+const getAgingBalances = async (db) => {
+  const query = `
+    SELECT
+      db.id,
+      db.reason,
+      db.date,
+      c.name AS client,
+      db.amount,
+      COALESCE(MAX(rv.date), db.date) AS last_payment_date,
+      CURRENT_DATE - COALESCE(MAX(rv.date), db.date) AS aging_days
+    FROM due_balances db
+    LEFT JOIN receipt_voucher rv
+      ON rv.due_balance_id = db.id
+    LEFT JOIN dev_sales.clients c
+      ON c.id = db.client_id
+    GROUP BY db.id, c.name
+    ORDER BY aging_days DESC
+    LIMIT 10;
+  `;
+
+  return (await db.query(query)).rows;
+};
+
+const getReceiptsDashboard = async (db, year) => {
+  const [
+    monthly_due_vs_paid,
+    top_clients_outstanding,
+    top_outstanding_balances,
+    aging_balances
+  ] = await Promise.all([
+    getReceiptsMonthlyDueVsPaid(db, year),
+    getTopClientsByOutstanding(db, year),
+    getTopOutstandingBalances(db, year),
+    getAgingBalances(db)
+  ]);
+
+  return {
+    monthly_due_vs_paid,
+    top_clients_outstanding,
+    top_outstanding_balances,
+    aging_balances
+  };
+};
+
+// ===============================
+// Report: Receipts by Client (RV list)
+// ===============================
+const getClientReceiptsReport = async (db, { client_id, from, to, limit, offset }) => {
+  if (!client_id) throw new Error("client_id is required");
+  if (!from || !to) throw new Error("from and to are required");
+
+  // 1️⃣ Rows
+  const rowsRes = await db.query(
+    `
+    SELECT
+      rv.receipt_number,
+      TO_CHAR(rv.date, 'YYYY-MM-DD') AS date,
+      rv.amount,
+      rv.reason
+    FROM receipt_voucher rv
+    INNER JOIN due_balances db
+      ON db.id = rv.due_balance_id
+    WHERE db.client_id = $1
+      AND db.date BETWEEN $2 AND $3
+    ORDER BY rv.date ASC, rv.id ASC
+    LIMIT $4 OFFSET $5
+    `,
+    [client_id, from, to, limit, offset]
+  );
+
+  // 2️⃣ Totals
+  const totalRes = await db.query(
+    `
+    SELECT
+      COALESCE(SUM(rv.amount), 0) AS total_sum,
+      COUNT(rv.id) AS total_count
+    FROM receipt_voucher rv
+    INNER JOIN due_balances db
+      ON db.id = rv.due_balance_id
+    WHERE db.client_id = $1
+      AND db.date BETWEEN $2 AND $3
+    `,
+    [client_id, from, to]
+  );
+
+  return {
+    rows: rowsRes.rows,
+    total_sum: Number(totalRes.rows[0].total_sum),
+    total_count: Number(totalRes.rows[0].total_count)
+  };
+};
+
+const getPrintableDueBalance = async (db, dueBalanceId) => {
+  // 1️⃣ Due balance header
+  const dueRes = await db.query(
+    `
+    SELECT
+      db.id,
+      db.reason,
+      TO_CHAR(db.date, 'YYYY-MM-DD') AS date,
+      db.amount,
+      c.name AS client
+    FROM due_balances db
+    LEFT JOIN dev_sales.clients c ON c.id = db.client_id
+    WHERE db.id = $1
+    `,
+    [dueBalanceId]
+  );
+
+  if (dueRes.rows.length === 0) {
+    throw new Error("Due balance not found");
+  }
+
+  // 2️⃣ Receipt vouchers
+  const rvRes = await db.query(
+    `
+    SELECT
+      rv.receipt_number,
+      TO_CHAR(rv.date, 'YYYY-MM-DD') AS date,
+      rv.amount,
+      rv.reason,
+      rv.type
+    FROM receipt_voucher rv
+    WHERE rv.due_balance_id = $1
+    ORDER BY rv.date ASC, rv.id ASC
+    `,
+    [dueBalanceId]
+  );
+
+  // 3️⃣ Totals
+  const totalsRes = await db.query(
+    `
+    SELECT
+      db.amount AS total_due,
+      COALESCE(SUM(rv.amount), 0) AS total_paid,
+      db.amount - COALESCE(SUM(rv.amount), 0) AS total_outstanding
+    FROM due_balances db
+    LEFT JOIN receipt_voucher rv
+      ON rv.due_balance_id = db.id
+    WHERE db.id = $1
+    GROUP BY db.amount
+    `,
+    [dueBalanceId]
+  );
+
+  return {
+    due: dueRes.rows[0],
+    receipts: rvRes.rows,
+    totals: totalsRes.rows[0]
+  };
+};
+
 module.exports = {
   getInvoices,
   getInvoiceDetails,
@@ -3148,5 +4153,25 @@ module.exports = {
   getDashboardOverview,
   getDashboardSales,
   getDashboardInventory,
-  getDashboardClients
+  getDashboardClients,
+  getItemsSoldForClientTotals,
+  deleteStorageTransaction,
+  createDueBalance,
+  updateDueBalance,
+  deleteDueBalance,
+  getDueBalanceById,
+  createReceiptVoucher,
+  updateReceiptVoucher,
+  deleteReceiptVoucher,
+  createReceiptCheque,
+  updateReceiptCheque,
+  deleteReceiptCheque,
+  getDueBalances,
+  getReceiptVouchersByDueBalance,
+  getReceiptVoucherDetails,
+  createStandaloneReceipt,
+  getClientReceiptsTotals,
+  getReceiptsDashboard,
+  getClientReceiptsReport,
+  getPrintableDueBalance
 };

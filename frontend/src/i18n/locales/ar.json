@@ -258,7 +258,8 @@
       "item_required": "رقم الصنف مطلوب",
       "item_not_found": "الصنف غير موجود",
       "exempt_requires_tax": "لتحديد الصنف كمعفى، يجب إدخال رقم ضريبي صحيح"
-    }
+    },
+     "create_due_balance": "إنشاء ذمة على العميل بقيمة الفاتورة"
   },
 
    "ClientList": {
@@ -672,7 +673,8 @@
       "standard_discount": "نسبة الخصم الاساسية %",
       "standard_qty": "الكمية الاساسية",
 
-      "favorite": "تعيين كصنف مفضل"
+      "favorite": "تعيين كصنف مفضل",
+      "initial_stock_date": "تاريخ بداية المدة"
     },
 
     "actions": {
@@ -772,6 +774,10 @@
     "states": {
       "no_items": "لا توجد أصناف مطابقة",
       "no_movements": "لا توجد حركات مسجلة"
+    },
+        "confirm": {
+      "title": "تأكيد الحذف",
+      "delete_transaction": "هل أنت متأكد من حذف حركة المخزون هذه؟ لا يمكن التراجع عن هذا الإجراء."
     }
   },
 
@@ -810,6 +816,7 @@
     "fields": {
       "direction": "الاتجاه",
       "quantity": "الكمية",
+      "date": "تاريخ الحركة",
       "notes": "ملاحظات"
     },
 
@@ -931,7 +938,8 @@
     "tabs": {
       "main": "الرئيسية",
       "history": "السجل",
-      "stats": "الإحصائيات"
+      "stats": "الإحصائيات",
+      "receipts": "القبوضات"
     }
   },
 
@@ -1140,7 +1148,8 @@
     "by_client": "المبيعات حسب العميل",
     "by_client_detailed": "المبيعات حسب العميل (تفصيلي)",
     "by_area": "المبيعات حسب المنطقة",
-    "by_currency": "المبيعات حسب العملة"
+    "by_currency": "المبيعات حسب العملة",
+    "by_client_items_totals": "الأصناف المباعة للعميل (إجمالي)"
   },
 
   "areas": {
@@ -1409,7 +1418,8 @@
       "clients": "العملاء",
       "users": "إدارة المستخدمين",
       "company_config": "إعدادات الشركة",
-      "stock_management": "إدارة المخزون"
+      "stock_management": "إدارة المخزون",
+      "receipts": "سندات القبض"
     },
 
     "toggles": {
@@ -1536,6 +1546,309 @@
     "branding": {
       "powered_by": "بدعم من"
     }
+  },
+
+  "Receipts": {
+  "title": "القبوضات",
+  "subtitle": "إدارة ذمم العملاء وسندات القبض",
+
+  "filters": {
+    "client": "العميل",
+    "select_client": "اختيار العميل",
+    "from_date": "من تاريخ",
+    "to_date": "إلى تاريخ",
+    "apply": "تطبيق"
+  },
+
+  "actions": {
+    "add_balance": "إضافة ذمة",
+    "create_receipt": "إنشاء سند قبض"
+  },
+
+  "table": {
+    "id": "الرقم",
+    "reason": "السبب",
+    "amount": "المبلغ",
+    "paid": "المدفوع",
+    "status": "الحالة",
+    "client": "العميل",
+    "actions": "الإجراءات"
+  },
+
+  "status": {
+    "pending": "قيد الانتظار",
+    "completed": "مكتملة",
+    "overdue": "متأخرة"
+  },
+
+  "receipt_vouchers": {
+    "title": "سندات القبض",
+    "add": "إضافة سند قبض",
+
+    "table": {
+      "number": "رقم السند",
+      "amount": "المبلغ",
+      "type": "النوع",
+      "reason": "السبب",
+      "date": "التاريخ",
+      "actions": "الإجراءات"
+    },
+
+    "empty": "لا توجد سندات قبض"
+  },
+
+  "loading": "جاري التحميل...",
+
+  "empty_state": {
+    "title": "لا توجد قبوضات",
+    "subtitle": "حاول تعديل عوامل التصفية"
+  },
+
+  "pagination": {
+    "previous": "السابق",
+    "next": "التالي",
+    "page": "صفحة",
+    "of": "من"
+  },
+
+  "common": {
+    "no_value": "-",
+    "print": "طباعة",
+    "edit": "تعديل",
+    "delete": "حذف"
+  },
+  "receipt_types": {
+  "cash": "نقدي",
+  "bank_transfer": "حوالة بنكية",
+  "cheque": "شيك"
+},
+    "totals": {
+      "total_balance": "إجمالي الذمم",
+      "total_paid": "إجمالي المدفوع",
+      "total_outstanding": "إجمالي المتبقي"
+    }
+},
+"BalanceModal": {
+  "title": {
+    "create": "إضافة ذمة",
+    "edit": "تعديل الذمة"
+  },
+
+  "subtitle": {
+    "create": "إنشاء سجل ذمة جديد للعميل",
+    "edit": "تعديل بيانات الذمة"
+  },
+
+  "fields": {
+    "id": "رقم الذمة",
+    "client": "العميل",
+    "date": "التاريخ",
+    "amount": "المبلغ",
+    "reason": "السبب",
+    "notes": "ملاحظات"
+  },
+
+  "placeholders": {
+    "amount": "0.00",
+    "reason": "أدخل سبب الذمة",
+    "notes": "أدخل أي ملاحظات أو تفاصيل إضافية..."
+  },
+
+  "client": {
+    "select": "اختيار العميل",
+    "hint_create": "اختر العميل لهذه الذمة",
+    "hint_edit": "لا يمكن تغيير العميل في وضع التعديل"
+  },
+
+  "footer": {
+    "required": "حقول مطلوبة"
+  },
+
+  "buttons": {
+    "cancel": "إلغاء",
+    "add": "إضافة ذمة",
+    "save": "حفظ التعديلات",
+    "saving": "جاري الحفظ..."
+  }
+},
+
+"DeleteBalanceModal": {
+  "title": "حذف الذمة",
+  "message": "هل أنت متأكد أنك تريد حذف هذه الذمة؟",
+  "warning": "لا يمكن التراجع عن هذا الإجراء.",
+
+  "buttons": {
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "deleting": "جاري الحذف..."
+  }
+},
+
+"DeleteReceiptVoucherModal": {
+  "title": "حذف سند القبض",
+  "message": "هل أنت متأكد أنك تريد حذف سند القبض هذا؟",
+  "warning": "لا يمكن التراجع عن هذا الإجراء.",
+
+  "buttons": {
+    "cancel": "إلغاء",
+    "delete": "حذف"
+  }
+},
+
+"ReceiptVoucherModal": {
+  "title": {
+    "create": "إنشاء سند قبض",
+    "edit": "تعديل سند القبض"
+  },
+
+  "subtitle": {
+    "create": "تسجيل دفعة جديدة للعميل ",
+    "edit": "تعديل سند القبض للعميل "
+  },
+
+  "fields": {
+    "receipt_number": "رقم السند",
+    "date": "تاريخ السند",
+    "payment_type": "طريقة الدفع",
+    "amount": "المبلغ",
+    "reason": "السبب",
+    "notes": "ملاحظات"
+  },
+
+  "placeholders": {
+    "amount": "0.00",
+    "reason": "أدخل سبب الدفعة",
+    "notes": "أدخل أي ملاحظات أو تفاصيل إضافية..."
+  },
+
+  "payment_types": {
+    "cash": "نقدي",
+    "bank_transfer": "حوالة بنكية",
+    "cheque": "شيك"
+  },
+
+  "cheques": {
+    "section_title": "تفاصيل الشيك",
+    "section_hint": "أدخل بيانات الشيك لهذا السند",
+    "add": "إضافة شيك",
+    "remove": "حذف",
+
+    "index": "شيك رقم ",
+
+    "fields": {
+      "number": "رقم الشيك",
+      "amount": "المبلغ",
+      "due_date": "تاريخ الاستحقاق",
+      "bank": "البنك المستفيد"
+    },
+
+    "placeholders": {
+      "number": "CHQ-123456",
+      "amount": "0.00",
+      "bank": "اسم البنك"
+    },
+
+    "validation": {
+      "total": "مجموع الشيكات : ",
+      "match": "المجموع مطابق لمبلغ السند",
+      "mismatch": "يجب أن يساوي مبلغ السند "
+    }
+  },
+
+  "footer": {
+    "required": "حقول مطلوبة"
+  },
+
+  "buttons": {
+    "cancel": "إلغاء",
+    "create": "إنشاء سند",
+    "save": "حفظ التعديلات",
+    "saving": "جاري الحفظ..."
+  }
+},
+
+"CreateReceiptModal": {
+  "title": "إنشاء سند قبض",
+  "subtitle": "تسجيل سند قبض جديد للعميل",
+
+  "fields": {
+    "client": "العميل",
+    "date": "تاريخ السند",
+    "amount": "إجمالي المبلغ",
+    "payment_type": "طريقة الدفع",
+    "reason": "السبب",
+    "notes": "ملاحظات"
+  },
+
+  "placeholders": {
+    "select_client": "اختيار العميل",
+    "amount": "0.00",
+    "reason": "أدخل سبب السند",
+    "notes": "أدخل أي ملاحظات أو تفاصيل إضافية..."
+  },
+
+  "hints": {
+    "client": "اختر العميل الذي سيتم تسجيل السند له"
+  },
+
+  "payment_types": {
+    "cash": "نقدي",
+    "bank_transfer": "حوالة بنكية",
+    "cheque": "شيك"
+  },
+
+  "cheques": {
+    "section_title": "تفاصيل الشيك",
+    "section_hint": "أدخل بيانات الشيك لهذا السند",
+    "add": "إضافة شيك",
+    "remove": "حذف",
+
+    "index": "شيك رقم ",
+
+    "fields": {
+      "number": "رقم الشيك",
+      "amount": "المبلغ",
+      "due_date": "تاريخ الاستحقاق",
+      "bank": "البنك المستفيد"
+    },
+
+    "placeholders": {
+      "number": "CHQ-123456",
+      "amount": "0.00",
+      "bank": "اسم البنك"
+    },
+
+    "validation": {
+      "total": "مجموع الشيكات : ",
+      "match": "المجموع مطابق لمبلغ السند",
+      "mismatch": "يجب أن يساوي مبلغ السند "
+    }
+  },
+
+  "footer": {
+    "required": "حقول مطلوبة"
+  },
+
+  "buttons": {
+    "cancel": "إلغاء",
+    "create": "إنشاء سند",
+    "creating": "جاري الإنشاء..."
+  }
+},
+
+  "ReceiptsDash": {
+    "title": "القبوضات",
+    "due_vs_paid": "الذمم مقابل المقبوضات",
+    "months_label": "حسب الشهر",
+    "top_clients": "أعلى العملاء ذممًا",
+    "top_clients_annotation": "العملاء أصحاب أعلى أرصدة غير مدفوعة",
+    "top_outstanding": "أعلى الذمم المتبقية",
+    "top_outstanding_annotation": "أعلى الذمم غير المسددة مع توضيح المدفوع من الإجمالي"
+  },
+  "common": {
+    "items": "عناصر",
+    "unpaid": "غير مدفوع",
+    "outstanding": "ذمم متبقية"
   }
 
 }

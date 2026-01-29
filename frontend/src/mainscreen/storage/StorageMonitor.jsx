@@ -6,7 +6,7 @@ import PrintableStorageMovement from "./PrintableStorageMovement";
 import StorageTransactionModal from "./adjustmodal";
 import QuickStorageAdjustModal from "./QuickStorageAdjustModal";
 import ManageStoragesModal from "./managestoragesmodal";
-
+import ConfirmDeleteTransactionPopup from "./ConfirmDeleteTransactionPopup";
 import { useTranslation } from "react-i18next";
 
 export default function StorageMonitor() {
@@ -27,7 +27,8 @@ const [quickAdjustOpen, setQuickAdjustOpen] = useState(false);
 const [quickAdjustItem, setQuickAdjustItem] = useState(null);
 const [openStorages, setOpenStorages] = useState(false);
 const {t} = useTranslation();
-
+const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+const [txToDelete, setTxToDelete] = useState(null);
 const [company, setCompany] = useState(null);
 
 useEffect(() => {
@@ -396,7 +397,7 @@ const canAdjustStock = stockPerm?.add === true;
                     className="hover:bg-gray-50 transition"
                 >
                     {/* Date / Time (subtle) */}
-                    <td className="pl-3 py-2 text-xs text-gray-500 whitespace-nowrap font-bold">
+                    <td className="ps-3 py-2 text-xs text-gray-500 whitespace-nowrap font-bold">
                     {l.date}
                     </td>
 
@@ -454,18 +455,31 @@ const canAdjustStock = stockPerm?.add === true;
                     {l.transaction_id || "-"}
                     </td>
 
-                    <td className=" text-gray-500 font-mono text-xs text-center">
-                    <div>
-                        <button className="btn-xs bg-[#2f788a] hover:bg-gray-700 text-white text-xs rounded-lg "
+                    <td className="text-center">
+                      <div className="flex justify-center gap-2">
+
+                        {/* PRINT */}
+                        <button
+                          className="btn-xs bg-[#2f788a] hover:bg-gray-700 text-white rounded-lg"
                           onClick={() => {
-                                setPrintData(l);
-                                setTimeout(handlePrint, 50);
-                            }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
-                          <path fill-rule="evenodd" d="M4 5a2 2 0 0 0-2 2v3a2 2 0 0 0 1.51 1.94l-.315 1.896A1 1 0 0 0 4.18 15h7.639a1 1 0 0 0 .986-1.164l-.316-1.897A2 2 0 0 0 14 10V7a2 2 0 0 0-2-2V2a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v3Zm1.5 0V2.5h5V5h-5Zm5.23 5.5H5.27l-.5 3h6.459l-.5-3Z" clip-rule="evenodd" />
-                        </svg>
+                            setPrintData(l);
+                            setTimeout(handlePrint, 50);
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-printer-check-icon lucide-printer-check"><path d="M13.5 22H7a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v.5"/><path d="m16 19 2 2 4-4"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/></svg>
                         </button>
-                    </div>
+
+                        {/* DELETE */}
+                        <button
+                          className="btn-xs bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                          onClick={() => {
+                            setTxToDelete(l);
+                            setConfirmDeleteOpen(true);
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                      </div>
                     </td>
                 </tr>
                 ))}
@@ -522,6 +536,24 @@ const canAdjustStock = stockPerm?.add === true;
   open={openStorages}
   onClose={() => setOpenStorages(false)}
   onSaved={refetchData}
+/>
+<ConfirmDeleteTransactionPopup
+  open={confirmDeleteOpen}
+  onCancel={() => {
+    setConfirmDeleteOpen(false);
+    setTxToDelete(null);
+  }}
+  onConfirm={async () => {
+    if (!txToDelete) return;
+
+    await api.delete(
+      `/api/invoices/storage-monitor/transaction/${txToDelete.id}`
+    );
+
+    setConfirmDeleteOpen(false);
+    setTxToDelete(null);
+    refetchData();
+  }}
 />
     </div>
   );

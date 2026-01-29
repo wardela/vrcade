@@ -55,6 +55,14 @@ const isReadOnly =
   const [isStocked, setIsStocked] = useState(true);
   const [defaultStorage, setDefaultStorage] = useState("");
   const [popupMessage, setPopupMessage] = useState(null);
+  const [initialStockDate, setInitialStockDate] = useState(() => {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+});
+
   
   const showPopup = (message) => {
     setPopupMessage(message);
@@ -106,6 +114,13 @@ useEffect(() => {
 
     setIsStocked(true);
     setStorageQty([]);
+    setInitialStockDate(() => {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    });
   }
 }, [isOpen]);
 
@@ -212,7 +227,8 @@ const saveItem = async () => {
       usual_discount_percentage: usualDiscountPct,
       notes,
       is_stocked: isStocked,
-      default_storage_id: defaultStorage || null
+      default_storage_id: defaultStorage || null,
+      initial_stock_date: initialStockDate, // ✅ NEW
     };
 
     if (!isEdit && isStocked) {
@@ -318,20 +334,20 @@ useEffect(() => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-gray-600">{t("ItemCard.fields.category")}</label>
-<select
-  className={`w-full border rounded px-3 py-2 ${
-    fieldErrors.category ? "border-red-500 ring-2 ring-red-200" : ""
-  }`}
-  value={category}
-  disabled={isReadOnly}
-  onChange={(e) => {
-    setCategory(e.target.value);
-    setFieldErrors(prev => ({ ...prev, category: null }));
-  }}
->
-{fieldErrors.category && (
-  <p className="text-xs text-red-600 mt-1">{fieldErrors.category}</p>
-)}
+                <select
+                  className={`w-full border rounded px-3 py-2 ${
+                    fieldErrors.category ? "border-red-500 ring-2 ring-red-200" : ""
+                  }`}
+                  value={category}
+                  disabled={isReadOnly}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    setFieldErrors(prev => ({ ...prev, category: null }));
+                  }}
+                >
+                {fieldErrors.category && (
+                  <p className="text-xs text-red-600 mt-1">{fieldErrors.category}</p>
+                )}
                 <option value="">{t("ItemCard.actions.select")}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -448,30 +464,106 @@ useEffect(() => {
 
         {!isEdit && isStocked && (
   <div className="mb-4 border-b pb-4">
-    <h3 className="text-md font-semibold text-gray-600 mb-2">
+<div className="space-y-4">
+  {/* Section Header with decorative accent */}
+  <div className="flex items-center gap-3">
+    <div className="h-8 w-1 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" />
+    <h3 className="text-lg font-bold text-slate-800 tracking-tight">
       {t("ItemCard.sections.initial_stock")}
     </h3>
+  </div>
 
-    <div className="grid grid-cols-2 gap-4">
-      {storages.map((s, idx) => (
-        <div key={s.id} className="flex gap-2 items-center">
-          <span className="w-1/2 text-sm text-gray-700">
-            {s.name}
-          </span>
+  {/* Date Input Field */}
+  <div className="group relative">
+    <label 
+      htmlFor="initial-stock-date"
+      className="flex items-center gap-2 text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide"
+    >
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        fill="none" 
+        viewBox="0 0 24 24" 
+        strokeWidth="2" 
+        stroke="currentColor" 
+        className="w-4 h-4 text-slate-400"
+      >
+        <path 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" 
+        />
+      </svg>
+      {t("ItemCard.fields.initial_stock_date")}
+    </label>
+    
+    <div className="relative">
+      <input
+        id="initial-stock-date"
+        type="date"
+        className={`
+          w-full px-4 py-3 
+          text-sm font-medium
+          border-2 rounded-xl
+          transition-all duration-200
+          ${isReadOnly 
+            ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed' 
+            : 'bg-white border-slate-300 text-slate-900 hover:border-blue-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none shadow-sm hover:shadow-md'
+          }
+        `}
+        value={initialStockDate}
+        disabled={isReadOnly}
+        onChange={(e) => setInitialStockDate(e.target.value)}
+      />
+      
+      {/* Decorative corner accent */}
+      {!isReadOnly && (
+        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      )}
+    </div>
+  </div>
+</div>
+
+   <div className="space-y-3 mt-3">
+  {storages.map((s, idx) => (
+    <div 
+      key={s.id} 
+      className="group relative bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 hover:border-slate-300"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <label 
+          htmlFor={`storage-${s.id}`}
+          className="flex-1 text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors cursor-pointer"
+        >
+          {s.name}
+        </label>
+        <div className="relative">
           <input
+            id={`storage-${s.id}`}
             type="number"
-            className="w-1/2 border rounded px-2 py-1"
+            min="0"
+            className={`
+              w-24 px-3 py-2 text-right font-semibold
+              border-2 rounded-lg
+              transition-all duration-200
+              ${isReadOnly 
+                ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' 
+                : 'bg-white border-slate-300 text-slate-900 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none'
+              }
+            `}
             value={storageQty[idx]?.qty || 0}
-              disabled={isReadOnly}
+            disabled={isReadOnly}
             onChange={(e) => {
               const copy = [...storageQty];
               copy[idx].qty = Number(e.target.value);
               setStorageQty(copy);
             }}
           />
+
         </div>
-      ))}
+      </div>
     </div>
+  ))}
+</div>
   </div>
 )}
 
@@ -580,21 +672,45 @@ useEffect(() => {
 
         {/* STOCK + FAV */}
                        
-<div className=" flex items-center gap-3 mb-2 border-b pb-2">
-
-  {/* Star toggle icon */}
+<div className="relative flex items-center gap-4 pb-4 mb-4 border-b border-slate-200">
+  
+  {/* Star toggle button with enhanced design */}
   <button
     onClick={() => setFav(!fav)}
-      disabled={isReadOnly}
-    className="flex justify-center items-center p-1.5 rounded-md hover:bg-gray-100 transition"
+    disabled={isReadOnly}
+    className={`
+      group relative flex items-center justify-center
+      w-10 h-10 rounded-xl
+      transition-all duration-300 ease-out
+      ${isReadOnly 
+        ? 'cursor-not-allowed opacity-50' 
+        : 'hover:scale-110 active:scale-95'
+      }
+      ${fav 
+        ? 'bg-gradient-to-br from-amber-50 to-yellow-50 shadow-sm' 
+        : 'bg-slate-50 hover:bg-slate-100'
+      }
+    `}
+    aria-label={fav ? "Remove from favorites" : "Add to favorites"}
   >
+    {/* Glow effect when favorited */}
+    {fav && !isReadOnly && (
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-400/20 to-yellow-400/20 blur-md animate-pulse" />
+    )}
+    
     {fav ? (
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
-        fill="#2f788a"
-        className="w-6 h-6 drop-shadow-sm"
+        fill="url(#starGradient)"
+        className="w-6 h-6 relative z-10 drop-shadow-sm transition-transform duration-300 group-hover:rotate-12"
       >
+        <defs>
+          <linearGradient id="starGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#d97706" />
+          </linearGradient>
+        </defs>
         <path
           fillRule="evenodd"
           d="M10.788 3.21c.448-1.077 1.976-1.077 
@@ -612,9 +728,9 @@ useEffect(() => {
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
-        strokeWidth="1.8"
-        stroke="#9aa0a6"
-        className="w-6 h-6"
+        strokeWidth="2"
+        stroke="currentColor"
+        className="w-6 h-6 relative z-10 text-slate-400 group-hover:text-amber-500 transition-colors duration-300"
       >
         <path
           strokeLinecap="round"
@@ -634,9 +750,36 @@ useEffect(() => {
     )}
   </button>
 
-  {/* Label */}
-  <span className="text-gray-700 text-sm">{t("ItemCard.fields.favorite")}</span>
-</div>
+          {/* Enhanced label */}
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-slate-700">
+              {t("ItemCard.fields.favorite")}
+            </span>
+            {fav && (
+              <span className="text-xs text-amber-600 font-medium animate-fade-in">
+                ★ {t("ItemsScreen.table.favorite")}
+              </span>
+            )}
+          </div>
+
+          {/* Optional: Add this to your global CSS for the fade-in animation */}
+          <style jsx>{`
+            @keyframes fade-in {
+              from {
+                opacity: 0;
+                transform: translateY(-4px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            .animate-fade-in {
+              animation: fade-in 0.3s ease-out;
+            }
+          `}</style>
+        </div>
+
         {/* NOTES */}
         <div className="mb-4">
           <h3 className="text-md font-semibold text-gray-600 mb-2">{t("ItemCard.sections.notes")}</h3>

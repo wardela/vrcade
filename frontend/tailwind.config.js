@@ -2,7 +2,12 @@
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
-    extend: {},
+    extend: {
+fontFamily: {
+  sans: ['"Almarai"', 'system-ui', 'sans-serif'],
+},
+
+  },
   },
   darkMode: "class", // Enable class-based dark mode
   plugins: [require('daisyui')],

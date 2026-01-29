@@ -12,15 +12,29 @@ export default function QuickStorageAdjustModal({
   const [qty, setQty] = useState("");
   const [direction, setDirection] = useState("IN");
   const [notes, setNotes] = useState("");
+  const [txDate, setTxDate] = useState(() => {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
   const {t} = useTranslation();
   // reset when closed
-  useEffect(() => {
-    if (!open) {
-      setQty("");
-      setDirection("IN");
-      setNotes("");
-    }
-  }, [open]);
+useEffect(() => {
+  if (!open) return;
+
+  setQty("");
+  setDirection("IN");
+  setNotes("");
+
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  setTxDate(`${yyyy}-${mm}-${dd}`);
+}, [open]);
+
 
   // click outside
   useEffect(() => {
@@ -36,7 +50,7 @@ export default function QuickStorageAdjustModal({
   if (!open || !item) return null;
 
   const submit = async () => {
-    if (!qty || qty <= 0) return;
+    if (!qty || qty <= 0 || !txDate) return;
 
     await api.post(`/api/invoices/storage-adjust`, {
       item_id: item.item_id,
@@ -45,6 +59,7 @@ export default function QuickStorageAdjustModal({
       from_storage_id: direction === "OUT" ? item.storage_id : null,
       to_storage_id: direction === "IN" ? item.storage_id : null,
       notes,
+      date: txDate, // ✅ NEW
     });
 
     onClose();
@@ -107,6 +122,19 @@ export default function QuickStorageAdjustModal({
             type="number"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
+            className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#2f788a]"
+          />
+        </div>
+
+        {/* Date */}
+        <div className="mb-4">
+          <label className="text-sm text-gray-600 mb-1 block">
+            {t("QuickStorageAdjustModal.fields.date")}
+          </label>
+          <input
+            type="date"
+            value={txDate}
+            onChange={(e) => setTxDate(e.target.value)}
             className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#2f788a]"
           />
         </div>

@@ -11,6 +11,7 @@ const PERMISSION_MODULES = [
   "users",
   "company_config",
   "einvoicing", // ✅ ADD THIS
+  "receipts",
 ];
 
 // permissions input expected from frontend:

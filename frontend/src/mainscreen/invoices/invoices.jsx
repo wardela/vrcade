@@ -36,6 +36,7 @@ const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 const [popupMessage, setPopupMessage] = useState(null);
 const [notesChanged, setNotesChanged] = useState(false);
 const [showDiscount, setShowDiscount] = useState(true);
+const [createDueBalance, setCreateDueBalance] = useState(true);
 
 const {t} = useTranslation();
 const round3 = (num) => Math.round(num * 1000) / 1000;
@@ -167,6 +168,16 @@ const canSaveThisInvoice =
 
 const isEditable = canSaveThisInvoice;
 
+useEffect(() => {
+  // Only auto-toggle in NEW invoice mode
+  if (!isNewMode) return;
+
+  if (paymentType === "credit") {
+    setCreateDueBalance(true);
+  } else if (paymentType === "cash") {
+    setCreateDueBalance(false);
+  }
+}, [paymentType, isNewMode]);
 
 
 const [notes, setNotes] = useState("");
@@ -742,21 +753,24 @@ if (hasMissingStorage) {
         typeof it.unit_number === "number" ? it.unit_number : null,
     }));
 
-    const payload = {
-      invoice_number: invoiceNumber,
-      date: invoiceDate,
-      pos: "POS-1",
-      type: paymentType,
-      type2,
-      currency,
-      client_contact: clientPhone,
-      client_det_code: clientDetailType,
-      client_detail: clientDetailValue,
-      client_id: selectedInvoice?.client_id || null,
-      client: clientName,
-      notes,
-      lines,
-    };
+const payload = {
+  invoice_number: invoiceNumber,
+  date: invoiceDate,
+  pos: "POS-1",
+  type: paymentType,
+  type2,
+  currency,
+  client_contact: clientPhone,
+  client_det_code: clientDetailType,
+  client_detail: clientDetailValue,
+  client_id: selectedInvoice?.client_id || null,
+  client: clientName,
+  notes,
+  lines,
+
+  // 🔥 NEW
+  create_due_balance: Boolean(createDueBalance),
+};
 
     const res = await api.post(`/api/invoices`, payload);
     const created = res.data;
@@ -834,6 +848,7 @@ const initNewInvoice = async () => {
     setCurrency("JOD");
     setType2("local");
     setNotes("");
+    setCreateDueBalance(true); // default for new invoices
 
     // Items → ONE EMPTY LINE
     setInvoiceItems([
@@ -1335,43 +1350,73 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
   
 
   {/* Payment Type */}
-{/* Payment Type */}
-<div className="flex flex-col">
-  <label className="text-sm text-gray-500 mb-1">{t("Invoices.payment_type")}</label>
+<div className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+  {/* Payment Type Toggle */}
+  <div className="flex flex-col gap-2">
+    <label className="text-sm font-medium text-gray-700">
+      {t("Invoices.payment_type")}
+    </label>
 
-  <div
-    className={`flex rounded-lg overflow-hidden border ${
-      !isEditable ? "opacity-50 cursor-not-allowed" : ""
-    }`}
-  >
-    {/* CREDIT OPTION */}
-    <button
-      onClick={() => isEditable && setPaymentType("credit")}
-      className={`flex-1 py-2 text-sm font-medium transition 
-        ${paymentType === "credit"
-          ? "bg-[#2f788a] text-white"
-          : "bg-white text-gray-700 hover:bg-gray-100"
-        }
-      `}
-      disabled={!isEditable}
+    <div
+      className={`flex rounded-lg overflow-hidden border border-gray-300 shadow-sm ${
+        !isEditable ? "opacity-50 cursor-not-allowed" : ""
+      }`}
     >
-      {t("Invoices.payment_credit")}
-    </button>
+      {/* CREDIT OPTION */}
+      <button
+        onClick={() => isEditable && setPaymentType("credit")}
+        className={`flex-1 py-2.5 px-4 text-sm font-medium transition-all duration-200 
+          ${paymentType === "credit"
+            ? "bg-[#2f788a] text-white shadow-inner"
+            : "bg-white text-gray-700 hover:bg-gray-50"
+          }
+          ${!isEditable ? "" : "active:scale-[0.98]"}
+        `}
+        disabled={!isEditable}
+      >
+        {t("Invoices.payment_credit")}
+      </button>
 
-    {/* CASH OPTION */}
-    <button
-      onClick={() => isEditable && setPaymentType("cash")}
-      className={`flex-1 py-2 text-sm font-medium transition border-l 
-        ${paymentType === "cash"
-          ? "bg-[#2f788a] text-white"
-          : "bg-white text-gray-700 hover:bg-gray-100"
-        }
-      `}
-      disabled={!isEditable}
-    >
-      {t("Invoices.payment_cash")}
-    </button>
+      {/* CASH OPTION */}
+      <button
+        onClick={() => isEditable && setPaymentType("cash")}
+        className={`flex-1 py-2.5 px-4 text-sm font-medium transition-all duration-200 border-l border-gray-300
+          ${paymentType === "cash"
+            ? "bg-[#2f788a] text-white shadow-inner"
+            : "bg-white text-gray-700 hover:bg-gray-50"
+          }
+          ${!isEditable ? "" : "active:scale-[0.98]"}
+        `}
+        disabled={!isEditable}
+      >
+        {t("Invoices.payment_cash")}
+      </button>
+    </div>
   </div>
+
+  {/* Create Due Balance (NEW invoices only) */}
+  {isNewMode && (
+    <div className="flex items-center gap-2 pt-1">
+      <input
+        type="checkbox"
+        id="create-due-balance"
+        checked={createDueBalance}
+        disabled={!isEditable}
+        onChange={(e) => setCreateDueBalance(e.target.checked)}
+        className={`w-4 h-4 rounded border-gray-300 text-[#2f788a] focus:ring-[#2f788a] focus:ring-offset-0 focus:ring-2 transition
+          ${!isEditable ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+        `}
+      />
+      <label 
+        htmlFor="create-due-balance"
+        className={`text-sm text-gray-700 select-none
+          ${!isEditable ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+        `}
+      >
+        {t("Invoices.create_due_balance")}
+      </label>
+    </div>
+  )}
 </div>
 </div>
 

@@ -22,6 +22,13 @@ export default function StorageTransactionModal({ open, onClose, onSuccess }) {
   const [qty, setQty] = useState("");
   const [notes, setNotes] = useState("");
   const {t} = useTranslation();
+  const [txDate, setTxDate] = useState(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
 
 const [popupMessage, setPopupMessage] = useState(null);
 
@@ -104,21 +111,23 @@ const filteredItems = items.filter(i => {
 });
 
 
+
   /* ---------------- SUBMIT ---------------- */
   const submit = async () => {
-    if (!selectedItem || !qty) {
+    if (!selectedItem || !qty || !txDate) {
       showPopup(t("StorageTransactionModal.messages.missing_item_qty"));
       return;
     }
 
-    await api.post(`/api/invoices/storage-adjust`, {
-      item_id: selectedItem.id,
-      qty: Number(qty),
-      type,
-      from_storage_id: type !== "IN" ? fromStorage : null,
-      to_storage_id: type !== "OUT" ? toStorage : null,
-      notes
-    });
+await api.post(`/api/invoices/storage-adjust`, {
+  item_id: selectedItem.id,
+  qty: Number(qty),
+  type,
+  from_storage_id: type !== "IN" ? fromStorage : null,
+  to_storage_id: type !== "OUT" ? toStorage : null,
+  notes,
+  date: txDate, // ✅ NEW
+});
 
     onSuccess?.();
     resetState();
@@ -241,6 +250,13 @@ const filteredItems = items.filter(i => {
               placeholder={t("StorageTransactionModal.transaction.quantity")}
               value={qty}
               onChange={(e) => setQty(e.target.value)}
+            />
+
+            <input
+              type="date"
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              value={txDate}
+              onChange={(e) => setTxDate(e.target.value)}
             />
 
             <textarea

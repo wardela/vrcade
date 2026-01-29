@@ -9,6 +9,10 @@
     padding: 0;
   }
   
+html, body {
+  font-family: "Almarai", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
  html[dir="rtl"] {
   direction: rtl;
 }

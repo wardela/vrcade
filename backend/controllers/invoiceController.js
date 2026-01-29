@@ -673,13 +673,21 @@ const getStorageLogs = async (req, res) => {
 
 const adjustStorageManually = async (req, res) => {
   try {
-    await invoiceService.adjustStorageManually(req.db,req.body);
+    const { item_id, qty, type, date } = req.body;
+
+    if (!item_id || !qty || !type || !date) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    await invoiceService.adjustStorageManually(req.db, req.body);
+
     res.status(200).json({ message: "Stock adjusted successfully" });
   } catch (err) {
     console.error("Storage adjust error:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 const getAllItems = async (req, res) => {
   try {
@@ -1298,6 +1306,43 @@ const getSalesByClientDetailedReport = async (req, res) => {
   }
 };
 
+const getItemsSoldForClientTotals = async (req, res) => {
+  try {
+    const {
+      from,
+      to,
+      client_id,
+      limit = 20,
+      offset = 0
+    } = req.query;
+
+    if (!from || !to || !client_id) {
+      return res.status(400).json({
+        message: "from, to, and client_id are required"
+      });
+    }
+
+    const data = await invoiceService.getItemsSoldForClientTotals(
+      req.db,
+      {
+        from,
+        to,
+        client_id: Number(client_id),
+        limit: Number(limit),
+        offset: Number(offset)
+      }
+    );
+
+    res.json(data);
+  } catch (err) {
+    console.error("Items sold for client totals report error:", err);
+    res.status(500).json({
+      message: "Failed to fetch items sold for client totals report"
+    });
+  }
+};
+
+
 const getSalesByClientReport = async (req, res) => {
   try {
     const {
@@ -1587,6 +1632,500 @@ const getDashboardClients = async (req, res) => {
   }
 };
 
+const deleteStorageTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Transaction id is required" });
+    }
+
+    await invoiceService.deleteStorageTransaction(req.db, Number(id));
+
+    res.json({ message: "Transaction deleted successfully" });
+  } catch (err) {
+    console.error("Delete storage transaction error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const createDueBalance = async (req, res) => {
+  try {
+    const { reason, date, amount, client_id, notes } = req.body;
+
+    if (!reason || !amount || !client_id) {
+      return res.status(400).json({
+        message: "reason, amount, and client_id are required"
+      });
+    }
+
+    const created = await invoiceService.createDueBalance(req.db, {
+      reason,
+      date,
+      amount,
+      client_id,
+      notes
+    });
+
+    res.status(201).json(created);
+  } catch (err) {
+    console.error("Error creating due balance:", err);
+    res.status(400).json({
+      message: err.message || "Error creating due balance"
+    });
+  }
+};
+
+const updateDueBalance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, date, amount, notes } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Due balance ID is required" });
+    }
+
+    const updated = await invoiceService.updateDueBalance(
+      req.db,
+      id,
+      { reason, date, amount, notes }
+    );
+
+    res.status(200).json(updated);
+  } catch (err) {
+    console.error("Error updating due balance:", err);
+    res.status(400).json({
+      message: err.message || "Error updating due balance"
+    });
+  }
+};
+
+const deleteDueBalance = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Due balance ID is required" });
+    }
+
+    const deleted = await invoiceService.deleteDueBalance(req.db, id);
+
+    res.status(200).json(deleted);
+  } catch (err) {
+    console.error("Error deleting due balance:", err);
+    res.status(400).json({
+      message: err.message || "Error deleting due balance"
+    });
+  }
+};
+
+const getDueBalanceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Due balance ID is required"
+      });
+    }
+
+    const dueBalance =
+      await invoiceService.getDueBalanceById(req.db, id);
+
+    res.status(200).json(dueBalance);
+  } catch (err) {
+    console.error("Error fetching due balance:", err);
+    res.status(400).json({
+      message: err.message || "Failed to fetch due balance"
+    });
+  }
+};
+
+const createReceiptVoucher = async (req, res) => {
+  try {
+    const {
+      due_balance_id,
+      date,        // ✅ ADD THIS
+      type,
+      amount,
+      reason,
+      notes
+    } = req.body;
+
+    if (!due_balance_id || !date || !type || !amount) {
+      return res.status(400).json({
+        message: "due_balance_id, date, type, and amount are required"
+      });
+    }
+
+    const created =
+      await invoiceService.createReceiptVoucher(req.db, {
+        due_balance_id,
+        date,        // ✅ PASS IT
+        type,
+        amount,
+        reason,
+        notes
+      });
+
+    res.status(201).json(created);
+  } catch (err) {
+    console.error("Error creating receipt voucher:", err);
+    res.status(400).json({
+      message: err.message || "Error creating receipt voucher"
+    });
+  }
+};
+
+const updateReceiptVoucher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      date,        // ✅ ADD THIS
+      type,
+      amount,
+      reason,
+      notes
+    } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Receipt voucher ID is required"
+      });
+    }
+
+    const updated = await invoiceService.updateReceiptVoucher(
+      req.db,
+      id,
+      {
+        date,       // ✅ PASS IT
+        type,
+        amount,
+        reason,
+        notes
+      }
+    );
+
+    res.status(200).json(updated);
+  } catch (err) {
+    console.error("Error updating receipt voucher:", err);
+    res.status(400).json({
+      message: err.message || "Error updating receipt voucher"
+    });
+  }
+};
+
+const deleteReceiptVoucher = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Receipt voucher ID is required"
+      });
+    }
+
+    const deleted = await invoiceService.deleteReceiptVoucher(req.db, id);
+
+    res.status(200).json(deleted);
+  } catch (err) {
+    console.error("Error deleting receipt voucher:", err);
+    res.status(400).json({
+      message: err.message || "Error deleting receipt voucher"
+    });
+  }
+};
+
+const createReceiptCheque = async (req, res) => {
+  try {
+    const {
+      receipt_voucher_id,
+      cheque_number,
+      cheque_amount,
+      due_date,
+      beneficiary_bank
+    } = req.body;
+
+    if (
+      !receipt_voucher_id ||
+      !cheque_number ||
+      !cheque_amount ||
+      !due_date ||
+      !beneficiary_bank
+    ) {
+      return res.status(400).json({
+        message:
+          "receipt_voucher_id, cheque_number, cheque_amount, due_date, and beneficiary_bank are required"
+      });
+    }
+
+    const created = await invoiceService.createReceiptCheque(req.db, {
+      receipt_voucher_id,
+      cheque_number,
+      cheque_amount,
+      due_date,
+      beneficiary_bank
+    });
+
+    res.status(201).json(created);
+  } catch (err) {
+    console.error("Error creating receipt cheque:", err);
+    res.status(400).json({
+      message: err.message || "Error creating receipt cheque"
+    });
+  }
+};
+
+const updateReceiptCheque = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      cheque_number,
+      cheque_amount,
+      due_date,
+      beneficiary_bank
+    } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Receipt cheque ID is required"
+      });
+    }
+
+    const updated = await invoiceService.updateReceiptCheque(
+      req.db,
+      id,
+      {
+        cheque_number,
+        cheque_amount,
+        due_date,
+        beneficiary_bank
+      }
+    );
+
+    res.status(200).json(updated);
+  } catch (err) {
+    console.error("Error updating receipt cheque:", err);
+    res.status(400).json({
+      message: err.message || "Error updating receipt cheque"
+    });
+  }
+};
+
+const deleteReceiptCheque = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Receipt cheque ID is required"
+      });
+    }
+
+    const deleted = await invoiceService.deleteReceiptCheque(req.db, id);
+
+    res.status(200).json(deleted);
+  } catch (err) {
+    console.error("Error deleting receipt cheque:", err);
+    res.status(400).json({
+      message: err.message || "Error deleting receipt cheque"
+    });
+  }
+};
+
+const getDueBalances = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      client_id,
+      from_date,
+      to_date
+    } = req.query;
+
+    const result = await invoiceService.getDueBalances(req.db, {
+      page: Number(page),
+      limit: Number(limit),
+      client_id,
+      from_date,
+      to_date
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching due balances:", err);
+    res.status(500).json({
+      message: "Failed to fetch due balances"
+    });
+  }
+};
+
+const getReceiptVouchersByDueBalance = async (req, res) => {
+  try {
+    const { due_balance_id } = req.params;
+
+    if (!due_balance_id) {
+      return res.status(400).json({
+        message: "due_balance_id is required"
+      });
+    }
+
+    const vouchers =
+      await invoiceService.getReceiptVouchersByDueBalance(
+        req.db,
+        due_balance_id
+      );
+
+    res.status(200).json(vouchers);
+  } catch (err) {
+    console.error("Error fetching receipt vouchers:", err);
+    res.status(500).json({
+      message: "Failed to fetch receipt vouchers"
+    });
+  }
+};
+
+const getReceiptVoucherDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Receipt voucher ID is required"
+      });
+    }
+
+    const details =
+      await invoiceService.getReceiptVoucherDetails(req.db, id);
+
+    res.status(200).json(details);
+  } catch (err) {
+    console.error("Error fetching receipt voucher details:", err);
+    res.status(400).json({
+      message: err.message || "Failed to fetch receipt voucher details"
+    });
+  }
+};
+
+const createStandaloneReceipt = async (req, res) => {
+  try {
+    const {
+      client_id,
+      date,
+      amount,
+      type,
+      reason,
+      notes,
+      cheques
+    } = req.body;
+
+    if (!client_id || !date || !amount || !type) {
+      return res.status(400).json({
+        message: "client_id, date, amount, and type are required"
+      });
+    }
+
+    const result = await invoiceService.createStandaloneReceipt(req.db, {
+      client_id,
+      date,
+      amount,
+      type,
+      reason,
+      notes,
+      cheques
+    });
+
+    res.status(201).json(result);
+  } catch (err) {
+    console.error("Error creating standalone receipt:", err);
+    res.status(400).json({
+      message: err.message || "Error creating receipt"
+    });
+  }
+};
+
+const getClientReceiptsTotals = async (req, res) => {
+  try {
+    const { client_id, from_date, to_date } = req.query;
+
+    if (!client_id) {
+      return res.status(400).json({
+        message: "client_id is required"
+      });
+    }
+
+    const totals =
+      await invoiceService.getClientReceiptsTotals(req.db, {
+        client_id,
+        from_date,
+        to_date
+      });
+
+    res.status(200).json(totals);
+  } catch (err) {
+    console.error("Error fetching receipts totals:", err);
+    res.status(500).json({
+      message: "Failed to fetch receipts totals"
+    });
+  }
+};
+
+const getReceiptsDashboard = async (req, res) => {
+  try {
+    const year = Number(req.query.year) || new Date().getFullYear();
+    const data = await invoiceService.getReceiptsDashboard(req.db, year);
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Receipts dashboard error:", err);
+    res.status(500).json({ message: "Failed to load receipts dashboard" });
+  }
+};
+
+const getClientReceiptsReport = async (req, res) => {
+  try {
+    const { client_id, from, to, limit = 100, offset = 0 } = req.query;
+
+    if (!client_id || !from || !to) {
+      return res.status(400).json({
+        message: "client_id, from, and to are required"
+      });
+    }
+
+    const result = await invoiceService.getClientReceiptsReport(req.db, {
+      client_id,
+      from,
+      to,
+      limit: Number(limit),
+      offset: Number(offset)
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching client receipts report:", err);
+    res.status(500).json({
+      message: err.message || "Failed to fetch client receipts report"
+    });
+  }
+};
+
+const getPrintableDueBalance = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const data = await invoiceService.getPrintableDueBalance(
+      req.db,
+      id
+    );
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Printable due balance error:", err);
+    res.status(400).json({
+      message: err.message || "Failed to load printable due balance"
+    });
+  }
+};
+
 module.exports = {
   getInvoices,
   getInvoiceDetails,
@@ -1663,5 +2202,25 @@ module.exports = {
   getDashboardOverview,
   getDashboardSales,
   getDashboardInventory,
-  getDashboardClients
+  getDashboardClients,
+  getItemsSoldForClientTotals,
+  deleteStorageTransaction,
+  createDueBalance,
+  updateDueBalance,
+  deleteDueBalance,
+  getDueBalanceById,
+  createReceiptVoucher,
+  updateReceiptVoucher,
+  deleteReceiptVoucher,
+  createReceiptCheque,
+  updateReceiptCheque,
+  deleteReceiptCheque,
+  getDueBalances,
+  getReceiptVouchersByDueBalance,
+  getReceiptVoucherDetails,
+  createStandaloneReceipt,
+  getClientReceiptsTotals,
+  getReceiptsDashboard,
+  getClientReceiptsReport,
+  getPrintableDueBalance
 };

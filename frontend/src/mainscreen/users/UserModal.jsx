@@ -12,6 +12,7 @@ const emptyPermissions = {
   users: { view: false, add: false, edit: false, delete: false },
   company_config: { view: false, add: false, edit: false, delete: false },
   einvoicing: { view: false, add: false, edit: false, delete: false },
+  receipts: { view: false, add: false, edit: false, delete: false },
 };
 
 export default function UserModal({ close, refresh, editData }) {
@@ -292,6 +293,11 @@ const PermissionRow = ({ label, module, actions }) => {
       label={t("UserModal.modules.stock_management")}
       module="stock_management"
       actions={["view","add"]}
+    />
+    <PermissionRow
+      label={t("UserModal.modules.receipts")}
+      module="receipts"
+      actions={["view","add","edit","delete"]}
     />
   </div>
 </div>
