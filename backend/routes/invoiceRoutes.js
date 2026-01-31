@@ -142,4 +142,7 @@ router.get("/stats/dashboard-sales", invoiceController.getDashboardSales);
 router.get("/stats/dashboard-inventory", invoiceController.getDashboardInventory);
 router.get("/stats/dashboard-clients", invoiceController.getDashboardClients);
 
+// POS
+router.post("/pos", invoiceController.createPosInvoice);
+
 module.exports = router;

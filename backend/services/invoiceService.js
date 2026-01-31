@@ -464,7 +464,7 @@ const searchInvoices = async (db,query, limit = 100, offset = 0) => {
   return result.rows;
 };
 
-const saveCompanyConfig = async (db,{
+const saveCompanyConfig = async (db, {
   company_name,
   tax_number,
   tax_serial,
@@ -474,12 +474,16 @@ const saveCompanyConfig = async (db,{
   phone_number,
   company_location,
   email,
-  invoice_terms // ✅ NEW
+  invoice_terms,
+  auto_pos_einvoicing // ✅ NEW
 }) => {
   const existing = await db.query(
     `SELECT id FROM company_config LIMIT 1`
   );
 
+  // =========================
+  // UPDATE EXISTING CONFIG
+  // =========================
   if (existing.rows.length > 0) {
     const id = existing.rows[0].id;
 
@@ -487,18 +491,19 @@ const saveCompanyConfig = async (db,{
       `
       UPDATE company_config
       SET
-        company_name      = $1,
-        tax_number        = $2,
-        tax_serial        = $3,
-        client_id         = $4,
-        secret_key        = $5,
-        logo_url          = COALESCE($6, logo_url),
-        phone_number      = $7,
-        company_location  = $8,
-        email             = $9,
-        invoice_terms     = $10,
-        updated_at        = NOW()
-      WHERE id = $11
+        company_name        = $1,
+        tax_number          = $2,
+        tax_serial          = $3,
+        client_id           = $4,
+        secret_key          = $5,
+        logo_url            = COALESCE($6, logo_url),
+        phone_number        = $7,
+        company_location    = $8,
+        email               = $9,
+        invoice_terms       = $10,
+        auto_pos_einvoicing = COALESCE($11, auto_pos_einvoicing),
+        updated_at          = NOW()
+      WHERE id = $12
       RETURNING *;
       `,
       [
@@ -512,48 +517,53 @@ const saveCompanyConfig = async (db,{
         company_location || null,
         email || null,
         invoice_terms || null,
+        auto_pos_einvoicing ?? null,
         id
       ]
     );
 
     return result.rows[0];
-  } else {
-    const result = await db.query(
-      `
-      INSERT INTO company_config
-        (
-          company_name,
-          tax_number,
-          tax_serial,
-          client_id,
-          secret_key,
-          logo_url,
-          phone_number,
-          company_location,
-          email,
-          invoice_terms
-        )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      RETURNING *;
-      `,
-      [
+  }
+
+  // =========================
+  // INSERT FIRST CONFIG
+  // =========================
+  const result = await db.query(
+    `
+    INSERT INTO company_config
+      (
         company_name,
         tax_number,
         tax_serial,
         client_id,
         secret_key,
-        logo_url || null,
-        phone_number || null,
-        company_location || null,
-        email || null,
-        invoice_terms || null
-      ]
-    );
+        logo_url,
+        phone_number,
+        company_location,
+        email,
+        invoice_terms,
+        auto_pos_einvoicing
+      )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    RETURNING *;
+    `,
+    [
+      company_name,
+      tax_number,
+      tax_serial,
+      client_id,
+      secret_key,
+      logo_url || null,
+      phone_number || null,
+      company_location || null,
+      email || null,
+      invoice_terms || null,
+      auto_pos_einvoicing ?? true // ✅ default ON
+    ]
+  );
 
-    return result.rows[0];
-  }
+  return result.rows[0];
 };
-
 
 const getCompanyConfig = async (db) => {
   const result = await db.query(
@@ -569,7 +579,6 @@ const getCompanyConfig = async (db) => {
 
   return company;
 };
-
 
 // Daily KPIs for a given date
 const getDailyStats = async (db,date) => {
@@ -3851,7 +3860,7 @@ const getClientReceiptsTotals = async (
     total_outstanding: Number(res.rows[0].total_outstanding)
   };
 };
-
+ 
 // ===== receipts dashboard block =====
 
 const getReceiptsMonthlyDueVsPaid = async (db, year) => {

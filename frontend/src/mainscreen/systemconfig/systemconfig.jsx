@@ -18,6 +18,7 @@ const [email, setEmail] = useState("");
 const {t} = useTranslation();
 const [popupMessage, setPopupMessage] = useState(null);
 const [invoiceTerms, setInvoiceTerms] = useState("");
+const [autoPosEinvoicing, setAutoPosEinvoicing] = useState(false);
 
 const showPopup = (message) => {
   setPopupMessage(message);
@@ -34,6 +35,7 @@ const fetchCompany = async () => {
     const res = await api.get(`/api/invoices/company`);
     if (res.data) {
       const data = res.data;
+
       setCompanyName(data.company_name || "");
       setTaxNumber(data.tax_number || "");
       setTaxSerial(data.tax_serial || "");
@@ -44,6 +46,11 @@ const fetchCompany = async () => {
       setLocation(data.company_location || "");
       setEmail(data.email || "");
       setInvoiceTerms(data.invoice_terms || "");
+
+      // ✅ ADD THIS
+      setAutoPosEinvoicing(
+        data.auto_pos_einvoicing ?? true
+      );
     }
   } catch (err) {
     console.error("Error fetching company:", err);
@@ -52,6 +59,7 @@ const fetchCompany = async () => {
     setLoading(false);
   }
 };
+
 
 
   // ✅ Save or update company info
@@ -67,11 +75,12 @@ const payload = {
   phone_number: phone,
   company_location: location,
   email,
-  invoice_terms: invoiceTerms
+  invoice_terms: invoiceTerms,
+  auto_pos_einvoicing: autoPosEinvoicing
 };
 
 await api.post(`/api/invoices/company`, payload);
-
+await fetchCompany(); // ✅ keep UI in sync
       showPopup(" Company configuration saved successfully!");
     } catch (err) {
       console.error("Error saving company:", err);
@@ -307,6 +316,66 @@ const isReadOnly = !canEditCompanyConfig;
 
         {/* Right Column - API Config */}
         <div className="w-full lg:w-1/2 bg-white rounded-xl shadow p-6">
+<div className="mb-6">
+  <label className="
+    cursor-pointer
+    flex items-center justify-between
+    p-4
+    rounded-lg
+    border border-gray-200
+    bg-white
+    hover:border-gray-300
+    transition-colors duration-200
+  ">
+    <div className="flex items-center gap-3 flex-1">
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width="20" 
+        height="20" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="1.75" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        className="text-gray-400"
+      >
+        <path d="m17 15-5.5 5.5L9 18"/>
+        <path d="M5 17.743A7 7 0 1 1 15.71 10h1.79a4.5 4.5 0 0 1 1.5 8.742"/>
+      </svg>
+      
+      <div>
+        <span className="font-medium text-gray-800 text-sm">
+          {t("SystemConfig.toggles.auto_pos_einvoicing.title")}
+        </span>
+        <p className="text-xs text-gray-500 mt-0.5">
+          {t("SystemConfig.toggles.auto_pos_einvoicing.description")}
+        </p>
+      </div>
+    </div>
+
+    {/* Simple Toggle */}
+<div className="ml-4 flex-shrink-0">
+  <input
+    type="checkbox"
+    className="
+      w-5 h-5
+      rounded
+      border-2 border-gray-300
+      text-green-500
+      focus:ring-2 focus:ring-green-500 focus:ring-offset-2
+      disabled:opacity-50 disabled:cursor-not-allowed
+      cursor-pointer
+      transition-colors
+    "
+    checked={autoPosEinvoicing}
+    disabled={isReadOnly}
+    onChange={(e) => setAutoPosEinvoicing(e.target.checked)}
+  />
+</div>
+  </label>
+</div>
+
           <h3 className="text-lg font-semibold text-gray-700 mb-4">
              {t("SystemConfig.sections.api_credentials")}
           </h3>

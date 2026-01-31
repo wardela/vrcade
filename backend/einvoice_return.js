@@ -44,7 +44,7 @@ function buildReturnInvoiceXml(returnHeader, originalHeader, lines, company) {
     const discountFactor = 1 - discountRate;
 
     const lineDiscount =
-  qty * price * (NToZ(l.discount_percentage));
+    qty * price * (NToZ(l.discount_percentage)) / (1 + taxRate);
 
       totalDis += lineDiscount;
 
@@ -217,9 +217,9 @@ for (const l of lines) {
 
 xml += `</cac:TaxTotal>\n`;
 
-
+const EXAMMERF = Number(EXAMOUNT) + Number(DISAMOUNT);
   xml += `<cac:LegalMonetaryTotal>\n`;
-  xml += `<cbc:TaxExclusiveAmount currencyID="JO">${EXAMOUNT}</cbc:TaxExclusiveAmount>\n`;
+  xml += `<cbc:TaxExclusiveAmount currencyID="JO">${EXAMMERF}</cbc:TaxExclusiveAmount>\n`;
   xml += `<cbc:TaxInclusiveAmount currencyID="JO">${INAMOUNT}</cbc:TaxInclusiveAmount>\n`;
   xml += `<cbc:AllowanceTotalAmount currencyID="JO">${DISAMOUNT}</cbc:AllowanceTotalAmount>\n`;
   xml += `<cbc:PrepaidAmount currencyID="JO">0</cbc:PrepaidAmount>\n`;
@@ -278,10 +278,10 @@ const lineTotalIncl = qty * price * (1 - discRate);
   // Price (unit price BEFORE tax)
 const unitPriceIncl = price * (1 - discRate);
 const unitPriceEx = taxRate > 0 ? roundTo9(unitPriceIncl / (1 + taxRate)) : unitPriceIncl;
-
+const unitrefex = price / (1 + taxRate);
 
   xml += `<cac:Price>\n`;
-  xml += `<cbc:PriceAmount currencyID="JO">${unitPriceEx}</cbc:PriceAmount>\n`;
+  xml += `<cbc:PriceAmount currencyID="JO">${unitrefex}</cbc:PriceAmount>\n`;
   xml += `<cbc:BaseQuantity unitCode="C62">1</cbc:BaseQuantity>\n`;
 
   xml += `<cac:AllowanceCharge>\n`;
@@ -289,7 +289,7 @@ const unitPriceEx = taxRate > 0 ? roundTo9(unitPriceIncl / (1 + taxRate)) : unit
   xml += `<cbc:AllowanceChargeReason>DISCOUNT</cbc:AllowanceChargeReason>\n`;
 
 const lineDiscountAmount =
-  qty * price * NToZ(l.discount_percentage);
+  qty * price * NToZ(l.discount_percentage) / (1 + taxRate);
 
 xml += `<cbc:Amount currencyID="JO">${formatAmount9(lineDiscountAmount)}</cbc:Amount>\n`;
 

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 const emptyPermissions = {
   dashboard: { view: false, add: false, edit: false, delete: false },
   sales: { view: false, add: false, edit: false, delete: false },
+  pos: { view:false, add:false, edit:false, delete:false }, 
   refunds: { view: false, add: false, edit: false, delete: false },
   items: { view: false, add: false, edit: false, delete: false },
   stock_management: { view: false, add: false, edit: false, delete: false },
@@ -297,6 +298,11 @@ const PermissionRow = ({ label, module, actions }) => {
     <PermissionRow
       label={t("UserModal.modules.receipts")}
       module="receipts"
+      actions={["view","add","edit","delete"]}
+    />
+    <PermissionRow
+      label={t("UserModal.modules.pos")}
+      module="pos"
       actions={["view","add","edit","delete"]}
     />
   </div>

@@ -1,15 +1,18 @@
 {
   "sidebar": {
     "dashboard": "لوحة التحكم",
+    "sales": "المبيعات",
     "invoices": "الفواتير",
-    "refunds": "فواتير المرتجعات",
-    "unshared": "فواتير غير مرسلة",
+    "refunds": "المرتجعات",
+    "unshared": "غير مشاركة",
+    "receipts": "الإيصالات",
+    "inventory": "المخزون",
     "items": "الأصناف",
-    "storage": "المخزون",
-    "clients": "إدارة العملاء",
+    "storage": "المستودعات",
+    "clients": "العملاء",
     "reports": "التقارير",
-    "users": "إدارة المستخدمين",
-    "company": "إعدادات الشركة",
+    "users": "المستخدمون",
+    "company": "الشركة",
     "logout": " الخروج"
   },
   "settings": {
@@ -1419,7 +1422,8 @@
       "users": "إدارة المستخدمين",
       "company_config": "إعدادات الشركة",
       "stock_management": "إدارة المخزون",
-      "receipts": "سندات القبض"
+      "receipts": "سندات القبض",
+       "pos": "نقطة البيع"
     },
 
     "toggles": {
@@ -1492,8 +1496,15 @@
       "load_failed": "فشل تحميل بيانات الشركة",
       "save_success": "تم حفظ إعدادات الشركة بنجاح!",
       "save_failed": "فشل حفظ إعدادات الشركة"
+    },
+     "toggles": {
+      "auto_pos_einvoicing": {
+        "title": "الفوترة الإلكترونية التلقائية لمبيعات نقطة البيع",
+        "description": "في حال الإيقاف: يتم حفظ فواتير نقطة البيع بشكل عادي ويمكن مشاركتها لاحقًا يدويًا."
+      }
     }
   },
+
   "LogoutConfirm": {
     "title": "تسجيل الخروج",
     "message": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
@@ -1849,6 +1860,149 @@
     "items": "عناصر",
     "unpaid": "غير مدفوع",
     "outstanding": "ذمم متبقية"
-  }
+  },
+   "POS": {
+    "recent_invoices": {
+      "title": "الفواتير الأخيرة",
+      "new_invoice": "إنشاء فاتورة جديدة",
+      "loading": "جاري تحميل الفواتير..."
+    },
 
+    "search": {
+      "placeholder": "بحث بالاسم / الباركود / الكود...",
+      "manual_barcode": "إدخال باركود يدويًا",
+      "toggle_recent": "إظهار / إخفاء الفواتير"
+    },
+
+    "categories": {
+      "favorites": "المفضلة",
+      "all": "الكل"
+    },
+
+    "items": {
+      "price": "السعر",
+      "stock": "المخزون",
+      "not_stocked": "غير مخزّن",
+      "usual_discount": "خصم افتراضي"
+    },
+
+    "cart": {
+      "customer": "العميل",
+      "walk_in": "زبون نقدي",
+      "select": "اختيار",
+      "clear_customer": "إزالة",
+
+      "unit_price": "سعر الوحدة",
+      "quantity": "الكمية",
+      "total": "الإجمالي",
+
+      "add_discount": "إضافة خصم",
+      "discount_applied": "خصم مطبق",
+      "apply_discount": "تطبيق خصم",
+      "percentage": "النسبة (%)",
+      "amount": "القيمة (دينار)"
+    },
+
+    "totals": {
+      "subtotal": "المجموع الفرعي",
+      "discount": "الخصم",
+      "total": "المجموع النهائي"
+    },
+
+    "actions": {
+      "hold": "تعليق",
+      "held": "فواتير معلّقة",
+      "pay": "دفع",
+      "clear": "تفريغ",
+      "print": "طباعة",
+      "save": "حفظ",
+      "back": "رجوع"
+    },
+
+    "states": {
+      "locked": "الفاتورة مقفلة",
+      "no_items": "يجب إضافة عناصر إلى الفاتورة",
+      "save_success": "تم تحديث الفاتورة بنجاح",
+      "save_failed": "فشل حفظ الفاتورة",
+      "load_failed": "فشل تحميل الفاتورة",
+      "item_not_found": "العنصر غير موجود لهذا الباركود"
+    }
+  },
+    "BarcodeModal": {
+    "title": "إدخال الباركود يدويًا",
+    "placeholder": "امسح أو اكتب الباركود...",
+    "actions": {
+      "cancel": "إلغاء",
+      "add": "إضافة العنصر"
+    }
+  },
+    "HeldInvoicesModal": {
+    "title": "الفواتير المعلّقة",
+    "empty": "لا توجد فواتير معلّقة",
+    "labels": {
+      "walk_in": "زبون نقدي",
+      "items": "عناصر",
+      "currency": "دينار"
+    }
+  },
+    "PayModal": {
+    "title": "إتمام الدفع",
+
+    "payment_types": {
+      "cash": "نقدًا",
+      "card": "بطاقة",
+      "bank": "تحويل بنكي"
+    },
+
+    "totals": {
+      "grand_total": "المجموع النهائي",
+      "amount_paid": "المبلغ المدفوع",
+      "change": "الباقي"
+    },
+
+    "placeholders": {
+      "amount_paid": "أدخل المبلغ المدفوع"
+    },
+
+    "actions": {
+      "cancel": "إلغاء",
+      "confirm": "تأكيد الدفع"
+    }
+  },
+   "ReceiptPreviewModal": {
+    "title": "معاينة الطباعة",
+
+    "invoice": {
+      "number": "رقم الفاتورة",
+      "date": "التاريخ"
+    },
+
+    "company": {
+      "tax_number": "الرقم الضريبي"
+    },
+
+    "items": {
+      "qty_times": "×"
+    },
+
+    "totals": {
+      "total_discount": "إجمالي الخصم",
+      "before_tax": "المجموع قبل الضريبة",
+      "tax": "الضريبة",
+      "grand_total": "المجموع النهائي"
+    },
+
+    "states": {
+      "loading": "جاري تحميل الإيصال..."
+    },
+
+    "footer": {
+      "powered_by": "مشغّل بواسطة"
+    },
+
+    "actions": {
+      "print": "طباعة",
+      "close": "إغلاق"
+    }
+  }
 }

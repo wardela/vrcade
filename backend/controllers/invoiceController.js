@@ -1135,7 +1135,11 @@ const shareRefundInvoice = async (req, res) => {
     const result = await processReturnInvoice(returnHeader, originalHeader, lines, cfg, company);
 
     if (!result.ok) {
-        console.log("ISTD ERROR RESPONSE:", result.error);
+        console.log(
+  "ISTD ERROR RESPONSE (FULL):",
+  JSON.stringify(result.error, null, 2)
+);
+
 
       return res.status(400).json({
         message: "Refund sharing failed",
@@ -2126,6 +2130,119 @@ const getPrintableDueBalance = async (req, res) => {
   }
 };
 
+const silentlyShareInvoice = async (req, invoice_number) => {
+  try {
+    // ⛔ Fake a req/res context to reuse logic
+    const fakeReq = {
+      ...req,
+      params: { invoice_number }
+    };
+
+    // We don't want to send HTTP responses here
+    const fakeRes = {
+      status: () => fakeRes,
+      json: () => {}
+    };
+
+    // 🔁 Call your EXISTING logic
+    await shareSingleInvoice(fakeReq, fakeRes);
+
+    return { success: true };
+  } catch (err) {
+    // IMPORTANT: swallow error but return structured info
+    if (err.response) {
+      return {
+        success: false,
+        source: "ISTD",
+        status: err.response.status,
+        message: err.response.data || "ISTD rejected invoice"
+      };
+    }
+
+    return {
+      success: false,
+      source: "SYSTEM",
+      message: err.message || "Silent e-invoice failed"
+    };
+  }
+};
+
+const createPosInvoice = async (req, res) => {
+  try {
+    const payload = req.body;
+
+    if (!Array.isArray(payload?.lines) || payload.lines.length === 0) {
+      return res.status(400).json({ message: "POS invoice must have lines" });
+    }
+
+    // ✅ SAME numbering logic as SALES (MAX + 1)
+const invRes = await req.db.query(`
+  SELECT
+    'INV-' ||
+    (COALESCE(MAX(SUBSTRING(invoice_number FROM 5)::INT), 0) + 1)::TEXT
+    AS invoice_number
+  FROM invoice_header
+`);
+
+const invoice_number = invRes.rows[0].invoice_number;
+
+
+    const posPayload = {
+      ...payload,
+
+      invoice_number,          
+      type: "cash",
+      type2: "local",
+      notes: "POS Sales | مبيعات نقطة بيع",
+      date: new Date(),
+
+      client_id: payload.client_id || null,
+      client: payload.client || "",
+      client_contact: payload.client_contact || null,
+      client_det_code: payload.client_id ? "NIN" : null,
+      client_detail: payload.client_detail || null,
+
+      create_due_balance: false,
+    };
+
+const created = await invoiceService.createInvoice(req.db, posPayload);
+
+// ===============================
+// 🔎 CHECK COMPANY CONFIG
+// ===============================
+const company = await invoiceService.getCompanyConfig(req.db);
+
+// default = true (safe)
+const autoPosEinvoicing = company?.auto_pos_einvoicing ?? true;
+
+// ===============================
+// 🚫 AUTO E-INVOICING DISABLED
+// ===============================
+if (!autoPosEinvoicing) {
+  // behave as if e-invoicing does not exist
+  return res.status(201).json(created);
+}
+
+// ===============================
+// ✅ AUTO E-INVOICING ENABLED
+// ===============================
+const einvoiceResult = await silentlyShareInvoice(req, invoice_number);
+
+// always return invoice, never block POS
+return res.status(201).json({
+  ...created,
+  einvoice: einvoiceResult.success
+    ? { shared: true }
+    : { shared: false, warning: einvoiceResult }
+});
+
+
+  } catch (error) {
+    console.error("Error creating POS invoice:", error);
+    res.status(500).json({ message: "Error creating POS invoice" });
+  }
+};
+
 module.exports = {
   getInvoices,
   getInvoiceDetails,
@@ -2222,5 +2339,6 @@ module.exports = {
   getClientReceiptsTotals,
   getReceiptsDashboard,
   getClientReceiptsReport,
-  getPrintableDueBalance
+  getPrintableDueBalance,
+  createPosInvoice
 };

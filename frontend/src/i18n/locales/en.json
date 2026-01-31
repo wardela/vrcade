@@ -1,15 +1,18 @@
 {
   "sidebar": {
     "dashboard": "Dashboard",
+    "sales": "Sales",
     "invoices": "Invoices",
-    "refunds": "Refund Invoices",
-    "unshared": "Unshared Invoices",
+    "refunds": "Refunds",
+    "unshared": "Unshared",
+    "receipts": "Receipts",
+    "inventory": "Inventory",
     "items": "Items",
     "storage": "Storage",
-    "clients": "Clients Management",
+    "clients": "Clients",
     "reports": "Reports",
-    "users": "User Management",
-    "company": "Company Config",
+    "users": "Users",
+    "company": "Company",
     "logout": "Logout"
   },
  "settings": {
@@ -1417,7 +1420,8 @@
       "users": "User Management",
       "company_config": "Company Config.",
       "stock_management": "Stock Management",
-      "receipts": "Receipts"
+      "receipts": "Receipts",
+      "pos": "Point of Sale (POS)"
     },
 
     "toggles": {
@@ -1490,8 +1494,15 @@
       "load_failed": "Failed to load company data",
       "save_success": "Company configuration saved successfully!",
       "save_failed": "Failed to save company configuration"
+    },
+      "toggles": {
+      "auto_pos_einvoicing": {
+        "title": "Auto E-Invoice POS Sales",
+        "description": "If disabled: POS invoices are saved normally and can be shared later manually."
+      }
     }
   },
+
     "LogoutConfirm": {
     "title": "Logout?",
     "message": "Are you sure you want to logout?",
@@ -1846,7 +1857,150 @@
     "items": "items",
     "unpaid": "unpaid",
     "outstanding": "Outstanding"
+  },
+  
+    "POS": {
+    "recent_invoices": {
+      "title": "Recent Invoices",
+      "new_invoice": "Create new invoice",
+      "loading": "Loading invoices..."
+    },
+
+    "search": {
+      "placeholder": "Search item / barcode / code...",
+      "manual_barcode": "Enter barcode manually",
+      "toggle_recent": "Toggle recent invoices"
+    },
+
+    "categories": {
+      "favorites": "Favorites",
+      "all": "All"
+    },
+
+    "items": {
+      "price": "Price",
+      "stock": "Stock",
+      "not_stocked": "Not stocked",
+      "usual_discount": "Usual discount"
+    },
+
+    "cart": {
+      "customer": "Customer",
+      "walk_in": "Walk-in Customer",
+      "select": "Select",
+      "clear_customer": "Clear",
+
+      "unit_price": "Unit Price",
+      "quantity": "Quantity",
+      "total": "Total",
+
+      "add_discount": "Add discount",
+      "discount_applied": "discount applied",
+      "apply_discount": "Apply Discount",
+      "percentage": "Percentage (%)",
+      "amount": "Amount (JOD)"
+    },
+
+    "totals": {
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "total": "Total"
+    },
+
+    "actions": {
+      "hold": "Hold",
+      "held": "Held",
+      "pay": "Pay",
+      "clear": "Clear",
+      "print": "Print",
+      "save": "Save",
+      "back": "Back"
+    },
+
+    "states": {
+      "locked": "Invoice is locked",
+      "no_items": "Invoice must have items",
+      "save_success": "Invoice updated successfully",
+      "save_failed": "Failed to save invoice",
+      "load_failed": "Failed to load invoice",
+      "item_not_found": "Item not found for barcode"
+    }
+  },
+    "BarcodeModal": {
+    "title": "Enter Barcode Manually",
+    "placeholder": "Scan or type barcode...",
+    "actions": {
+      "cancel": "Cancel",
+      "add": "Add Item"
+    }
+  },
+    "HeldInvoicesModal": {
+    "title": "Held Invoices",
+    "empty": "No held invoices",
+    "labels": {
+      "walk_in": "Walk-in Customer",
+      "items": "items",
+      "currency": "JOD"
+    }
+  },
+  "PayModal": {
+    "title": "Complete Payment",
+
+    "payment_types": {
+      "cash": "Cash",
+      "card": "Card",
+      "bank": "Bank Transfer"
+    },
+
+    "totals": {
+      "grand_total": "Grand Total",
+      "amount_paid": "Amount Paid",
+      "change": "Change"
+    },
+
+    "placeholders": {
+      "amount_paid": "Enter paid amount"
+    },
+
+    "actions": {
+      "cancel": "Cancel",
+      "confirm": "Confirm Payment"
+    }
+  },
+    "ReceiptPreviewModal": {
+    "title": "Print Preview",
+
+    "invoice": {
+      "number": "Invoice #",
+      "date": "Date"
+    },
+
+    "company": {
+      "tax_number": "Tax No"
+    },
+
+    "items": {
+      "qty_times": "×"
+    },
+
+    "totals": {
+      "total_discount": "Total discount",
+      "before_tax": "Total before tax",
+      "tax": "Tax",
+      "grand_total": "Grand total"
+    },
+
+    "states": {
+      "loading": "Loading receipt…"
+    },
+
+    "footer": {
+      "powered_by": "Powered by"
+    },
+
+    "actions": {
+      "print": "Print",
+      "close": "Close"
+    }
   }
-
-
 }

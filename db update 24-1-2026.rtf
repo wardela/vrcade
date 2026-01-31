@@ -214,4 +214,13 @@ ON CONFLICT (user_id, module) DO NOTHING;\
  For each schema\
 \
 ============\
-}
+\
+ALTER TABLE dev_sales.company_config\
+ADD COLUMN IF NOT EXISTS auto_pos_einvoicing boolean NOT NULL DEFAULT false;\
+ \
+================\
+\
+INSERT INTO dev_sales.user_permissions (user_id, module, can_view, can_add, can_edit, can_delete)\
+SELECT id, 'pos', true, true, true, true\
+FROM dev_sales.users\
+ON CONFLICT (user_id, module) DO NOTHING;}
