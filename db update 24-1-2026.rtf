@@ -223,4 +223,70 @@ ADD COLUMN IF NOT EXISTS auto_pos_einvoicing boolean NOT NULL DEFAULT false;\
 INSERT INTO dev_sales.user_permissions (user_id, module, can_view, can_add, can_edit, can_delete)\
 SELECT id, 'pos', true, true, true, true\
 FROM dev_sales.users\
-ON CONFLICT (user_id, module) DO NOTHING;}
+ON CONFLICT (user_id, module) DO NOTHING;\
+\
+=======\
+\
+-- FUNCTION: dev_sales.delete_stock_transaction(integer)\
+\
+-- DROP FUNCTION IF EXISTS dev_sales.delete_stock_transaction(integer);\
+\
+CREATE OR REPLACE FUNCTION dev_sales.delete_stock_transaction(\
+	p_log_id integer)\
+    RETURNS void\
+    LANGUAGE 'plpgsql'\
+    COST 100\
+    VOLATILE PARALLEL UNSAFE\
+AS $BODY$\
+DECLARE\
+    v_item_id integer;\
+    v_storage_id integer;\
+    v_qty numeric;\
+    v_direction character varying;\
+BEGIN\
+    -- Lock and fetch the transaction log\
+    SELECT\
+        item_id,\
+        storage_id,\
+        qty,\
+        direction\
+    INTO\
+        v_item_id,\
+        v_storage_id,\
+        v_qty,\
+        v_direction\
+    FROM transaction_logs\
+    WHERE id = p_log_id\
+    FOR UPDATE;\
+\
+    IF NOT FOUND THEN\
+        RAISE EXCEPTION 'Transaction log % not found', p_log_id;\
+    END IF;\
+\
+    -- Revert storage quantity\
+    UPDATE storage_items\
+    SET qty = qty + CASE\
+        WHEN v_direction = 'IN' THEN -v_qty\
+        ELSE v_qty\
+    END\
+    WHERE item_id = v_item_id\
+      AND storage_id = v_storage_id;\
+\
+    -- Revert item total quantity\
+    UPDATE items\
+    SET stock_qty = stock_qty + CASE\
+        WHEN v_direction = 'IN' THEN -v_qty\
+        ELSE v_qty\
+    END\
+    WHERE id = v_item_id;\
+\
+    -- Delete the transaction log\
+    DELETE FROM transaction_logs\
+    WHERE id = p_log_id;\
+\
+END;\
+$BODY$;\
+\
+ALTER FUNCTION dev_sales.delete_stock_transaction(integer)\
+    OWNER TO postgres;\
+}

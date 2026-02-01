@@ -3303,7 +3303,7 @@ const getDueBalanceById = async (db, dueBalanceId) => {
         c.name AS client_name,
         db.notes
       FROM due_balances db
-      LEFT JOIN dev_sales.clients c
+      LEFT JOIN clients c
         ON c.id = db.client_id
       WHERE db.id = $1;
       `,
@@ -3555,7 +3555,6 @@ const getDueBalances = async (
   const filters = [];
   const values = [];
 
-  // Dynamic filters
   if (client_id) {
     values.push(client_id);
     filters.push(`db.client_id = $${values.length}`);
@@ -3574,41 +3573,39 @@ const getDueBalances = async (
   const whereClause =
     filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
 
-  // Main query
   const dataQuery = `
-SELECT
-  db.id,
-  db.reason,
-  db.amount,
-  db.date,                      -- ✅ ADD THIS
+    SELECT
+      db.id,
+      db.reason,
+      db.amount,
+      db.date,
 
-  COALESCE(SUM(rv.amount), 0) AS paid,
+      COALESCE(SUM(rv.amount), 0) AS paid,
 
-  CASE
-    WHEN COALESCE(SUM(rv.amount), 0) = 0 THEN 'outstanding'
-    WHEN COALESCE(SUM(rv.amount), 0) < db.amount THEN 'pending'
-    ELSE 'completed'
-  END AS state,
+      CASE
+        WHEN COALESCE(SUM(rv.amount), 0) = 0 THEN 'outstanding'
+        WHEN COALESCE(SUM(rv.amount), 0) < db.amount THEN 'pending'
+        ELSE 'completed'
+      END AS state,
 
-  c.name AS client
+      c.name AS client
 
     FROM due_balances db
 
     LEFT JOIN receipt_voucher rv
       ON rv.due_balance_id = db.id
 
-    LEFT JOIN dev_sales.clients c
+    LEFT JOIN clients c
       ON c.id = db.client_id
 
     ${whereClause}
 
-GROUP BY
-  db.id,
-  db.date,        -- ✅ ADD THIS
-  c.name
+    GROUP BY
+      db.id,
+      db.date,
+      c.name
 
-
-    ORDER BY db.id DESC, db.id DESC
+    ORDER BY db.id DESC
 
     LIMIT $${values.length + 1}
     OFFSET $${values.length + 2};
@@ -3637,6 +3634,7 @@ GROUP BY
     }
   };
 };
+
 
 const getReceiptVouchersByDueBalance = async (db, dueBalanceId) => {
   try {
@@ -3676,7 +3674,7 @@ const getReceiptVoucherDetails = async (db, receiptVoucherId) => {
         TO_CHAR(rv.date, 'YYYY-MM-DD') AS date,
         c.name AS client
       FROM receipt_voucher rv
-      LEFT JOIN dev_sales.clients c
+      LEFT JOIN clients c
         ON c.id = rv.client_id
       WHERE rv.id = $1;
       `,
@@ -3724,6 +3722,7 @@ const getReceiptVoucherDetails = async (db, receiptVoucherId) => {
     throw err;
   }
 };
+
 
 const createStandaloneReceipt = async (
   db,
@@ -3896,7 +3895,7 @@ const getTopClientsByOutstanding = async (db, year) => {
     FROM due_balances db
     LEFT JOIN receipt_voucher rv
       ON rv.due_balance_id = db.id
-    LEFT JOIN dev_sales.clients c
+    LEFT JOIN clients c
       ON c.id = db.client_id
     WHERE EXTRACT(YEAR FROM db.date) = $1
     GROUP BY c.id, c.name
@@ -3920,7 +3919,7 @@ const getTopOutstandingBalances = async (db, year) => {
     FROM due_balances db
     LEFT JOIN receipt_voucher rv
       ON rv.due_balance_id = db.id
-    LEFT JOIN dev_sales.clients c
+    LEFT JOIN clients c
       ON c.id = db.client_id
     WHERE EXTRACT(YEAR FROM db.date) = $1
     GROUP BY db.id, c.name
@@ -3931,8 +3930,8 @@ const getTopOutstandingBalances = async (db, year) => {
 
   return (await db.query(query, [year])).rows;
 };
- 
-const getAgingBalances = async (db) => {
+
+ const getAgingBalances = async (db) => {
   const query = `
     SELECT
       db.id,
@@ -3945,15 +3944,16 @@ const getAgingBalances = async (db) => {
     FROM due_balances db
     LEFT JOIN receipt_voucher rv
       ON rv.due_balance_id = db.id
-    LEFT JOIN dev_sales.clients c
+    LEFT JOIN clients c
       ON c.id = db.client_id
-    GROUP BY db.id, c.name
+    GROUP BY db.id, db.date, c.name
     ORDER BY aging_days DESC
     LIMIT 10;
   `;
 
   return (await db.query(query)).rows;
 };
+
 
 const getReceiptsDashboard = async (db, year) => {
   const [
@@ -4035,7 +4035,7 @@ const getPrintableDueBalance = async (db, dueBalanceId) => {
       db.amount,
       c.name AS client
     FROM due_balances db
-    LEFT JOIN dev_sales.clients c ON c.id = db.client_id
+    LEFT JOIN clients c ON c.id = db.client_id
     WHERE db.id = $1
     `,
     [dueBalanceId]
@@ -4083,6 +4083,7 @@ const getPrintableDueBalance = async (db, dueBalanceId) => {
     totals: totalsRes.rows[0]
   };
 };
+
 
 module.exports = {
   getInvoices,
