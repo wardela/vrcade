@@ -4,6 +4,7 @@ import DashboardSalesBlock from "./salesblock";
 import DashboardInventoryBlock from "./inventoryblock";
 import ClientsDashboardBlock from "./clientsblock";
 import DashboardSectionNav from "./DashboardSectionNav";
+import DashboardReceiptsBlock from "./DashboardReceiptsBlock";
 
 export default function Overview() {
   return (
@@ -28,6 +29,11 @@ export default function Overview() {
         {/* ================= SALES SECTION ================= */}
         <div id="sales" className="flex-1 min-h-screen">
           <DashboardSalesBlock />
+        </div>
+
+        {/* ================= Receipts SECTION ================= */}
+        <div id="receipts" className="flex-1 min-h-screen">
+          <DashboardReceiptsBlock />
         </div>
 
         {/* ================= INVENTORY SECTION ================= */}

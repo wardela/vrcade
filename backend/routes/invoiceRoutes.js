@@ -32,6 +32,41 @@ router.post("/refunds", invoiceController.createRefundInvoice);
 router.get("/refunds/full/:refund_invoice_number", invoiceController.getRefundFullInvoice);
 router.get("/refunds", invoiceController.getRefundInvoices);
 
+// Due balances
+router.post("/due-balances", invoiceController.createDueBalance);
+router.put("/due-balances/:id", invoiceController.updateDueBalance);
+router.delete("/due-balances/:id", invoiceController.deleteDueBalance);
+router.get("/due-balances/:id", invoiceController.getDueBalanceById);
+
+// Receipt vouchers
+router.post("/receipt-vouchers", invoiceController.createReceiptVoucher);
+router.put("/receipt-vouchers/:id", invoiceController.updateReceiptVoucher);
+router.delete("/receipt-vouchers/:id", invoiceController.deleteReceiptVoucher);
+
+// Receipt cheques
+router.post("/receipt-cheques", invoiceController.createReceiptCheque);
+router.put("/receipt-cheques/:id", invoiceController.updateReceiptCheque);
+router.delete("/receipt-cheques/:id", invoiceController.deleteReceiptCheque);
+
+// Due balances (GET with pagination & filters)
+router.get("/due-balances", invoiceController.getDueBalances);
+
+// Receipt vouchers by due balance
+router.get("/due-balances/:due_balance_id/receipt-vouchers", invoiceController.getReceiptVouchersByDueBalance);
+
+// Receipt voucher details
+router.get("/receipt-vouchers/:id", invoiceController.getReceiptVoucherDetails);
+
+router.post("/receipts/standalone", invoiceController.createStandaloneReceipt);
+
+router.get("/receipts/totals", invoiceController.getClientReceiptsTotals);
+
+router.get("/stats/dashboard-receipts", invoiceController.getReceiptsDashboard);
+
+router.get("/reports/receipts/by-client", invoiceController.getClientReceiptsReport);
+
+router.get("/due-balances/:id/print", invoiceController.getPrintableDueBalance);
+
 // ✅ ADD THESE
 router.get("/stats/daily", invoiceController.getDailyStats);
 router.get("/stats/hourly", invoiceController.getHourlySales);
@@ -61,12 +96,12 @@ router.post("/storages", invoiceController.addStorage);
 router.put("/storages/:id", invoiceController.editStorage);
 
 router.post("/storage-adjust", invoiceController.adjustStorageManually);
+router.delete("/storage-monitor/transaction/:id", invoiceController.deleteStorageTransaction);
 router.get("/items", invoiceController.getAllItems);
 
 router.get("/storage-monitor/overview", invoiceController.getStorageOverview);
 router.get("/storage-monitor/:id/items", invoiceController.getStorageItems);
 router.get("/storage-monitor/logs", invoiceController.getStorageLogs);
-
 
 router.get("/units", invoiceController.getUnits);
 router.post("/units", invoiceController.addUnit);
@@ -90,6 +125,7 @@ router.get("/reports/sales/general", invoiceController.getGeneralSalesReport);
 router.get("/reports/sales/by-client", invoiceController.getSalesByClientReport);
 router.get("/reports/sales/by-area", invoiceController.getSalesByAreaReport);
 router.get("/reports/sales/by-client-detailed", invoiceController.getSalesByClientDetailedReport);
+router.get("/reports/sales/items-by-client-totals", invoiceController.getItemsSoldForClientTotals);
 router.get("/reports/einvoicing", invoiceController.getEinvoicingReport);
 router.get("/reports/einvoicing/tax-declaration", invoiceController.getTaxDeclarationReport);
 router.get("/reports/refunds/general", invoiceController.getRefundsReport);
@@ -105,5 +141,8 @@ router.get("/stats/dashboard-overview", invoiceController.getDashboardOverview);
 router.get("/stats/dashboard-sales", invoiceController.getDashboardSales);
 router.get("/stats/dashboard-inventory", invoiceController.getDashboardInventory);
 router.get("/stats/dashboard-clients", invoiceController.getDashboardClients);
+
+// POS
+router.post("/pos", invoiceController.createPosInvoice);
 
 module.exports = router;

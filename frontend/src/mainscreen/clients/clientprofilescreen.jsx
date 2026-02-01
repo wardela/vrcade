@@ -2,6 +2,7 @@ import { useState } from "react";
 import ClientProfileMain from "./profilemaintab";
 import ClientProfileHistory from "./profilehistorytab";
 import ClientProfileStats from "./profilestatstab";
+import ClientReceiptsTab from "./ClientReceiptsTab";
 import { useTranslation } from "react-i18next";
 
 export default function ClientProfileScreen({ client, onBack }) {
@@ -18,6 +19,7 @@ try {
 
 const clientPerm = permissions?.clients || {};
 const canEditClient = clientPerm.edit === true;
+const canViewReceipts = permissions?.receipts?.view === true;
 
   return (
     <div className="flex flex-col w-full h-screen bg-base-200">
@@ -53,6 +55,13 @@ const canEditClient = clientPerm.edit === true;
           active={activeTab === "history"}
           onClick={() => setActiveTab("history")}
         />
+        {canViewReceipts && (
+        <TabButton
+          label={t("ClientProfileScreen.tabs.receipts")}
+          active={activeTab === "receipts"}
+          onClick={() => setActiveTab("receipts")}
+        />
+        )}
       </div>
 
       {/* Content */}
@@ -65,6 +74,9 @@ const canEditClient = clientPerm.edit === true;
         )}
         {activeTab === "history" && <ClientProfileHistory client={client} />}
         {activeTab === "stats" && <ClientProfileStats client={client} />}
+        {activeTab === "receipts" && (
+          <ClientReceiptsTab client={client} />
+        )}
       </div>
     </div>
   );

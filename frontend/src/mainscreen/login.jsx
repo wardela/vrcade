@@ -6,12 +6,14 @@ import BrandLogo from "../components/brandlogo";
 import { useTranslation } from "react-i18next";
 const ROUTE_PRIORITY = [
   { module: "dashboard", path: "/overview" },
+  { module: "pos", path: "/pos" }, 
   { module: "sales", path: "/process" },
   { module: "refunds", path: "/refund" },
   { module: "einvoicing", path: "/unshared" },
   { module: "items", path: "/items" },
   { module: "stock_management", path: "/storage" },
   { module: "clients", path: "/clients" },
+  { module: "receipts", path: "/receipts" },
   { module: "reports", path: "/reports" },
   { module: "users", path: "/activity" },
   { module: "company_config", path: "/company" }

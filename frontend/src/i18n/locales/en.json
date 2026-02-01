@@ -1,15 +1,18 @@
 {
   "sidebar": {
     "dashboard": "Dashboard",
+    "sales": "Sales",
     "invoices": "Invoices",
-    "refunds": "Refund Invoices",
-    "unshared": "Unshared Invoices",
+    "refunds": "Refunds",
+    "unshared": "Unshared",
+    "receipts": "Receipts",
+    "inventory": "Inventory",
     "items": "Items",
     "storage": "Storage",
-    "clients": "Clients Management",
+    "clients": "Clients",
     "reports": "Reports",
-    "users": "User Management",
-    "company": "Company Config",
+    "users": "Users",
+    "company": "Company",
     "logout": "Logout"
   },
  "settings": {
@@ -259,7 +262,8 @@
       "item_required": "Item ID is required ",
       "item_not_found": "Item not found ",
       "exempt_requires_tax": "To mark an item as exempt, Client Detail must be a Tax Number and must be filled."
-    }
+    },
+    "create_due_balance": "Create due balance for this invoice"
   },
 
    "ClientList": {
@@ -671,7 +675,8 @@
       "standard_discount": "Standard Discount %",
       "standard_qty": "Standard Qty",
 
-      "favorite": "Mark as Favorite Item"
+      "favorite": "Mark as Favorite Item",
+      "initial_stock_date": "Initial Stock Date"
     },
 
     "actions": {
@@ -769,6 +774,10 @@
     "states": {
       "no_items": "No items matched",
       "no_movements": "No movements recorded"
+    },
+     "confirm": {
+      "title": "Confirm Deletion",
+      "delete_transaction": "Are you sure you want to delete this storage transaction? This action cannot be undone."
     }
   },
 
@@ -807,6 +816,7 @@
     "fields": {
       "direction": "Direction",
       "quantity": "Quantity",
+      "date": "Transaction Date",
       "notes": "Notes"
     },
 
@@ -927,7 +937,8 @@
     "tabs": {
       "main": "Main",
       "history": "History",
-      "stats": "Statistics"
+      "stats": "Statistics",
+      "receipts": "Receipts"
     }
   },
 
@@ -1137,7 +1148,8 @@
     "by_client": "Sales by Client",
     "by_client_detailed": "Sales by Client (Detailed)",
     "by_area": "Sales by Area",
-    "by_currency": "Sales by Currency"
+    "by_currency": "Sales by Currency",
+    "by_client_items_totals": "Items Sold for Client (Totals)"
   },
 
   "areas": {
@@ -1407,7 +1419,9 @@
       "clients": "Clients",
       "users": "User Management",
       "company_config": "Company Config.",
-      "stock_management": "Stock Management"
+      "stock_management": "Stock Management",
+      "receipts": "Receipts",
+      "pos": "Point of Sale (POS)"
     },
 
     "toggles": {
@@ -1480,8 +1494,15 @@
       "load_failed": "Failed to load company data",
       "save_success": "Company configuration saved successfully!",
       "save_failed": "Failed to save company configuration"
+    },
+      "toggles": {
+      "auto_pos_einvoicing": {
+        "title": "Auto E-Invoice POS Sales",
+        "description": "If disabled: POS invoices are saved normally and can be shared later manually."
+      }
     }
   },
+
     "LogoutConfirm": {
     "title": "Logout?",
     "message": "Are you sure you want to logout?",
@@ -1533,6 +1554,453 @@
 
     "branding": {
       "powered_by": "Powered by"
+    }
+  },
+
+  "Receipts": {
+  "title": "Receipts",
+  "subtitle": "Manage client due balances and receipt vouchers",
+
+  "filters": {
+    "client": "Client",
+    "select_client": "Select Client",
+    "from_date": "From Date",
+    "to_date": "To Date",
+    "apply": "Apply"
+  },
+
+  "actions": {
+    "add_balance": "Add Balance",
+    "create_receipt": "Create Receipt"
+  },
+
+  "table": {
+    "id": "ID",
+    "reason": "Reason",
+    "amount": "Amount",
+    "paid": "Paid",
+    "status": "Status",
+    "client": "Client",
+    "actions": "Actions"
+  },
+
+  "status": {
+    "pending": "Pending",
+    "completed": "Completed",
+    "overdue": "Overdue"
+  },
+
+  "receipt_vouchers": {
+    "title": "Receipt Vouchers",
+    "add": "Add Receipt Voucher",
+
+    "table": {
+      "number": "RV Number",
+      "amount": "Amount",
+      "type": "Type",
+      "reason": "Reason",
+      "date": "Date",
+      "actions": "Actions"
+    },
+
+    "empty": "No receipt vouchers"
+  },
+
+  "loading": "Loading...",
+
+  "empty_state": {
+    "title": "No receipts found",
+    "subtitle": "Try adjusting your filters"
+  },
+
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "of": "of"
+  },
+
+  "common": {
+    "no_value": "-",
+    "print": "Print",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "receipt_types": {
+  "cash": "Cash",
+  "bank_transfer": "Bank Transfer",
+  "cheque": "Cheque"
+},
+    "totals": {
+      "total_balance": "Total Balance",
+      "total_paid": "Total Paid",
+      "total_outstanding": "Total Outstanding"
+    }
+},
+
+"BalanceModal": {
+  "title": {
+    "create": "Add Due Balance",
+    "edit": "Edit Due Balance"
+  },
+
+  "subtitle": {
+    "create": "Create a new due balance record for a client",
+    "edit": "Update the due balance information"
+  },
+
+  "fields": {
+    "id": "Balance ID",
+    "client": "Client",
+    "date": "Date",
+    "amount": "Amount",
+    "reason": "Reason",
+    "notes": "Notes"
+  },
+
+  "placeholders": {
+    "amount": "0.00",
+    "reason": "Enter reason for this balance",
+    "notes": "Add any additional notes or comments..."
+  },
+
+  "client": {
+    "select": "Select Client",
+    "hint_create": "Choose the client for this balance",
+    "hint_edit": "Client cannot be changed in edit mode"
+  },
+
+  "footer": {
+    "required": "Required fields"
+  },
+
+  "buttons": {
+    "cancel": "Cancel",
+    "add": "Add Balance",
+    "save": "Save Changes",
+    "saving": "Saving..."
+  }
+},
+
+"DeleteBalanceModal": {
+  "title": "Delete Due Balance",
+  "message": "Are you sure you want to delete this due balance?",
+  "warning": "This action cannot be undone.",
+
+  "buttons": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleting": "Deleting..."
+  }
+},
+
+"DeleteReceiptVoucherModal": {
+  "title": "Delete Receipt Voucher",
+  "message": "Are you sure you want to delete this receipt voucher?",
+  "warning": "This action cannot be undone.",
+
+  "buttons": {
+    "cancel": "Cancel",
+    "delete": "Delete"
+  }
+},
+
+"ReceiptVoucherModal": {
+  "title": {
+    "create": "Create Receipt Voucher",
+    "edit": "Edit Receipt Voucher"
+  },
+
+  "subtitle": {
+    "create": "Record a new payment for ",
+    "edit": "Update receipt voucher for "
+  },
+
+  "fields": {
+    "receipt_number": "RV Number",
+    "date": "Receipt Date",
+    "payment_type": "Payment Type",
+    "amount": "Amount",
+    "reason": "Reason",
+    "notes": "Notes"
+  },
+
+  "placeholders": {
+    "amount": "0.00",
+    "reason": "Enter reason for this payment",
+    "notes": "Add any additional notes or comments..."
+  },
+
+  "payment_types": {
+    "cash": "Cash",
+    "bank_transfer": "Bank Transfer",
+    "cheque": "Cheque"
+  },
+
+  "cheques": {
+    "section_title": "Cheque Details",
+    "section_hint": "Add cheque information for this receipt",
+    "add": "Add Cheque",
+    "remove": "Remove",
+
+    "index": "Cheque ",
+
+    "fields": {
+      "number": "Cheque Number",
+      "amount": "Amount",
+      "due_date": "Due Date",
+      "bank": "Beneficiary Bank"
+    },
+
+    "placeholders": {
+      "number": "CHQ-123456",
+      "amount": "0.00",
+      "bank": "Bank name"
+    },
+
+    "validation": {
+      "total": "Cheque Total: ",
+      "match": "Matches receipt amount",
+      "mismatch": "Must equal receipt amount "
+    }
+  },
+
+  "footer": {
+    "required": "Required fields"
+  },
+
+  "buttons": {
+    "cancel": "Cancel",
+    "create": "Create Voucher",
+    "save": "Save Changes",
+    "saving": "Saving..."
+  }
+},
+"CreateReceiptModal": {
+  "title": "Create Receipt",
+  "subtitle": "Record a new payment receipt for a client",
+
+  "fields": {
+    "client": "Client",
+    "date": "Receipt Date",
+    "amount": "Total Amount",
+    "payment_type": "Payment Type",
+    "reason": "Reason",
+    "notes": "Notes"
+  },
+
+  "placeholders": {
+    "select_client": "Select Client",
+    "amount": "0.00",
+    "reason": "Enter reason for this receipt",
+    "notes": "Add any additional notes or comments..."
+  },
+
+  "hints": {
+    "client": "Choose the client receiving this receipt"
+  },
+
+  "payment_types": {
+    "cash": "Cash",
+    "bank_transfer": "Bank Transfer",
+    "cheque": "Cheque"
+  },
+
+  "cheques": {
+    "section_title": "Cheque Details",
+    "section_hint": "Add cheque information for this receipt",
+    "add": "Add Cheque",
+    "remove": "Remove",
+
+    "index": "Cheque #{{index}}",
+
+    "fields": {
+      "number": "Cheque Number",
+      "amount": "Amount",
+      "due_date": "Due Date",
+      "bank": "Beneficiary Bank"
+    },
+
+    "placeholders": {
+      "number": "CHQ-123456",
+      "amount": "0.00",
+      "bank": "Bank name"
+    },
+
+    "validation": {
+      "total": "Cheque Total: ",
+      "match": "Matches receipt amount",
+      "mismatch": "Must equal receipt amount "
+    }
+  },
+
+  "footer": {
+    "required": "Required fields"
+  },
+
+  "buttons": {
+    "cancel": "Cancel",
+    "create": "Create Receipt",
+    "creating": "Creating..."
+  }
+},
+  "ReceiptsDash": {
+    "title": "Receipts",
+    "due_vs_paid": "Due vs Paid",
+    "months_label": "By Month",
+    "top_clients": "Top Clients by Outstanding",
+    "top_clients_annotation": "Clients with highest unpaid balances",
+    "top_outstanding": "Top Outstanding Balances",
+    "top_outstanding_annotation": "Highest unpaid due balances, showing paid vs total."
+  },
+  "common": {
+    "items": "items",
+    "unpaid": "unpaid",
+    "outstanding": "Outstanding"
+  },
+  
+    "POS": {
+    "recent_invoices": {
+      "title": "Recent Invoices",
+      "new_invoice": "Create new invoice",
+      "loading": "Loading invoices..."
+    },
+
+    "search": {
+      "placeholder": "Search item / barcode / code...",
+      "manual_barcode": "Enter barcode manually",
+      "toggle_recent": "Toggle recent invoices"
+    },
+
+    "categories": {
+      "favorites": "Favorites",
+      "all": "All"
+    },
+
+    "items": {
+      "price": "Price",
+      "stock": "Stock",
+      "not_stocked": "Not stocked",
+      "usual_discount": "Usual discount"
+    },
+
+    "cart": {
+      "customer": "Customer",
+      "walk_in": "Walk-in Customer",
+      "select": "Select",
+      "clear_customer": "Clear",
+
+      "unit_price": "Unit Price",
+      "quantity": "Quantity",
+      "total": "Total",
+
+      "add_discount": "Add discount",
+      "discount_applied": "discount applied",
+      "apply_discount": "Apply Discount",
+      "percentage": "Percentage (%)",
+      "amount": "Amount (JOD)"
+    },
+
+    "totals": {
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "total": "Total"
+    },
+
+    "actions": {
+      "hold": "Hold",
+      "held": "Held",
+      "pay": "Pay",
+      "clear": "Clear",
+      "print": "Print",
+      "save": "Save",
+      "back": "Back"
+    },
+
+    "states": {
+      "locked": "Invoice is locked",
+      "no_items": "Invoice must have items",
+      "save_success": "Invoice updated successfully",
+      "save_failed": "Failed to save invoice",
+      "load_failed": "Failed to load invoice",
+      "item_not_found": "Item not found for barcode"
+    }
+  },
+    "BarcodeModal": {
+    "title": "Enter Barcode Manually",
+    "placeholder": "Scan or type barcode...",
+    "actions": {
+      "cancel": "Cancel",
+      "add": "Add Item"
+    }
+  },
+    "HeldInvoicesModal": {
+    "title": "Held Invoices",
+    "empty": "No held invoices",
+    "labels": {
+      "walk_in": "Walk-in Customer",
+      "items": "items",
+      "currency": "JOD"
+    }
+  },
+  "PayModal": {
+    "title": "Complete Payment",
+
+    "payment_types": {
+      "cash": "Cash",
+      "card": "Card",
+      "bank": "Bank Transfer"
+    },
+
+    "totals": {
+      "grand_total": "Grand Total",
+      "amount_paid": "Amount Paid",
+      "change": "Change"
+    },
+
+    "placeholders": {
+      "amount_paid": "Enter paid amount"
+    },
+
+    "actions": {
+      "cancel": "Cancel",
+      "confirm": "Confirm Payment"
+    }
+  },
+    "ReceiptPreviewModal": {
+    "title": "Print Preview",
+
+    "invoice": {
+      "number": "Invoice #",
+      "date": "Date"
+    },
+
+    "company": {
+      "tax_number": "Tax No"
+    },
+
+    "items": {
+      "qty_times": "×"
+    },
+
+    "totals": {
+      "total_discount": "Total discount",
+      "before_tax": "Total before tax",
+      "tax": "Tax",
+      "grand_total": "Grand total"
+    },
+
+    "states": {
+      "loading": "Loading receipt…"
+    },
+
+    "footer": {
+      "powered_by": "Powered by"
+    },
+
+    "actions": {
+      "print": "Print",
+      "close": "Close"
     }
   }
 }

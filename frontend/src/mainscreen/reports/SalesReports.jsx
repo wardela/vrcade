@@ -7,6 +7,7 @@ import GeneralSalesReportPrint from "./printables/GeneralSalesReportPrint";
 import SalesByClientReportPrint from "./printables/SalesByClientReportPrint";
 import SalesByAreaReportPrint from "./printables/SalesByAreaReportPrint";
 import SalesByClientDetailedReportPrint from "./printables/SalesByClientDetailedReportPrint";
+import ItemsSoldForClientTotalsReportPrint from "./printables/ItemsSoldForClientTotalsReportPrint";
 import { useTranslation } from "react-i18next";
 const PAGE_SIZE = 100;
 
@@ -192,6 +193,38 @@ const fetchSalesByClientDetailed = async (newOffset = 0) => {
   }
 };
 
+const fetchItemsSoldForClientTotals = async (newOffset = 0) => {
+  if (!selectedClient || !dateFrom || !dateTo) return;
+
+  try {
+    setLoading(true);
+
+    const res = await api.get(
+      `/api/invoices/reports/sales/items-by-client-totals`,
+      {
+        params: {
+          from: dateFrom,
+          to: dateTo,
+          client_id: selectedClient.id,
+          limit: PAGE_SIZE,
+          offset: newOffset
+        }
+      }
+    );
+
+    setRows(res.data.rows || []);
+    setTotalCount(res.data.total_count || 0);
+    setOffset(newOffset);
+
+    // No totalSum in this report
+    setTotalSum(0);
+  } catch (err) {
+    console.error("Failed to fetch items sold for client totals", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 const applyReport = async () => {
   if (reportType === "general") {
     fetchGeneralSales();
@@ -204,6 +237,11 @@ const applyReport = async () => {
 if (reportType === "by_client_detailed") {
   if (!selectedClient) return;
   fetchSalesByClientDetailed();
+}
+
+if (reportType === "by_client_items_totals") {
+  if (!selectedClient) return;
+  fetchItemsSoldForClientTotals();
 }
 
   if (reportType === "by_client") {
@@ -290,6 +328,25 @@ const fetchSalesByClientDetailedForPrint = async () => {
   return res.data;
 };
 
+const fetchItemsSoldForClientTotalsForPrint = async () => {
+  if (!selectedClient) return;
+
+  const res = await api.get(
+    `/api/invoices/reports/sales/items-by-client-totals`,
+    {
+      params: {
+        from: dateFrom,
+        to: dateTo,
+        client_id: selectedClient.id,
+        limit: 1000000,
+        offset: 0
+      }
+    }
+  );
+
+  setPrintRows(res.data.rows || []);
+  return res.data;
+};
 
 const handlePrint = useReactToPrint({
   content: () => printRef.current,
@@ -322,9 +379,14 @@ const canApplyReport = (() => {
   if (loading) return false;
   if (!dateFrom || !dateTo) return false;
 
-if (reportType === "by_client" || reportType === "by_client_detailed") {
+if (
+  reportType === "by_client" ||
+  reportType === "by_client_detailed" ||
+  reportType === "by_client_items_totals"
+) {
   return !!selectedClient;
 }
+
 
   if (reportType === "demographic") {
     return !!selectedArea;
@@ -375,6 +437,9 @@ const getInvoiceGroupColor = (rows) => {
         <option value="by_client_detailed">
           {t("SalesReports.report_types.by_client_detailed")}
         </option>
+        <option value="by_client_items_totals">
+          {t("SalesReports.report_types.by_client_items_totals")}
+        </option>
       </select>
     </div>
 
@@ -405,7 +470,10 @@ const getInvoiceGroupColor = (rows) => {
     </div>
 
     {/* Select Client */}
-    {(reportType === "by_client" || reportType === "by_client_detailed") && (
+    {(reportType === "by_client" ||
+      reportType === "by_client_detailed" ||
+      reportType === "by_client_items_totals")
+      && (
       <button
         onClick={() => setClientModalOpen(true)}
         className="
@@ -423,7 +491,9 @@ const getInvoiceGroupColor = (rows) => {
     )}
 
     {/* Selected Client Display */}
-    {(reportType === "by_client" || reportType === "by_client_detailed") && selectedClient && (
+    {(reportType === "by_client" ||
+      reportType === "by_client_detailed" ||
+      reportType === "by_client_items_totals") && selectedClient && (
       <div>
         <label className="block text-xs text-gray-500 mb-1">
           {t("SalesReports.filters.selected_client")}
@@ -500,6 +570,12 @@ const getInvoiceGroupColor = (rows) => {
 if (reportType === "demographic") {
   setPrintMode("by_area");
   await fetchSalesByAreaForPrint();
+  setPendingPrint(true);
+}
+if (reportType === "by_client_items_totals") {
+  if (!selectedClient) return;
+  setPrintMode("by_client_items_totals");
+  await fetchItemsSoldForClientTotalsForPrint();
   setPendingPrint(true);
 }
         if (reportType === "by_client") {
@@ -893,6 +969,96 @@ if (reportType === "demographic") {
   </div>
 )}
 
+{/* ================= ITEMS SOLD FOR CLIENT (TOTALS) ================= */}
+{reportType === "by_client_items_totals" && (
+  <div className="border rounded-lg bg-white flex flex-col flex-1 min-h-0">
+
+    {/* Scrollable table area */}
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 sticky top-0 z-10">
+          <tr>
+            <th className="px-4 py-3 text-start">
+              {t("SalesReports.table.item")}
+            </th>
+            <th className="px-4 py-3 text-start">
+              {t("StorageMonitor.table.unit")}
+            </th>
+            <th className="px-4 py-3 text-center">
+              {t("SalesReports.table.qty")}
+            </th>
+          </tr>
+        </thead>
+
+        <tbody className="divide-y divide-gray-200">
+          {loading && (
+            <tr>
+              <td colSpan={3} className="px-4 py-6 text-center text-gray-400">
+                {t("SalesReports.states.loading")}
+              </td>
+            </tr>
+          )}
+
+          {!loading && rows.length === 0 && (
+            <tr>
+              <td colSpan={3} className="px-4 py-6 text-center text-gray-400">
+                {t("SalesReports.states.empty")}
+              </td>
+            </tr>
+          )}
+
+          {!loading &&
+            rows.map((r, idx) => (
+              <tr key={idx}>
+                <td className="px-4 py-2 font-medium">
+                  {r.item_name}
+                </td>
+                <td className="px-4 py-2">
+                  {r.unit || "-"}
+                </td>
+                <td className="px-4 py-2 text-center font-semibold">
+                  {Number(r.total_qty)}
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Pagination */}
+    <div className="flex justify-between items-center px-4 py-3 border-t bg-gray-50">
+      <span className="text-xs text-gray-500">
+        {t("SalesReports.summary.showing")} {rows.length} / {totalCount}
+      </span>
+
+      <span className="text-sm font-semibold text-gray-400">
+        —
+      </span>
+
+      <div className="flex gap-2">
+        <button
+          disabled={offset === 0 || loading}
+          onClick={() =>
+            fetchItemsSoldForClientTotals(offset - PAGE_SIZE)
+          }
+          className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+        >
+          {t("SalesReports.actions.previous")}
+        </button>
+
+        <button
+          disabled={rows.length < PAGE_SIZE || loading}
+          onClick={() =>
+            fetchItemsSoldForClientTotals(offset + PAGE_SIZE)
+          }
+          className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+        >
+          {t("SalesReports.actions.next")}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 {reportType === "currency" &&(
    <div className="border rounded-lg bg-white flex flex-col flex-1 min-h-0 items-center justify-center ">
@@ -949,6 +1115,16 @@ Reports by currency Coming Soon !</div>
   )}
   {printMode === "by_client_detailed" && company && selectedClient && (
   <SalesByClientDetailedReportPrint
+    ref={printRef}
+    rows={printRows}
+    dateFrom={dateFrom}
+    dateTo={dateTo}
+    client={selectedClient}
+    company={company}
+  />
+)}
+{printMode === "by_client_items_totals" && company && selectedClient && (
+  <ItemsSoldForClientTotalsReportPrint
     ref={printRef}
     rows={printRows}
     dateFrom={dateFrom}

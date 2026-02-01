@@ -1,0 +1,292 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 Times-Roman;\f1\ftech\fcharset77 Symbol;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs24 \cf0 \expnd0\expndtw0\kerning0
+1- \
+\
+CREATE OR REPLACE FUNCTION dev_sales.adjust_stock(\
+    p_transaction_id character varying,\
+    p_item_id integer,\
+    p_storage_id integer,\
+    p_qty numeric,\
+    p_direction character varying,\
+    p_type character varying,\
+    p_date date,\
+    p_notes text DEFAULT NULL\
+)\
+RETURNS void\
+LANGUAGE plpgsql\
+COST 100\
+VOLATILE PARALLEL UNSAFE\
+AS $BODY$\
+BEGIN\
+\
+    -- Skip stock logic for non-stocked items\
+    IF NOT EXISTS (\
+        SELECT 1\
+        FROM items\
+        WHERE id = p_item_id\
+          AND is_stocked = true\
+    ) THEN\
+        RETURN;\
+    END IF;\
+\
+    -- Safety checks\
+    IF p_qty <= 0 THEN\
+        RAISE EXCEPTION 'Quantity must be greater than zero';\
+    END IF;\
+\
+    IF p_direction NOT IN ('IN', 'OUT') THEN\
+        RAISE EXCEPTION 'Invalid direction %', p_direction;\
+    END IF;\
+\
+    IF p_date IS NULL THEN\
+        RAISE EXCEPTION 'Transaction date cannot be NULL';\
+    END IF;\
+\
+    -- Ensure storage_items row exists\
+    INSERT INTO storage_items (item_id, storage_id, qty)\
+    VALUES (p_item_id, p_storage_id, 0)\
+    ON CONFLICT (item_id, storage_id) DO NOTHING;\
+\
+    -- Lock row\
+    PERFORM 1\
+    FROM storage_items\
+    WHERE item_id = p_item_id\
+      AND storage_id = p_storage_id\
+    FOR UPDATE;\
+\
+    -- Insert transaction log with PROVIDED DATE\
+    INSERT INTO transaction_logs (\
+        transaction_id,\
+        item_id,\
+        storage_id,\
+        qty,\
+        direction,\
+        type,\
+        notes,\
+        created_at\
+    )\
+    VALUES (\
+        p_transaction_id,\
+        p_item_id,\
+        p_storage_id,\
+        p_qty,\
+        p_direction,\
+        p_type,\
+        p_notes,\
+        p_date   -- DATE 
+\f1 \uc0\u8594 
+\f0  TIMESTAMP (00:00:00)\
+    );\
+\
+    -- Update storage quantity\
+    UPDATE storage_items\
+    SET qty = qty + CASE\
+        WHEN p_direction = 'IN' THEN p_qty\
+        ELSE -p_qty\
+    END\
+    WHERE item_id = p_item_id\
+      AND storage_id = p_storage_id;\
+\
+    -- Update total item quantity\
+    UPDATE items\
+    SET stock_qty = stock_qty + CASE\
+        WHEN p_direction = 'IN' THEN p_qty\
+        ELSE -p_qty\
+    END\
+    WHERE id = p_item_id;\
+\
+END;\
+$BODY$;\
+\
+ALTER FUNCTION dev_sales.adjust_stock(\
+    character varying,\
+    integer,\
+    integer,\
+    numeric,\
+    character varying,\
+    character varying,\
+    date,\
+    text\
+)\
+OWNER TO postgres;\
+\
+2- \
+\
+Delete old one adjust_stock\
+\
+=======\
+\
+CREATE TABLE dev.due_balances (\
+    id SERIAL PRIMARY KEY,\
+\
+    reason TEXT NOT NULL,\
+    date DATE NOT NULL DEFAULT CURRENT_DATE,\
+\
+    amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),\
+\
+    client_id INTEGER NOT NULL,\
+\
+    notes TEXT,\
+\
+    created_at TIMESTAMP DEFAULT NOW(),\
+    updated_at TIMESTAMP DEFAULT NOW()\
+);\
+\
+===========\
+\
+CREATE TABLE dev.receipt_voucher (\
+    id SERIAL PRIMARY KEY,\
+\
+    due_balance_id INTEGER NOT NULL,\
+    client_id INTEGER NOT NULL,\
+\
+    receipt_number VARCHAR(20) NOT NULL UNIQUE,\
+\
+    type VARCHAR(20) NOT NULL CHECK (\
+        type IN ('cash', 'bank_transfer', 'cheque')\
+    ),\
+\
+    amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),\
+\
+    reason TEXT,\
+    notes TEXT,\
+\
+    created_at TIMESTAMP DEFAULT NOW(),\
+\
+    CONSTRAINT fk_receipt_due\
+        FOREIGN KEY (due_balance_id)\
+        REFERENCES dev.due_balances(id)\
+        ON DELETE CASCADE\
+);\
+\
+=========\
+\
+CREATE TABLE dev.receipt_cheques (\
+    id SERIAL PRIMARY KEY,\
+\
+    cheque_number VARCHAR(50) NOT NULL,\
+    cheque_amount NUMERIC(12,2) NOT NULL CHECK (cheque_amount > 0),\
+\
+    due_date DATE NOT NULL,\
+    beneficiary_bank TEXT NOT NULL,\
+\
+    receipt_voucher_id INTEGER NOT NULL,\
+\
+    created_at TIMESTAMP DEFAULT NOW(),\
+\
+    CONSTRAINT fk_cheque_receipt\
+        FOREIGN KEY (receipt_voucher_id)\
+        REFERENCES dev.receipt_voucher(id)\
+        ON DELETE CASCADE\
+);\
+\
+==========\
+\
+CREATE INDEX idx_due_balances_client\
+    ON dev.due_balances(client_id);\
+\
+CREATE INDEX idx_receipt_voucher_due\
+    ON dev.receipt_voucher(due_balance_id);\
+\
+CREATE INDEX idx_receipt_voucher_client\
+    ON dev.receipt_voucher(client_id);\
+\
+\
+============\
+\
+ALTER TABLE dev_sales.receipt_voucher\
+ADD COLUMN date DATE NOT NULL DEFAULT CURRENT_DATE;\
+\
+========\
+\
+INSERT INTO dev_sales.user_permissions (user_id, module, can_view, can_add, can_edit, can_delete)\
+SELECT u.id, 'receipts', false, false, false, false\
+FROM dev_sales.users u\
+ON CONFLICT (user_id, module) DO NOTHING;\
+\
+ For each schema\
+\
+============\
+\
+ALTER TABLE dev_sales.company_config\
+ADD COLUMN IF NOT EXISTS auto_pos_einvoicing boolean NOT NULL DEFAULT false;\
+ \
+================\
+\
+INSERT INTO dev_sales.user_permissions (user_id, module, can_view, can_add, can_edit, can_delete)\
+SELECT id, 'pos', true, true, true, true\
+FROM dev_sales.users\
+ON CONFLICT (user_id, module) DO NOTHING;\
+\
+=======\
+\
+-- FUNCTION: dev_sales.delete_stock_transaction(integer)\
+\
+-- DROP FUNCTION IF EXISTS dev_sales.delete_stock_transaction(integer);\
+\
+CREATE OR REPLACE FUNCTION dev_sales.delete_stock_transaction(\
+	p_log_id integer)\
+    RETURNS void\
+    LANGUAGE 'plpgsql'\
+    COST 100\
+    VOLATILE PARALLEL UNSAFE\
+AS $BODY$\
+DECLARE\
+    v_item_id integer;\
+    v_storage_id integer;\
+    v_qty numeric;\
+    v_direction character varying;\
+BEGIN\
+    -- Lock and fetch the transaction log\
+    SELECT\
+        item_id,\
+        storage_id,\
+        qty,\
+        direction\
+    INTO\
+        v_item_id,\
+        v_storage_id,\
+        v_qty,\
+        v_direction\
+    FROM transaction_logs\
+    WHERE id = p_log_id\
+    FOR UPDATE;\
+\
+    IF NOT FOUND THEN\
+        RAISE EXCEPTION 'Transaction log % not found', p_log_id;\
+    END IF;\
+\
+    -- Revert storage quantity\
+    UPDATE storage_items\
+    SET qty = qty + CASE\
+        WHEN v_direction = 'IN' THEN -v_qty\
+        ELSE v_qty\
+    END\
+    WHERE item_id = v_item_id\
+      AND storage_id = v_storage_id;\
+\
+    -- Revert item total quantity\
+    UPDATE items\
+    SET stock_qty = stock_qty + CASE\
+        WHEN v_direction = 'IN' THEN -v_qty\
+        ELSE v_qty\
+    END\
+    WHERE id = v_item_id;\
+\
+    -- Delete the transaction log\
+    DELETE FROM transaction_logs\
+    WHERE id = p_log_id;\
+\
+END;\
+$BODY$;\
+\
+ALTER FUNCTION dev_sales.delete_stock_transaction(integer)\
+    OWNER TO postgres;\
+}
