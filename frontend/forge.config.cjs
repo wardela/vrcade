@@ -4,6 +4,20 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
+    prune: true,
+    icon: 'assets/fawtartak',
+    // Exclude dev-only sources and build artifacts from the packaged app.
+    ignore: [
+      /^\/src($|\/)/,
+      /^\/public($|\/)/,
+      /^\/out($|\/)/,
+      /^\/dist_electron($|\/)/,
+      /^\/node_modules\/\.cache($|\/)/,
+      /^\/\.git($|\/)/,
+      /^\/\.github($|\/)/,
+      /^\/.*\.log$/,
+      /^\/.*\.md$/,
+    ],
   },
   rebuildConfig: {},
   makers: [

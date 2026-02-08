@@ -2,6 +2,54 @@ const invoiceService = require("../services/invoiceService");
 const { buildReturnInvoiceXml, sendReturnToISTD, processReturnInvoice } = require("../einvoice_return");
 const { buildEinvoiceXml, sendEinvoice, extractQR } = require("../einvoice");
 
+const EINV_DEBUG = process.env.EINV_DEBUG === "true";
+const POS_EINV_SYNC_WAIT_MS = (() => {
+  const parsed = Number(process.env.POS_EINV_SYNC_WAIT_MS);
+  if (!Number.isFinite(parsed)) return 4000;
+
+  const intValue = Math.trunc(parsed);
+  return intValue >= 500 ? intValue : 4000;
+})();
+
+function normalizeIstdMessage(data) {
+  if (!data) {
+    return "ISTD rejected the invoice request";
+  }
+
+  if (typeof data === "string") {
+    if (/504 Gateway Time-out/i.test(data)) {
+      return "ISTD gateway timed out. Please retry shortly.";
+    }
+
+    return data.length <= 300 ? data : `${data.slice(0, 300)}...`;
+  }
+
+  if (typeof data === "object" && data.message) {
+    return String(data.message);
+  }
+
+  return "ISTD rejected the invoice request";
+}
+
+function logIstdError(context, err, extra = {}) {
+  console.error(context, {
+    message: err?.message || "Unknown error",
+    code: err?.code || null,
+    status: err?.response?.status || null,
+    statusText: err?.response?.statusText || null,
+    ...extra,
+  });
+
+  if (EINV_DEBUG && err?.response?.data) {
+    const responseSnippet =
+      typeof err.response.data === "string"
+        ? err.response.data.slice(0, 300)
+        : JSON.stringify(err.response.data).slice(0, 300);
+
+    console.error("[ISTD] response snippet:", responseSnippet);
+  }
+}
+
 
 // GET /api/invoices?limit=100&offset=0
 const getInvoices = async (req, res) => {
@@ -195,6 +243,9 @@ const company = await invoiceService.getCompanyConfig(req.db);
     if (!Array.isArray(invoices) || invoices.length === 0) {
       return res.status(400).json({ message: "No invoices provided." });
     }
+    if (!company) {
+      return res.status(500).json({ message: "Company configuration not found" });
+    }
 
     // Step 1 — Save void invoices (return invoice numbers generated here)
     const savedRows = await invoiceService.saveVoidInvoices(req.db,invoices);
@@ -205,13 +256,20 @@ const company = await invoiceService.getCompanyConfig(req.db);
 
       // Fetch header + lines
       const original = await invoiceService.getInvoiceForReturn(req.db,originalInvoiceNumber);
+      if (!original?.header) {
+        return res.status(404).json({
+          message: `Original invoice not found for return: ${originalInvoiceNumber}`
+        });
+      }
 
       const originalHeader = {
         invoice_number: original.header.invoice_number,
         uuid: original.header.uuid,
         total: original.header.total,
         date: original.header.date,
-        type: original.header.type
+        type: original.header.type,
+        type2: original.header.type2,
+        currency: original.header.currency || "JOD",
       };
 
       const lines = original.lines;
@@ -220,23 +278,29 @@ const company = await invoiceService.getCompanyConfig(req.db);
       const returnHeader = {
         return_invoice_number: saved.return_invoice_number,
         return_uuid: saved.return_uuid,
-        date: saved.created_at
+        date: saved.created_at,
+        refund_reason: "VOID INVOICE",
       };
   
       // Build XML (console.log(xml) happens inside the function)
       const xml = buildReturnInvoiceXml(returnHeader, originalHeader, lines, company);
-      const sendResult = await sendReturnToISTD(xml);
+      const sendResult = await sendReturnToISTD(xml, company, company);
       if (!sendResult.ok) {
-  console.log("ISTD Return API Error:", sendResult.error);
+  console.error("ISTD Return API Error:", {
+    status: sendResult.status || null,
+    message: normalizeIstdMessage(sendResult.error)
+  });
 
   return res.status(400).json({
     message: "ISTD API Error",
-    error: sendResult.error
+    error: normalizeIstdMessage(sendResult.error)
   });
 }
 
 
-console.log("RETURN INVOICE SENT → STATUS:", sendResult.status);
+if (EINV_DEBUG) {
+  console.log("RETURN INVOICE SENT → STATUS:", sendResult.status);
+}
 await invoiceService.saveVoidInvoiceQR(
   req.db,
   saved.return_invoice_number,
@@ -245,9 +309,9 @@ await invoiceService.saveVoidInvoiceQR(
 
 
 
-      // TODO next: encode → send → save QR
-      console.log("Final Return XML:", xml);
-      console.log("---------------------------------------------");
+      if (EINV_DEBUG) {
+        console.log("[EINV-RETURN] XML generated for return invoice:", saved.return_invoice_number);
+      }
     }
 
     res.status(200).json({
@@ -312,9 +376,13 @@ const getUnsharedInvoices = async (req, res) => {
 const shareUnsharedInvoices = async (req, res) => {
   try {
     const { invoices } = req.body;
+    const company = await invoiceService.getCompanyConfig(req.db);
 
     if (!Array.isArray(invoices) || invoices.length === 0) {
       return res.status(400).json({ message: "No invoices provided" });
+    }
+    if (!company) {
+      return res.status(500).json({ message: "Company configuration not found" });
     }
 
     const results = [];
@@ -334,10 +402,12 @@ const shareUnsharedInvoices = async (req, res) => {
       const invObj = {
         InvNumber: header.invoice_number,
         Date: header.date,
-        Type: header.type === "cash" ? 1 : 2,
+        Type: header.type,
+        Type2: header.type2,
         Notes: header.notes || "",
         INVOICEUUID: header.uuid,
         HeaderTotal: Number(header.total),
+        Currency: header.currency || "JOD",
 
         FileNo: "17925592",
         CompanyName: "Carnival Amusement & Entertainment Co.",
@@ -349,29 +419,55 @@ const shareUnsharedInvoices = async (req, res) => {
         CustomerName: header.client || ""
       };
 
-      const acts = lines.map(l => ({
-        ItemNumber: l.item_number,
-        Qty: Number(l.qty),
-        LineTotal: Number(l.total), // including tax
-        TaxVal: Number(l.tax) || 8,
-        ItemDiscount: Number(l.discount) || 0,
-        ItemName: l.description || "",
-        ITEMNOTES: ""
-      }));
+      const acts = lines.map(l => {
+        const itemPrice = Number(l.item_price) || 0;
+        const discountPctRaw = Number(l.discount_percentage);
+        const hasDiscountPct =
+          l.discount_percentage !== null &&
+          l.discount_percentage !== undefined &&
+          String(l.discount_percentage).trim() !== "";
+        const discountFromPct = hasDiscountPct && Number.isFinite(discountPctRaw)
+          ? (discountPctRaw > 1 ? discountPctRaw / 100 : discountPctRaw)
+          : null;
+        const discountValueRaw = Number(l.discount);
+        const discountFromValue =
+          itemPrice > 0 && Number.isFinite(discountValueRaw)
+            ? discountValueRaw / itemPrice
+            : 0;
+
+        return {
+          ItemNumber: l.item_number,
+          Qty: Number(l.qty),
+          LineTotal: Number(l.total), // including tax
+          TaxVal: Number(l.tax) || 8,
+          ItemDiscount: discountFromPct !== null ? discountFromPct : discountFromValue,
+          OriginalPrice: itemPrice,
+          ItemName: l.description || "",
+          ITEMNOTES: ""
+        };
+      });
 
       // ===== STEP 1: BUILD XML =====
-      const xml = buildEinvoiceXml(invObj, acts);
+      const xml = buildEinvoiceXml(invObj, acts, company);
+      if (!xml) {
+        results.push({
+          invoice: inv,
+          status: "SEND_FAILED",
+          error: "XML generation failed"
+        });
+        continue;
+      }
 
       // ===== STEP 2: SEND TO TAX AUTH =====
       let apiResponse;
       try {
-        apiResponse = await sendEinvoice(xml);
+        apiResponse = await sendEinvoice(xml, company);
       } catch (err) {
-        console.log("Error sending invoice:", err);
+        logIstdError("Error sending invoice:", err, { invoice_number: inv });
         results.push({
           invoice: inv,
           status: "SEND_FAILED",
-          error: err.response?.data || err.message
+          error: normalizeIstdMessage(err.response?.data || err.message)
         });
         continue;
       }
@@ -993,7 +1089,24 @@ const shareSingleInvoice = async (req, res) => {
       l.tax === null || l.tax === undefined || Number.isNaN(Number(l.tax))
         ? 8
         : Number(l.tax),
-      ItemDiscount: Number(l.discount_percentage) || 0,
+      ItemDiscount: (() => {
+        const hasDiscountPct =
+          l.discount_percentage !== null &&
+          l.discount_percentage !== undefined &&
+          String(l.discount_percentage).trim() !== "";
+        const discountRaw = Number(l.discount_percentage);
+        if (hasDiscountPct && Number.isFinite(discountRaw) && discountRaw > 0) {
+          return discountRaw > 1 ? discountRaw / 100 : discountRaw;
+        }
+
+        const itemPrice = Number(l.item_price) || 0;
+        const discountValue = Number(l.discount);
+        if (itemPrice > 0 && Number.isFinite(discountValue) && discountValue > 0) {
+          return discountValue / itemPrice;
+        }
+
+        return 0;
+      })(),
       OriginalPrice: Number(l.item_price),
       ItemName: l.description,
       ITEMNOTES: "",
@@ -1006,9 +1119,9 @@ const shareSingleInvoice = async (req, res) => {
       return res.status(400).json({ message: "XML generation failed" });
     }
 
-    console.log("\n================= E-INVOICE XML =================");
-    console.log(xml);
-    console.log("================================================\n");
+    if (EINV_DEBUG) {
+      console.log(`[EINV] XML generated for invoice ${invoice_number}`);
+    }
     // 4) Send to ISTD
    const response = await sendEinvoice(xml, company);
 
@@ -1028,19 +1141,32 @@ const shareSingleInvoice = async (req, res) => {
     });
 
 } catch (err) {
-  console.error("Share invoice error:", err);
+  logIstdError("Share invoice error:", err, {
+    invoice_number: req.params?.invoice_number,
+  });
 
   // Axios error from ISTD
   if (err.response) {
+    const status = err.response.status;
+    const message =
+      status === 504
+        ? "ISTD gateway timed out while processing this invoice. Please retry shortly."
+        : normalizeIstdMessage(err.response.data);
+
     return res.status(err.response.status).json({
       success: false,
       source: "ISTD",
-      status: err.response.status,
-      message:
-        err.response.data && Object.keys(err.response.data).length
-          ? err.response.data
-          : "ISTD rejected the invoice request",
-      headers: err.response.headers || null
+      status,
+      message
+    });
+  }
+
+  if (err.code === "ECONNABORTED" || err.code === "ETIMEDOUT") {
+    return res.status(504).json({
+      success: false,
+      source: "ISTD",
+      status: 504,
+      message: "Timed out waiting for ISTD response"
     });
   }
 
@@ -1109,7 +1235,7 @@ const shareRefundInvoice = async (req, res) => {
       date: original.header.date,
       type: original.header.type,     // cash | credit
       type2: original.header.type2,
-      currency: original.header.currency,
+      currency: original.header.currency || "JOD",
     };
 
     const lines = (full.lines || []).map(l => ({
@@ -1135,15 +1261,15 @@ const shareRefundInvoice = async (req, res) => {
     const result = await processReturnInvoice(returnHeader, originalHeader, lines, cfg, company);
 
     if (!result.ok) {
-        console.log(
-  "ISTD ERROR RESPONSE (FULL):",
-  JSON.stringify(result.error, null, 2)
-);
+      logIstdError("ISTD refund share error:", {
+        response: { status: result.status, data: result.error },
+        message: normalizeIstdMessage(result.error)
+      });
 
 
       return res.status(400).json({
         message: "Refund sharing failed",
-        error: result.error
+        error: normalizeIstdMessage(result.error)
       });
     }
 
@@ -2138,24 +2264,44 @@ const silentlyShareInvoice = async (req, invoice_number) => {
       params: { invoice_number }
     };
 
+    let capturedStatus = 200;
+    let capturedBody = null;
+
     // We don't want to send HTTP responses here
     const fakeRes = {
-      status: () => fakeRes,
-      json: () => {}
+      status(code) {
+        capturedStatus = code;
+        return fakeRes;
+      },
+      json(payload) {
+        capturedBody = payload;
+        return fakeRes;
+      }
     };
 
-    // 🔁 Call your EXISTING logic
+    // Call existing logic and map its HTTP-like output to a result object
     await shareSingleInvoice(fakeReq, fakeRes);
 
-    return { success: true };
+    if (capturedStatus >= 200 && capturedStatus < 300) {
+      return { success: true, status: capturedStatus };
+    }
+
+    return {
+      success: false,
+      source: capturedBody?.source || "ISTD",
+      status: capturedBody?.status || capturedStatus,
+      message: normalizeIstdMessage(capturedBody?.message || "Silent e-invoice failed")
+    };
   } catch (err) {
+    logIstdError("Silent share invoice error:", err, { invoice_number });
+
     // IMPORTANT: swallow error but return structured info
     if (err.response) {
       return {
         success: false,
         source: "ISTD",
         status: err.response.status,
-        message: err.response.data || "ISTD rejected invoice"
+        message: normalizeIstdMessage(err.response.data)
       };
     }
 
@@ -2226,14 +2372,49 @@ if (!autoPosEinvoicing) {
 // ===============================
 // ✅ AUTO E-INVOICING ENABLED
 // ===============================
-const einvoiceResult = await silentlyShareInvoice(req, invoice_number);
+const sharePromise = silentlyShareInvoice(req, invoice_number);
+const einvoiceResult = await Promise.race([
+  sharePromise,
+  new Promise((resolve) =>
+    setTimeout(
+      () =>
+        resolve({
+          success: false,
+          pending: true,
+          source: "ISTD",
+          status: 504,
+          message: `E-invoice is still processing in background (waited ${POS_EINV_SYNC_WAIT_MS}ms)`
+        }),
+      POS_EINV_SYNC_WAIT_MS
+    )
+  )
+]);
+
+if (einvoiceResult.pending) {
+  sharePromise
+    .then((finalResult) => {
+      if (!finalResult.success) {
+        console.error("Async POS e-invoice failed:", {
+          invoice_number,
+          source: finalResult.source || "ISTD",
+          status: finalResult.status || null,
+          message: finalResult.message || "Unknown e-invoice error"
+        });
+      }
+    })
+    .catch((err) => {
+      logIstdError("Async POS e-invoice promise error:", err, { invoice_number });
+    });
+}
 
 // always return invoice, never block POS
 return res.status(201).json({
   ...created,
   einvoice: einvoiceResult.success
     ? { shared: true }
-    : { shared: false, warning: einvoiceResult }
+    : einvoiceResult.pending
+      ? { shared: false, pending: true, warning: einvoiceResult.message }
+      : { shared: false, warning: einvoiceResult }
 });
 
 

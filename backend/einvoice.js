@@ -11,7 +11,82 @@ const EINV_URL = "https://backend.jofotara.gov.jo/core/invoices/";
 const STICKOUNET_COOKIE =
   "4fdb7136e666916d0e373058e9e5c44e|7480c8b0e4ce7933ee164081a50488f1";
 
+const RETRYABLE_HTTP_STATUSES = new Set([502, 503, 504]);
+const RETRYABLE_NETWORK_CODES = new Set([
+  "ECONNABORTED",
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "EAI_AGAIN",
+  "ENOTFOUND",
+]);
+
+const EINV_TIMEOUT_MS = readIntEnv("EINV_TIMEOUT_MS", 8000, 1);
+const EINV_MAX_RETRIES = 0;
+const EINV_RETRY_BACKOFF_MS = readIntEnv("EINV_RETRY_BACKOFF_MS", 1500, 100);
+const EINV_DEBUG = process.env.EINV_DEBUG === "true";
+const EINV_LOG_XML = process.env.EINV_LOG_XML === "true";
+
 // ---------------- HELPER FUNCTIONS ----------------
+function readIntEnv(name, fallback, min) {
+  const parsed = Number(process.env[name]);
+  if (!Number.isFinite(parsed)) return fallback;
+
+  const intValue = Math.trunc(parsed);
+  if (intValue < min) return fallback;
+
+  return intValue;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function logEinvoiceDebug(...args) {
+  if (EINV_DEBUG) {
+    console.log(...args);
+  }
+}
+
+function truncateForLog(value, maxLength = 300) {
+  if (value === null || value === undefined) return "";
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  if (!text) return "";
+  return text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
+}
+
+function shouldRetryEinvoice(error) {
+  const status = error?.response?.status;
+  if (status && RETRYABLE_HTTP_STATUSES.has(status)) {
+    return true;
+  }
+
+  const code = String(error?.code || "").toUpperCase();
+  if (RETRYABLE_NETWORK_CODES.has(code)) {
+    return true;
+  }
+
+  return /timeout/i.test(String(error?.message || ""));
+}
+
+function extractInvoiceId(xmlInvoice) {
+  return xmlInvoice.match(/<cbc:ID>(.*?)<\/cbc:ID>/)?.[1] || "Unknown";
+}
+
+function resolveEinvoiceCredentials(company) {
+  const clientId = company?.client_id?.trim?.() || process.env.EINV_CLIENT_ID?.trim?.();
+  const secretKey = company?.secret_key?.trim?.() || process.env.EINV_SECRET_KEY?.trim?.();
+
+  if (!clientId || !secretKey) {
+    const err = new Error(
+      "Missing e-invoice credentials: set company client_id/secret_key or EINV_CLIENT_ID/EINV_SECRET_KEY env vars"
+    );
+    err.code = "EINV_CONFIG_MISSING";
+    throw err;
+  }
+
+  return { clientId, secretKey };
+}
+
 function extractQR(responseText) {
   if (!responseText) return null;
 
@@ -104,11 +179,9 @@ function buildEinvoiceXml(invoice, actions, company) {  // ------------ HEADER T
   // LineTotal in actions = line TOTAL including tax.
 
   if (NToZ(invoice.HeaderTotal) === 0) {
-    console.log("❌ Invoice total is 0 → skipping XML generation");
+    console.warn("[EINV] Invoice total is 0, skipping XML generation");
     return null; 
   }
-
-  console.log(company)
 
   let headerTotalInclTax = 0;
   let headerBeforeTax = 0;
@@ -124,7 +197,7 @@ function buildEinvoiceXml(invoice, actions, company) {  // ------------ HEADER T
     const isFree = act.ItemDiscount === 1 || act.ItemDiscount === 1.00;
 
     if (qty === 0 || unitPriceInclTax === 0 || lineTotal === 0 || isFree) {
-      console.log(`⚠️ Skipping line #${act.ItemNumber} (invalid or 100% discount)`);
+      logEinvoiceDebug(`[EINV] Skipping line #${act.ItemNumber} (invalid or 100% discount)`);
       continue;
     }
 
@@ -132,14 +205,14 @@ function buildEinvoiceXml(invoice, actions, company) {  // ------------ HEADER T
 
     const taxRate = NToZ(act.TaxVal) / 100;
     const lineTotalIncl = NToZ(act.LineTotal); // total INCLUDING tax for the whole line
-console.log(lineTotalIncl);
+    logEinvoiceDebug(`[EINV] Line ${act.ItemNumber} total incl tax:`, lineTotalIncl);
     headerTotalInclTax += lineTotalIncl;
 
     if (taxRate > 0) {
       const lineWithoutTax = roundTo9(lineTotalIncl / (1 + taxRate));
-      console.log(lineWithoutTax)
+      logEinvoiceDebug(`[EINV] Line ${act.ItemNumber} total before tax:`, lineWithoutTax);
       const lineTax = roundTo9(lineTotalIncl - lineWithoutTax);
-      console.log(lineTax)
+      logEinvoiceDebug(`[EINV] Line ${act.ItemNumber} tax:`, lineTax);
 
       headerBeforeTax += lineWithoutTax;
       headerTaxTotal += lineTax;
@@ -339,7 +412,7 @@ const invoiceTypeCodeName =
     const isFree = act.ItemDiscount === 1 || act.ItemDiscount === 1.00;
 
     if (qty === 0 || unitPriceInclTax === 0 || lineTotal === 0 || isFree) {
-      console.log(`⚠️ Skipping XML line #${act.ItemNumber}`);
+      logEinvoiceDebug(`[EINV] Skipping XML line #${act.ItemNumber}`);
       continue;
     }
 
@@ -439,32 +512,18 @@ const pricePerUnit = unitPriceBeforeTax;
   }
 
   xml += `</Invoice>`;
+  logEinvoiceDebug("[EINV] XML build summary:", {
+    invoiceNo: invoice.InvNumber,
+    headerTotalDb: invoice.HeaderTotal,
+    taxExclusiveAmount: EXAMOUNT,
+    taxAmount: TAXAMOUNT,
+    taxInclusiveAmount: INAMOUNT,
+    lineCount: actions.length,
+  });
 
-  // ================= DEBUG: HEADER TOTALS =================
-console.log("\n===== HEADER VALIDATION =====");
-console.log("Invoice No:", invoice.InvNumber);
-console.log("HeaderTotal (DB):", invoice.HeaderTotal);
-console.log("Computed TaxExclusiveAmount (EXAMOUNT):", EXAMOUNT);
-console.log("Computed TaxAmount (TAXAMOUNT):", TAXAMOUNT);
-console.log("Computed TaxInclusiveAmount (INAMOUNT):", INAMOUNT);
-console.log("ID :", company.client_id)
-console.log("key :", company.secret_key)
-
-
-// ================= DEBUG: LINE VALIDATION =================
-console.log("\n===== LINE VALIDATION =====");
-actions.forEach((act) => {
-  console.log(`Line #${act.ItemNumber}`);
-  console.log("Qty:", act.Qty);
-  console.log("Item:", act.ItemName);
-  console.log("LineTotal (incl VAT):", act.LineTotal);
-  console.log("TaxVal:", act.TaxVal);
-});
-
-// ================= DEBUG: FULL XML =================
-console.log("\n===== GENERATED XML =====");
-console.log(xml);
-console.log("===== END XML =====\n");
+  if (EINV_LOG_XML) {
+    logEinvoiceDebug("[EINV] Generated XML:", xml);
+  }
 
   return xml;
 }
@@ -493,55 +552,54 @@ function encodeXmlBase64(xmlMinified) {
  * @returns {Promise<{ status:number, data:any }>} - API response
  */
 async function sendEinvoice(xmlInvoice, company) {
-  try {
-    const xmlMinified = minifyXml(xmlInvoice);
-    const encodedXml = encodeXmlBase64(xmlMinified);
-    const payload = { invoice: encodedXml };
+  const xmlMinified = minifyXml(xmlInvoice);
+  const encodedXml = encodeXmlBase64(xmlMinified);
+  const payload = { invoice: encodedXml };
+  const { clientId, secretKey } = resolveEinvoiceCredentials(company);
+  const invoiceId = extractInvoiceId(xmlInvoice);
+  const maxAttempts = EINV_MAX_RETRIES + 1;
 
-    const headers = {
-      "client-id": company.client_id.trim(),
-      "secret-key": company.secret_key.trim(),
-      "Content-Type": "application/json",
-      Cookie: `stickounet=${STICKOUNET_COOKIE}`,
-    };
+  const headers = {
+    "client-id": clientId,
+    "secret-key": secretKey,
+    "Content-Type": "application/json",
+    Cookie: `stickounet=${STICKOUNET_COOKIE}`,
+  };
 
-    // ================= DEBUG BEFORE SENDING =================
-    console.log("\n===== SENDING INVOICE TO ISTD =====");
-    console.log("Minified XML length:", xmlMinified.length);
-    console.log("Base64 length:", encodedXml.length);
-    console.log(
-      "Invoice Number:",
-      xmlInvoice.match(/<cbc:ID>(.*?)<\/cbc:ID>/)?.[1] || "Unknown"
-    );
-    console.log("===================================\n");
+  logEinvoiceDebug(
+    `[EINV] Sending invoice ${invoiceId} (xmlLen=${xmlMinified.length}, base64Len=${encodedXml.length}, timeout=${EINV_TIMEOUT_MS}ms, retries=${EINV_MAX_RETRIES})`
+  );
 
-    // ================= SEND TO API =================
-    const response = await axios.post(EINV_URL, payload, { headers });
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await axios.post(EINV_URL, payload, {
+        headers,
+        timeout: EINV_TIMEOUT_MS,
+      });
 
-    return {
-      status: response.status,
-      data: response.data,
-    };
+      return {
+        status: response.status,
+        data: response.data,
+      };
+    } catch (error) {
+      const status = error?.response?.status || "N/A";
+      const code = error?.code || "UNKNOWN";
+      const retryable = shouldRetryEinvoice(error) && attempt < maxAttempts;
+      const snippet = truncateForLog(error?.response?.data);
 
-  } catch (error) {
-
-    // ================= FULL ERROR LOGGING =================
-    console.log("\n===== ISTD ERROR RESPONSE =====");
-
-    if (error.response) {
-      console.log("Status:", error.response.status);
-      console.log(
-        "Data:",
-        JSON.stringify(error.response.data, null, 2)
+      console.error(
+        `[EINV] Send failed for ${invoiceId} (attempt ${attempt}/${maxAttempts}, status=${status}, code=${code}${retryable ? ", retrying" : ""})`
       );
-      console.log("Headers:", error.response.headers);
-    } else {
-      console.log("Unknown Error:", error.message);
+      if (snippet) {
+        logEinvoiceDebug(`[EINV] Response snippet: ${snippet}`);
+      }
+
+      if (!retryable) {
+        throw error;
+      }
+
+      await wait(EINV_RETRY_BACKOFF_MS * attempt);
     }
-
-    console.log("===== END ERROR =====\n");
-
-    throw error; // rethrow so generateEinvoice() also logs it
   }
 }
 

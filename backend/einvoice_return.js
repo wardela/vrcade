@@ -3,6 +3,61 @@
 
 const axios = require("axios");
 
+const EINV_URL = "https://backend.jofotara.gov.jo/core/invoices/";
+const DEFAULT_STICKOUNET_COOKIE =
+  "4fdb7136e666916d0e373058e9e5c44e|7480c8b0e4ce7933ee164081a50488f1";
+const EINV_TIMEOUT_MS = readIntEnv("EINV_TIMEOUT_MS", 8000, 1);
+const EINV_DEBUG = process.env.EINV_DEBUG === "true";
+const EINV_LOG_XML = process.env.EINV_LOG_XML === "true";
+
+function readIntEnv(name, fallback, min) {
+  const parsed = Number(process.env[name]);
+  if (!Number.isFinite(parsed)) return fallback;
+
+  const intValue = Math.trunc(parsed);
+  if (intValue < min) return fallback;
+
+  return intValue;
+}
+
+function logEinvoiceReturnDebug(...args) {
+  if (EINV_DEBUG) {
+    console.log(...args);
+  }
+}
+
+function truncateForLog(value, maxLength = 300) {
+  if (value === null || value === undefined) return "";
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  if (!text) return "";
+  return text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
+}
+
+function resolveReturnCredentials(cfg = {}, company = {}) {
+  const clientId =
+    company?.client_id?.trim?.() ||
+    cfg?.client_id?.trim?.() ||
+    process.env.EINV_CLIENT_ID?.trim?.();
+  const secretKey =
+    company?.secret_key?.trim?.() ||
+    cfg?.secret_key?.trim?.() ||
+    process.env.EINV_SECRET_KEY?.trim?.();
+
+  if (!clientId || !secretKey) {
+    const err = new Error(
+      "Missing e-invoice credentials: set company client_id/secret_key or EINV_CLIENT_ID/EINV_SECRET_KEY env vars"
+    );
+    err.code = "EINV_CONFIG_MISSING";
+    throw err;
+  }
+
+  return { clientId, secretKey };
+}
+
+function extractInvoiceId(xml) {
+  return xml.match(/<cbc:ID>(.*?)<\/cbc:ID>/)?.[1] || "Unknown";
+}
+
 function NToZ(v) {
   if (v === null || v === undefined || Number.isNaN(Number(v))) return 0;
   return Number(v);
@@ -10,6 +65,11 @@ function NToZ(v) {
 
 function roundTo9(n) { return Math.round(NToZ(n) * 1e9) / 1e9; }
 function formatAmount9(n) { return roundTo9(n).toFixed(9); }
+function normalizeDiscountRate(v) {
+  const n = NToZ(v);
+  if (n <= 0) return 0;
+  return n > 1 ? n / 100 : n;
+}
 
 
 function buildReturnInvoiceXml(returnHeader, originalHeader, lines, company) {
@@ -40,7 +100,7 @@ function buildReturnInvoiceXml(returnHeader, originalHeader, lines, company) {
     const tax = NToZ(l.tax);
     const taxRate = tax / 100;
 
-    const discountRate = NToZ(l.discount_percentage);
+    const discountRate = normalizeDiscountRate(l.discount_percentage);
     const discountFactor = 1 - discountRate;
 
     const lineDiscount =
@@ -82,8 +142,9 @@ const scopeType = String(originalHeader.type2 || "").toLowerCase();
 const invoiceTypeCodeName =
   typeCodeMap?.[scopeType]?.[payType] || "012"; // safe fallback
 
+  const currency = originalHeader.currency || "JOD";
+
   let xml = "";
-console.log(company)
   xml += `<?xml version="1.0" encoding="UTF-8"?>\n`;
   xml += `<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" `;
   xml += `xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" `;
@@ -98,8 +159,8 @@ console.log(company)
 
 xml += `<cbc:InvoiceTypeCode name="${invoiceTypeCodeName}">381</cbc:InvoiceTypeCode>\n`;
 
-  xml += `<cbc:DocumentCurrencyCode>${originalHeader.currency}</cbc:DocumentCurrencyCode>\n`;
-  xml += `<cbc:TaxCurrencyCode>${originalHeader.currency}</cbc:TaxCurrencyCode>\n`;
+  xml += `<cbc:DocumentCurrencyCode>${currency}</cbc:DocumentCurrencyCode>\n`;
+  xml += `<cbc:TaxCurrencyCode>${currency}</cbc:TaxCurrencyCode>\n`;
 
   // Billing reference to the original invoice
   xml += `<cac:BillingReference>\n`;
@@ -188,7 +249,7 @@ for (const l of lines) {
   const taxVal = NToZ(l.tax);
   const taxRate = taxVal / 100;
 
-  const discRate = NToZ(l.discount_percentage);
+  const discRate = normalizeDiscountRate(l.discount_percentage);
   const lineTotalIncl = qty * price * (1 - discRate);
 
   if (lineTotalIncl === 0) continue;
@@ -235,7 +296,7 @@ for (const l of lines) {
 
   const taxRate = tax / 100;
 
-const discRate = NToZ(l.discount_percentage);
+const discRate = normalizeDiscountRate(l.discount_percentage);
 const lineTotalIncl = qty * price * (1 - discRate);
 
   const lineTotalEx = taxRate > 0 ? roundTo9(lineTotalIncl / (1 + taxRate)) : lineTotalIncl;
@@ -289,7 +350,7 @@ const unitrefex = price / (1 + taxRate);
   xml += `<cbc:AllowanceChargeReason>DISCOUNT</cbc:AllowanceChargeReason>\n`;
 
 const lineDiscountAmount =
-  qty * price * NToZ(l.discount_percentage) / (1 + taxRate);
+  qty * price * normalizeDiscountRate(l.discount_percentage) / (1 + taxRate);
 
 xml += `<cbc:Amount currencyID="JO">${formatAmount9(lineDiscountAmount)}</cbc:Amount>\n`;
 
@@ -300,7 +361,9 @@ xml += `<cbc:Amount currencyID="JO">${formatAmount9(lineDiscountAmount)}</cbc:Am
   xml += `</cac:InvoiceLine>\n`;
 }
   xml += `</Invoice>`;
-console.log(xml)
+  if (EINV_LOG_XML) {
+    logEinvoiceReturnDebug("[EINV-RETURN] Generated XML:", xml);
+  }
   return xml;
 }
 // MINIFY XML
@@ -327,32 +390,35 @@ function extractQR(responseText) {
   return responseText.substring(from, end);
 }
 
-async function sendReturnToISTD(xml, cfg, company = {}) {
-  const EINV_URL = "https://backend.jofotara.gov.jo/core/invoices/";
-
-
-
-  // optional (only if you use it)
-  const COOKIE = cfg.cookie ? String(cfg.cookie).trim()
-    : "4fdb7136e666916d0e373058e9e5c44e|7480c8b0e4ce7933ee164081a50488f1";
+async function sendReturnToISTD(xml, cfg = {}, company = {}) {
+  const minified = minifyXml(xml);
+  const base64 = encodeXmlBase64(minified);
+  const payload = { invoice: base64 };
+  const invoiceId = extractInvoiceId(xml);
 
   try {
-    const minified = minifyXml(xml);
-    const base64 = encodeXmlBase64(minified);
-
-    const payload = { invoice: base64 };
+    const { clientId, secretKey } = resolveReturnCredentials(cfg, company);
+    const cookieSource = cfg?.cookie ?? company?.cookie ?? DEFAULT_STICKOUNET_COOKIE;
+    const cookie = cookieSource ? String(cookieSource).trim() : "";
 
     const headers = {
-      "client-id": company.client_id.trim(),
-      "secret-key": company.secret_key.trim(),
+      "client-id": clientId,
+      "secret-key": secretKey,
       "Content-Type": "application/json",
     };
-console.log("client-id :",company.client_id)
-console.log("secret-key :",company.secret_key)
-    // only attach cookie if you actually need it
-    if (COOKIE) headers.Cookie = `stickounet=${COOKIE}`;
 
-    const response = await axios.post(EINV_URL, payload, { headers });
+    if (cookie) {
+      headers.Cookie = `stickounet=${cookie}`;
+    }
+
+    logEinvoiceReturnDebug(
+      `[EINV-RETURN] Sending invoice ${invoiceId} (xmlLen=${minified.length}, base64Len=${base64.length}, timeout=${EINV_TIMEOUT_MS}ms, retries=0)`
+    );
+
+    const response = await axios.post(EINV_URL, payload, {
+      headers,
+      timeout: EINV_TIMEOUT_MS,
+    });
 
     const qr = extractQR(JSON.stringify(response.data));
 
@@ -360,13 +426,24 @@ console.log("secret-key :",company.secret_key)
       ok: true,
       status: response.status,
       data: response.data,
-      qr: qr
+      qr,
     };
-
   } catch (error) {
+    const status = error?.response?.status || null;
+    const code = error?.code || "UNKNOWN";
+    const snippet = truncateForLog(error?.response?.data);
+
+    console.error(
+      `[EINV-RETURN] Send failed for ${invoiceId} (status=${status || "N/A"}, code=${code})`
+    );
+    if (snippet) {
+      logEinvoiceReturnDebug(`[EINV-RETURN] Response snippet: ${snippet}`);
+    }
+
     return {
       ok: false,
-      error: error.response?.data || error.message
+      status,
+      error: error.response?.data || error.message,
     };
   }
 }

@@ -657,7 +657,7 @@ const saveVoidInvoices = async (db,invoiceNumbers) => {
   const results = [];
 
   for (const original of invoiceNumbers) {
-    const returnNo = await getNextReturnInvoiceNumber();
+    const returnNo = await getNextReturnInvoiceNumber(db);
 
     const insertSql = `
       INSERT INTO void_invoices 
@@ -709,7 +709,9 @@ const getInvoiceForReturn = async (db,invoice_number) => {
       total,
       client,
       notes,
-      type
+      type,
+      type2,
+      currency
     FROM invoice_header
     WHERE invoice_number = $1
   `;
@@ -721,6 +723,7 @@ const getInvoiceForReturn = async (db,invoice_number) => {
       qty,
       item_price AS price,
       discount,
+      discount_percentage,
       tax,
       total
     FROM invoice_lines
