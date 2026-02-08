@@ -342,7 +342,7 @@ const unitPriceEx = taxRate > 0 ? roundTo9(unitPriceIncl / (1 + taxRate)) : unit
 const unitrefex = price / (1 + taxRate);
 
   xml += `<cac:Price>\n`;
-  xml += `<cbc:PriceAmount currencyID="JO">${unitrefex}</cbc:PriceAmount>\n`;
+  xml += `<cbc:PriceAmount currencyID="JO">${formatAmount9(unitrefex)}</cbc:PriceAmount>\n`;
   xml += `<cbc:BaseQuantity unitCode="C62">1</cbc:BaseQuantity>\n`;
 
   xml += `<cac:AllowanceCharge>\n`;
