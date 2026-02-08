@@ -4084,7 +4084,6 @@ const getPrintableDueBalance = async (db, dueBalanceId) => {
   };
 };
 
-
 module.exports = {
   getInvoices,
   getInvoiceDetails,
