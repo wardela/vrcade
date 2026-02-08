@@ -37,6 +37,7 @@ const [popupMessage, setPopupMessage] = useState(null);
 const [notesChanged, setNotesChanged] = useState(false);
 const [showDiscount, setShowDiscount] = useState(true);
 const [createDueBalance, setCreateDueBalance] = useState(true);
+const [reference, setReference] = useState("");
 
 const {t} = useTranslation();
 const round3 = (num) => Math.round(num * 1000) / 1000;
@@ -308,7 +309,7 @@ const grandTotal = totalBeforeTax + totalTax;
     setInvoiceDate(data.header.date);
     setPaymentType(data.header.type);
     setNotes(data.header.notes || "");
-
+    setReference(data.header.reference || "");
     // NEW FIELDS
     setType2(data.header.type2 || "local");
     setCurrency(data.header.currency || "JOD");
@@ -766,11 +767,11 @@ const payload = {
   client_id: selectedInvoice?.client_id || null,
   client: clientName,
   notes,
+  reference, // ✅ NEW
   lines,
-
-  // 🔥 NEW
   create_due_balance: Boolean(createDueBalance),
 };
+
 
     const res = await api.post(`/api/invoices`, payload);
     const created = res.data;
@@ -809,22 +810,23 @@ const payload = {
     unit_number:
       typeof it.unit_number === "number" ? it.unit_number : null,
   }));
-
-  await api.put(`/api/invoices/${invoiceNumber}`, {
-    header: {
-      client: clientName,
-      notes,
-      type2,
-      currency,
-      client_contact: clientPhone,
-      client_detail: clientDetailValue,
-      client_det_code: clientDetailType,
-      client_id: selectedInvoice?.client_id || null,
-      type: paymentType,
-      date: invoiceDate,
-    },
-    lines,
-  });
+ 
+await api.put(`/api/invoices/${invoiceNumber}`, {
+  header: {
+    client: clientName,
+    notes,
+    reference, // ✅ NEW
+    type2,
+    currency,
+    client_contact: clientPhone,
+    client_detail: clientDetailValue,
+    client_det_code: clientDetailType,
+    client_id: selectedInvoice?.client_id || null,
+    type: paymentType,
+    date: invoiceDate,
+  },
+  lines,
+});
 
   return invoiceNumber;
 };
@@ -848,6 +850,7 @@ const initNewInvoice = async () => {
     setCurrency("JOD");
     setType2("local");
     setNotes("");
+    setReference("");
     setCreateDueBalance(true); // default for new invoices
 
     // Items → ONE EMPTY LINE
@@ -1527,6 +1530,21 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
     placeholder={t("Invoices.notes_placeholder")}
     disabled={!selectedInvoice}
   />
+</div> 
+<div>
+  <label className="text-sm text-gray-500">
+    {t("Invoices.reference")}
+  </label>
+  <input
+    type="text"
+    value={reference}
+    onChange={(e) => setReference(e.target.value)}
+    className={`w-full border rounded-md p-2 mt-1 text-gray-700 ${
+      !isEditable ? "bg-gray-100 cursor-not-allowed" : ""
+    }`}
+    disabled={!isEditable}
+    placeholder={t("Invoices.reference_placeholder")}
+  />
 </div>
 </div>
 <div className={isLocked ? "pointer-events-auto" : ""}>
@@ -2149,6 +2167,7 @@ className={`w-full border rounded px-2 py-1
       totalBeforeTax={totalBeforeTax}
       totalTax={totalTax}
       grandTotal={grandTotal}
+      reference={reference}
       qr={qrCode}
     />
   )}

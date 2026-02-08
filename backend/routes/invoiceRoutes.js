@@ -58,7 +58,7 @@ router.get("/due-balances/:due_balance_id/receipt-vouchers", invoiceController.g
 router.get("/receipt-vouchers/:id", invoiceController.getReceiptVoucherDetails);
 
 router.post("/receipts/standalone", invoiceController.createStandaloneReceipt);
-
+ 
 router.get("/receipts/totals", invoiceController.getClientReceiptsTotals);
 
 router.get("/stats/dashboard-receipts", invoiceController.getReceiptsDashboard);

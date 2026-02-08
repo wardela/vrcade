@@ -203,7 +203,8 @@
 
     "notes": "ملاحظات",
     "notes_placeholder": "أضف ملاحظات...",
-
+    "reference": "المرجع",
+    "reference_placeholder": "أدخل المرجع",
     "expand_header": "توسيع العنوان",
     "collapse_header": "طي العنوان",
 
@@ -264,7 +265,7 @@
     },
      "create_due_balance": "إنشاء ذمة على العميل بقيمة الفاتورة"
   },
-
+ 
    "ClientList": {
     "title": "اختيار عميل",
     "add_client": "إضافة عميل",

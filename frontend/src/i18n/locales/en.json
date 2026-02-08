@@ -204,7 +204,8 @@
 
     "notes": "Notes",
     "notes_placeholder": "Add notes...",
-
+    "reference": "Reference",
+    "reference_placeholder": "Enter reference",
     "expand_header": "Expand header",
     "collapse_header": "Collapse header",
 
