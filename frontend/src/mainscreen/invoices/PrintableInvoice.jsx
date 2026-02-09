@@ -203,12 +203,13 @@ const hasInvoiceTerms =
         السعر<br />بدون ضريبة
       </th>
 
-
-
       <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
         الكمية
       </th>
       <th className="border border-black px-2 py-1 text-center whitespace-nowrap">الوحدة</th>
+      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
+        الاجمالي<br />بدون ضريبة
+      </th>
       <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
         ضريبة %
       </th>
@@ -239,6 +240,7 @@ const hasInvoiceTerms =
     ).map((item, idx) => {
       const priceIncl = item.price;
       const priceExcl = priceIncl / (1 + item.tax / 100);
+      const priceExclTotal = priceExcl * item.qty;
       const taxUnit = priceIncl - priceExcl;
       const discountFactor = item.discount / 100;
       const discountValue = priceIncl * item.qty * discountFactor;
@@ -275,8 +277,12 @@ const hasInvoiceTerms =
           <td className="border border-black px-2 py-1 text-center whitespace-nowrap">
             {item.unit_name || "-"}
           </td>
-          {/* Tax % */}
           <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
+            {priceExclTotal.toFixed(3)}
+          </td>
+
+          {/* Tax % */}
+          <td className="border border-black px-2 py-1 text-center whitespace-nowrap tabular-nums">
             {item.tax}
           </td>
 
