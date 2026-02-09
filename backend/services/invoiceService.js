@@ -76,26 +76,27 @@ const getInvoiceDetails = async (db,invoice_number) => {
 };
 
 const getFullInvoice = async (db,invoice_number) => {
-  const headerQuery = `
-    SELECT 
-      invoice_number,
-      uuid,
-      pos,
-      total,
-      client,
-      notes,
-      type,
-      qr,
-      type2,
-      currency,
-      client_contact,
-      client_detail,
-      client_det_code,
-      client_id,
-      TO_CHAR(date, 'YYYY-MM-DD') AS date
-    FROM invoice_header
-    WHERE invoice_number = $1
-  `;
+const headerQuery = `
+  SELECT 
+    invoice_number,
+    uuid,
+    pos,
+    total,
+    client,
+    notes,
+    type,
+    qr,
+    type2,
+    currency,
+    client_contact,
+    client_detail,
+    client_det_code,
+    client_id,
+    reference,
+    TO_CHAR(date, 'YYYY-MM-DD') AS date
+  FROM invoice_header
+  WHERE invoice_number = $1
+`;
 const linesQuery = `
   SELECT
   il.id,
@@ -218,12 +219,14 @@ const getNextInvoiceNumber = async (db) => {
 
 // Create invoice (header + lines) in one transaction
 const createInvoice = async (db,{
+  
   invoice_number,
   date,
   pos,
   type,
   client,
   notes,
+  reference, // ✅ NEW
   lines,
   type2,
   currency,
@@ -231,11 +234,11 @@ const createInvoice = async (db,{
   client_detail,
   client_det_code,
   client_id,
-
   create_due_balance
 }) => {
   try {
     await db.query("BEGIN");
+console.log("CREATE INVOICE REFERENCE =", reference);
 
 const validLines = lines
   .filter(ln => Number.isInteger(ln.item_id))
@@ -284,44 +287,46 @@ if (validLines.length === 0) {
 
 
 
-    const headerSql = `
-      INSERT INTO invoice_header (
-        invoice_number,
-        date,
-        pos,
-        type,
-        client,
-        notes,
-        total,
-        type2,
-        currency,
-        client_contact,
-        client_detail,
-        client_det_code,
-        client_id
-      )
-      VALUES ($1, COALESCE($2, NOW()), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-      RETURNING invoice_number, pos, total, client, notes, type, date,
-                type2, currency, client_contact, client_detail, client_det_code, client_id
-    `;
+const headerSql = `
+  INSERT INTO invoice_header (
+    invoice_number,
+    date,
+    pos,
+    type,
+    client,
+    notes,
+    reference,
+    total,
+    type2,
+    currency,
+    client_contact,
+    client_detail,
+    client_det_code,
+    client_id
+  )
+  VALUES ($1, COALESCE($2, NOW()), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+  RETURNING invoice_number, pos, total, client, notes, type, date,
+            type2, currency, client_contact, client_detail, client_det_code, client_id, reference
+`;
 
-    const headerVals = [
-      invoice_number,
-      date || null,
-      pos || "POS-1",
-      type || "cash",
-      client || "",
-      notes || "",
-      headerTotal,
 
-      // NEW FIELDS
-      type2 || null,
-      currency || "JOD",
-      client_contact || null,
-      client_detail || null,
-      client_det_code || null,
-      client_id || null,
-    ];
+const headerVals = [
+  invoice_number,
+  date || null,
+  pos || "POS-1",
+  type || "cash",
+  client || "",
+  notes || "",
+  reference || null,     // ✅ NEW
+  headerTotal,
+  type2 || null,
+  currency || "JOD",
+  client_contact || null,
+  client_detail || null,
+  client_det_code || null,
+  client_id || null,
+];
+
 
 
     const headerRes = await db.query(headerSql, headerVals);
@@ -863,14 +868,14 @@ const updateInvoiceFull = async (db, invoice_number, header, lines) => {
     // ✅ IF LOCKED/HAS_REFUNDS → ONLY ALLOW NOTES UPDATE
     if (isLocked || hasRefunds) {
       // Only update header notes field
-      const headerSql = `
-        UPDATE invoice_header
-        SET notes=$1, updated_at=NOW()
-        WHERE invoice_number=$2
-        RETURNING *;
-      `;
+const headerSql = `
+  UPDATE invoice_header
+  SET notes=$1, reference=$2, updated_at=NOW()
+  WHERE invoice_number=$3
+  RETURNING *;
+`;
 
-      await db.query(headerSql, [header.notes, invoice_number]);
+await db.query(headerSql, [header.notes, header.reference || null, invoice_number]);
 
       // Update line item notes only
       for (const ln of lines) {
@@ -888,28 +893,29 @@ const updateInvoiceFull = async (db, invoice_number, header, lines) => {
 
     // ✅ IF NOT LOCKED → FULL UPDATE (existing code)
     // 1) Update header
-    const headerSql = `
-      UPDATE invoice_header
-      SET client=$1, notes=$2, type2=$3, currency=$4,
-          client_contact=$5, client_detail=$6, client_det_code=$7,
-          client_id=$8, type=$9, date=$10, updated_at=NOW()
-      WHERE invoice_number=$11
-      RETURNING *;
-    `;
+const headerSql = `
+  UPDATE invoice_header
+  SET client=$1, notes=$2, reference=$3, type2=$4, currency=$5,
+      client_contact=$6, client_detail=$7, client_det_code=$8,
+      client_id=$9, type=$10, date=$11, updated_at=NOW()
+  WHERE invoice_number=$12
+  RETURNING *;
+`;
 
-    await db.query(headerSql, [
-      header.client,
-      header.notes,
-      header.type2,
-      header.currency,
-      header.client_contact,
-      header.client_detail,
-      header.client_det_code,
-      header.client_id,
-      header.type,
-      header.date,
-      invoice_number,
-    ]);
+await db.query(headerSql, [
+  header.client,
+  header.notes,
+  header.reference || null, // ✅ NEW
+  header.type2,
+  header.currency,
+  header.client_contact,
+  header.client_detail,
+  header.client_det_code,
+  header.client_id,
+  header.type,
+  header.date,
+  invoice_number,
+]);
 
     // 🔄 REVERT OLD STOCK (IN)
     const oldLines = await db.query(
@@ -3909,7 +3915,7 @@ const getTopClientsByOutstanding = async (db, year) => {
 
   return (await db.query(query, [year])).rows;
 };
-
+ 
 const getTopOutstandingBalances = async (db, year) => {
   const query = `
     SELECT

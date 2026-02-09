@@ -5,22 +5,23 @@ import { moneyTafqeet } from "./moneyTafqeet";
 import BrandLogo from "../../components/brandlogo";
 
 const PrintableInvoice = forwardRef(
-  (
-    {
-      company,   
-      invoiceNumber,
-      clientName,
-      invoiceDate,
-      paymentType,
-      notes,
-      invoiceItems,
-      totalBeforeTax,
-      totalTax,
-      grandTotal,
-      qr
-    },
-    ref
-  ) => {
+(
+  {
+    company,   
+    invoiceNumber,
+    clientName,
+    invoiceDate,
+    paymentType,
+    notes,
+    reference, // ✅ ADD THIS
+    invoiceItems,
+    totalBeforeTax,
+    totalTax,
+    grandTotal,
+    qr
+  },
+  ref
+) => {
     const formatDate = (d) => {
       if (!d) return "";
       const datePart = d.split(" ")[0].split("T")[0];
@@ -46,7 +47,11 @@ const PrintableInvoice = forwardRef(
     const last = merged[merged.length - 1];
 
     // If same description AND same unit price → merge quantities
-    if (last.desc === current.desc && last.price === current.price) {
+if (
+  last.desc === current.desc &&
+  last.price === current.price &&
+  last.unit_name === current.unit_name
+) {
       last.qty += current.qty;   // merge quantities
     } else {
       merged.push({ ...current }); // different item → new row
@@ -62,7 +67,7 @@ const totalDiscountValue = invoiceItems.reduce(
     sum + item.price * item.qty * (item.discount / 100),
   0
 );
-
+const total_before_discount = ( Number(totalDiscountValue) + Number(grandTotal)) 
 const shouldShowQR = qr && qr !== "123456789";
 const hasAnyNotes = invoiceItems.some(i =>
   i.notes != null && String(i.notes).trim() !== "" && String(i.notes) !== "0"
@@ -155,16 +160,23 @@ const hasInvoiceTerms =
               </div>
 
               {/* RIGHT */}
-              <div className="space-y-2 text-left ">
-                <p>
-                  <strong>العميل:</strong> {clientName || "غير مذكور"}
-                </p>
-                {notes && (
-                  <p>
-                    <strong>ملاحظات:</strong> {notes}
-                  </p>
-                )}
-              </div>
+<div className="space-y-2 text-left ">
+  <p>
+    <strong>العميل:</strong> {clientName || "غير مذكور"}
+  </p>
+
+  {reference && (
+    <p>
+      <strong>المرجع:</strong> {reference}
+    </p>
+  )}
+
+  {notes && (
+    <p>
+      <strong>ملاحظات:</strong> {notes}
+    </p>
+  )}
+</div>
 
             </div>
           </div>
@@ -191,6 +203,20 @@ const hasInvoiceTerms =
         السعر<br />بدون ضريبة
       </th>
 
+      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
+        الكمية
+      </th>
+      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">الوحدة</th>
+      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
+        الاجمالي<br />بدون ضريبة
+      </th>
+      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
+        ضريبة %
+      </th>
+
+      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
+        قيمة الضريبة
+      </th>
       {hasDiscount && (
         <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
           خصم %
@@ -202,19 +228,6 @@ const hasInvoiceTerms =
           قيمة الخصم
         </th>
       )}
-
-      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
-        الكمية
-      </th>
-
-      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
-        ضريبة %
-      </th>
-
-      <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
-        قيمة الضريبة
-      </th>
-
       <th className="border border-black px-2 py-1 text-center whitespace-nowrap">
         الإجمالي
       </th>
@@ -227,6 +240,7 @@ const hasInvoiceTerms =
     ).map((item, idx) => {
       const priceIncl = item.price;
       const priceExcl = priceIncl / (1 + item.tax / 100);
+      const priceExclTotal = priceExcl * item.qty;
       const taxUnit = priceIncl - priceExcl;
       const discountFactor = item.discount / 100;
       const discountValue = priceIncl * item.qty * discountFactor;
@@ -256,7 +270,26 @@ const hasInvoiceTerms =
           <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
             {priceExcl.toFixed(3)}
           </td>
+          {/* Quantity */}
+          <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
+            {item.qty}
+          </td>
+          <td className="border border-black px-2 py-1 text-center whitespace-nowrap">
+            {item.unit_name || "-"}
+          </td>
+          <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
+            {priceExclTotal.toFixed(3)}
+          </td>
 
+          {/* Tax % */}
+          <td className="border border-black px-2 py-1 text-center whitespace-nowrap tabular-nums">
+            {item.tax}
+          </td>
+
+          {/* Tax value */}
+          <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
+            {totalTaxItem.toFixed(2)}
+          </td>
           {/* Discount % */}
           {hasDiscount && (
             <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
@@ -270,22 +303,6 @@ const hasInvoiceTerms =
               {discountValue.toFixed(2)}
             </td>
           )}
-
-          {/* Quantity */}
-          <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
-            {item.qty}
-          </td>
-
-          {/* Tax % */}
-          <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
-            {item.tax}
-          </td>
-
-          {/* Tax value */}
-          <td className="border border-black px-2 py-1 text-right whitespace-nowrap tabular-nums">
-            {totalTaxItem.toFixed(2)}
-          </td>
-
           {/* Total */}
           <td className="border border-black px-2 py-1 text-right font-medium whitespace-nowrap tabular-nums">
             {totalIncl.toFixed(2)}
@@ -316,6 +333,26 @@ const hasInvoiceTerms =
           >
             <tbody>
               {/* Subtotal */}
+                {hasDiscount && (
+                  <tr>
+                    <td className="border border-black p-2 text-right text-center">
+                      {total_before_discount.toFixed(3)}
+                    </td>
+                    <td className="border border-black p-2 font-semibold bg-gray-50 text-center">
+                      إجمالي قبل الخصم
+                    </td>
+                  </tr>
+                )}
+                {hasDiscount && (
+                  <tr>
+                    <td className="border border-black p-2 text-right text-center">
+                      {totalDiscountValue.toFixed(3)}
+                    </td>
+                    <td className="border border-black p-2 font-semibold bg-gray-50 text-center">
+                      إجمالي الخصم
+                    </td>
+                  </tr>
+                )}
               <tr>
                       <td className="border border-black p-2 text-right w-1/2 text-center">
                 {totalBeforeTax.toFixed(3)} 
@@ -328,7 +365,6 @@ const hasInvoiceTerms =
 
               {/* Tax Total */}
               <tr>
-
                 <td className="border border-black p-2 text-right text-center items-center">
                 {totalTax.toFixed(3)}
                 </td>
@@ -336,16 +372,6 @@ const hasInvoiceTerms =
                   إجمالي الضريبة
                 </td>
               </tr>
-                {hasDiscount && (
-  <tr>
-    <td className="border border-black p-2 text-right text-center">
-      {totalDiscountValue.toFixed(3)}
-    </td>
-    <td className="border border-black p-2 font-semibold bg-gray-50 text-center">
-      إجمالي الخصم
-    </td>
-  </tr>
-)}
               {/* Grand Total */}
               <tr className="bg-gray-100">
 

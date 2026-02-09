@@ -1923,7 +1923,7 @@ const updateReceiptVoucher = async (req, res) => {
         message: "Receipt voucher ID is required"
       });
     }
-
+ 
     const updated = await invoiceService.updateReceiptVoucher(
       req.db,
       id,
