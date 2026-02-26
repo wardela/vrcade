@@ -4,11 +4,11 @@ const s3 = require("../config/s3");
 
 const DEFAULT_QR = "123456789";
 
-const assertInvoiceEditable = async (db,invoice_number, client) => {
+const assertInvoiceEditable = async (db, invoice_number, client) => {
   // 1️⃣ Check QR
   const qrRes = await db.query(
     `SELECT qr FROM invoice_header WHERE invoice_number = $1`,
-    [invoice_number]
+    [invoice_number],
   );
 
   if (qrRes.rows.length === 0) {
@@ -27,7 +27,7 @@ const assertInvoiceEditable = async (db,invoice_number, client) => {
     WHERE original_invoice_number = $1
     LIMIT 1
     `,
-    [invoice_number]
+    [invoice_number],
   );
 
   if (refundRes.rows.length > 0) {
@@ -36,7 +36,7 @@ const assertInvoiceEditable = async (db,invoice_number, client) => {
 };
 
 // Fetch 100 invoices at a time
-const getInvoices = async (db,limit = 100, offset = 0) => {
+const getInvoices = async (db, limit = 100, offset = 0) => {
   const query = `
 SELECT 
   ih.invoice_number,
@@ -59,7 +59,7 @@ LIMIT $1 OFFSET $2;
 };
 
 // Fetch invoice details (lines)
-const getInvoiceDetails = async (db,invoice_number) => {
+const getInvoiceDetails = async (db, invoice_number) => {
   const query = `
     SELECT 
       item_number,
@@ -75,8 +75,8 @@ const getInvoiceDetails = async (db,invoice_number) => {
   return result.rows;
 };
 
-const getFullInvoice = async (db,invoice_number) => {
-const headerQuery = `
+const getFullInvoice = async (db, invoice_number) => {
+  const headerQuery = `
   SELECT 
     invoice_number,
     uuid,
@@ -97,7 +97,7 @@ const headerQuery = `
   FROM invoice_header
   WHERE invoice_number = $1
 `;
-const linesQuery = `
+  const linesQuery = `
   SELECT
   il.id,
   il.invoice_number,
@@ -137,19 +137,22 @@ ORDER BY il.item_number;
   };
 };
 
-const updateInvoiceHeader = async (db,{
-  invoice_number,
-  client,
-  notes,
-  type2,
-  currency,
-  client_contact,
-  client_detail,
-  client_det_code,
-  client_id,
-  type,
-  date
-}) => {
+const updateInvoiceHeader = async (
+  db,
+  {
+    invoice_number,
+    client,
+    notes,
+    type2,
+    currency,
+    client_contact,
+    client_detail,
+    client_det_code,
+    client_id,
+    type,
+    date,
+  },
+) => {
   try {
     await db.query("BEGIN");
 
@@ -184,7 +187,7 @@ const updateInvoiceHeader = async (db,{
       client_id,
       type,
       date || null,
-      invoice_number
+      invoice_number,
     ];
 
     const result = await db.query(sql, values);
@@ -197,7 +200,6 @@ const updateInvoiceHeader = async (db,{
   } finally {
   }
 };
-
 
 // Get next invoice serial without inserting anything
 const getNextInvoiceNumber = async (db) => {
@@ -218,40 +220,42 @@ const getNextInvoiceNumber = async (db) => {
 };
 
 // Create invoice (header + lines) in one transaction
-const createInvoice = async (db,{
-  
-  invoice_number,
-  date,
-  pos,
-  type,
-  client,
-  notes,
-  reference, // ✅ NEW
-  lines,
-  type2,
-  currency,
-  client_contact,
-  client_detail,
-  client_det_code,
-  client_id,
-  create_due_balance
-}) => {
+const createInvoice = async (
+  db,
+  {
+    invoice_number,
+    date,
+    pos,
+    type,
+    client,
+    notes,
+    reference, // ✅ NEW
+    lines,
+    type2,
+    currency,
+    client_contact,
+    client_detail,
+    client_det_code,
+    client_id,
+    create_due_balance,
+  },
+) => {
   try {
     await db.query("BEGIN");
-console.log("CREATE INVOICE REFERENCE =", reference);
+    console.log("CREATE INVOICE REFERENCE =", reference);
 
-const validLines = lines
-  .filter(ln => Number.isInteger(ln.item_id))
-  .map((ln, idx) => ({
-    ...ln,
-    item_number: idx + 1, // ✅ FORCE SEQUENTIAL NUMBERING
-  }));
+    const validLines = lines
+      .filter((ln) => Number.isInteger(ln.item_id))
+      .map((ln, idx) => ({
+        ...ln,
+        item_number: idx + 1, // ✅ FORCE SEQUENTIAL NUMBERING
+      }));
 
-// ❌ No real items → do NOT save invoice
-if (validLines.length === 0) {
-  await db.query("ROLLBACK");
-  return null; // or throw new Error("Invoice has no items")
-}
+    // ❌ No real items → do NOT save invoice
+    if (validLines.length === 0) {
+      await db.query("ROLLBACK");
+      return null; // or throw new Error("Invoice has no items")
+    }
     // Compute total on server for safety
     let headerTotal = 0;
     for (const ln of validLines) {
@@ -260,7 +264,9 @@ if (validLines.length === 0) {
       const taxRate = Number(ln.tax || 0) / 100;
 
       // discount_percentage frontend sends 0–1 or 0–100?
-      const discPrc = ln.discount_percentage ? Number(ln.discount_percentage) : 0;
+      const discPrc = ln.discount_percentage
+        ? Number(ln.discount_percentage)
+        : 0;
 
       // Convert 15% → 0.15 automatically
       const discFactor = discPrc > 1 ? discPrc / 100 : discPrc;
@@ -268,9 +274,9 @@ if (validLines.length === 0) {
       // Discount VALUE per item (per unit)
       const discountValue = priceIncl * discFactor;
 
-        // Save for DB → discount column stores VALUE per unit
-      ln.discount = discountValue;            // full precision
-      ln.discount_percentage = discFactor;    // full precision
+      // Save for DB → discount column stores VALUE per unit
+      ln.discount = discountValue; // full precision
+      ln.discount_percentage = discFactor; // full precision
 
       // price excluding tax
       const priceExcl = priceIncl / (1 + taxRate);
@@ -281,13 +287,11 @@ if (validLines.length === 0) {
       // total INCLUDING tax
       const totalIncl = qty * priceIncl * (1 - discFactor);
 
-      ln._computed_total = totalIncl;   // FULL PRECISION
+      ln._computed_total = totalIncl; // FULL PRECISION
       headerTotal += totalIncl;
     }
 
-
-
-const headerSql = `
+    const headerSql = `
   INSERT INTO invoice_header (
     invoice_number,
     date,
@@ -309,52 +313,49 @@ const headerSql = `
             type2, currency, client_contact, client_detail, client_det_code, client_id, reference
 `;
 
-
-const headerVals = [
-  invoice_number,
-  date || null,
-  pos || "POS-1",
-  type || "cash",
-  client || "",
-  notes || "",
-  reference || null,     // ✅ NEW
-  headerTotal,
-  type2 || null,
-  currency || "JOD",
-  client_contact || null,
-  client_detail || null,
-  client_det_code || null,
-  client_id || null,
-];
-
-
+    const headerVals = [
+      invoice_number,
+      date || null,
+      pos || "POS-1",
+      type || "cash",
+      client || "",
+      notes || "",
+      reference || null, // ✅ NEW
+      headerTotal,
+      type2 || null,
+      currency || "JOD",
+      client_contact || null,
+      client_detail || null,
+      client_det_code || null,
+      client_id || null,
+    ];
 
     const headerRes = await db.query(headerSql, headerVals);
 
     // 🔥 CREATE DUE BALANCE (IF REQUESTED)
-if (
-  create_due_balance === true &&
-  type === "credit" &&
-  client_id &&
-  headerTotal > 0
-) {
-  await db.query(
-    `
+    if (
+      create_due_balance === true &&
+      type === "credit" &&
+      client_id &&
+      headerTotal > 0
+    ) {
+      await db.query(
+        `
     INSERT INTO due_balances
       (reason, date, amount, client_id, notes)
     VALUES ($1, $2, $3, $4, $5)
     `,
-    [
-      invoice_number,                    // reason
-      date || new Date(),                // invoice date
-      headerTotal,                       // grand total
-      client_id,                         // client
-      `ذمة للفاتورة رقم ${invoice_number}` // notes
-    ]
-  );
-}
+        [
+          invoice_number, // reason
+          date || new Date(), // invoice date
+          headerTotal, // grand total
+          client_id, // client
+          `ذمة للفاتورة رقم ${invoice_number}`, // notes
+        ],
+      );
+    }
 
-const lineSql = `
+    const lineSql = `
   INSERT INTO invoice_lines (
     invoice_number,
     item_number,
@@ -388,59 +389,56 @@ const lineSql = `
 `;
     const insertedLines = [];
     for (const ln of validLines) {
-let storageId = ln.storage_id ?? null;
+      let storageId = ln.storage_id ?? null;
 
-const itemRes = await db.query(
-  "SELECT is_stocked, default_storage_id FROM items WHERE id = $1",
-  [ln.item_id]
-);
+      const itemRes = await db.query(
+        "SELECT is_stocked, default_storage_id FROM items WHERE id = $1",
+        [ln.item_id],
+      );
 
-const isStocked = itemRes.rows[0]?.is_stocked === true;
-const defaultStorage = itemRes.rows[0]?.default_storage_id ?? null;
+      const isStocked = itemRes.rows[0]?.is_stocked === true;
+      const defaultStorage = itemRes.rows[0]?.default_storage_id ?? null;
 
-if (isStocked && !storageId) {
-  storageId = defaultStorage;
-}
+      if (isStocked && !storageId) {
+        storageId = defaultStorage;
+      }
 
-if (isStocked && !storageId) {
-  throw new Error(`Stocked item ${ln.item_id} requires a storage`);
-}
+      if (isStocked && !storageId) {
+        throw new Error(`Stocked item ${ln.item_id} requires a storage`);
+      }
 
-
-const vals = [
-  invoice_number,
-  ln.item_number,
-  ln.item_id || null,
-  ln.item_price,
-  ln.discount_percentage,
-  ln.tax,
-  ln.qty,
-  ln.description,
-  ln.notes || null,
-  ln.item_code || null,
-  ln.unit_number || null,
-  ln.exempt || false,
-  ln._computed_total,
-  storageId
-];
+      const vals = [
+        invoice_number,
+        ln.item_number,
+        ln.item_id || null,
+        ln.item_price,
+        ln.discount_percentage,
+        ln.tax,
+        ln.qty,
+        ln.description,
+        ln.notes || null,
+        ln.item_code || null,
+        ln.unit_number || null,
+        ln.exempt || false,
+        ln._computed_total,
+        storageId,
+      ];
       const r = await db.query(lineSql, vals);
       insertedLines.push(r.rows[0]);
 
       if (ln.item_id && storageId) {
         await db.query(
-      `SELECT adjust_stock($1,$2,$3,$4,'OUT','invoice',$5,$6)`,
-      [
-        invoice_number,           // transaction_id
-        ln.item_id,               // item
-        storageId,                // storage
-        ln.qty,                   // qty
-        date,                     // ✅ invoice date
-        `Invoice ${invoice_number}` // notes
-      ]
-    );
-
-}
-
+          `SELECT adjust_stock($1,$2,$3,$4,'OUT','invoice',$5,$6)`,
+          [
+            invoice_number, // transaction_id
+            ln.item_id, // item
+            storageId, // storage
+            ln.qty, // qty
+            date, // ✅ invoice date
+            `Invoice ${invoice_number}`, // notes
+          ],
+        );
+      }
     }
 
     await db.query("COMMIT");
@@ -452,7 +450,7 @@ const vals = [
   }
 };
 
-const searchInvoices = async (db,query, limit = 100, offset = 0) => {
+const searchInvoices = async (db, query, limit = 100, offset = 0) => {
   const sql = `
   SELECT 
     invoice_number,
@@ -469,22 +467,23 @@ const searchInvoices = async (db,query, limit = 100, offset = 0) => {
   return result.rows;
 };
 
-const saveCompanyConfig = async (db, {
-  company_name,
-  tax_number,
-  tax_serial,
-  client_id,
-  secret_key,
-  logo_url,
-  phone_number,
-  company_location,
-  email,
-  invoice_terms,
-  auto_pos_einvoicing // ✅ NEW
-}) => {
-  const existing = await db.query(
-    `SELECT id FROM company_config LIMIT 1`
-  );
+const saveCompanyConfig = async (
+  db,
+  {
+    company_name,
+    tax_number,
+    tax_serial,
+    client_id,
+    secret_key,
+    logo_url,
+    phone_number,
+    company_location,
+    email,
+    invoice_terms,
+    auto_pos_einvoicing, // ✅ NEW
+  },
+) => {
+  const existing = await db.query(`SELECT id FROM company_config LIMIT 1`);
 
   // =========================
   // UPDATE EXISTING CONFIG
@@ -523,8 +522,8 @@ const saveCompanyConfig = async (db, {
         email || null,
         invoice_terms || null,
         auto_pos_einvoicing ?? null,
-        id
-      ]
+        id,
+      ],
     );
 
     return result.rows[0];
@@ -563,8 +562,8 @@ const saveCompanyConfig = async (db, {
       company_location || null,
       email || null,
       invoice_terms || null,
-      auto_pos_einvoicing ?? true // ✅ default ON
-    ]
+      auto_pos_einvoicing ?? true, // ✅ default ON
+    ],
   );
 
   return result.rows[0];
@@ -572,7 +571,7 @@ const saveCompanyConfig = async (db, {
 
 const getCompanyConfig = async (db) => {
   const result = await db.query(
-    `SELECT * FROM company_config ORDER BY id DESC LIMIT 1`
+    `SELECT * FROM company_config ORDER BY id DESC LIMIT 1`,
   );
 
   const company = result.rows[0] || null;
@@ -586,7 +585,7 @@ const getCompanyConfig = async (db) => {
 };
 
 // Daily KPIs for a given date
-const getDailyStats = async (db,date) => {
+const getDailyStats = async (db, date) => {
   const query = `
     SELECT 
       COALESCE(SUM(total),0) AS total_income,
@@ -600,7 +599,7 @@ const getDailyStats = async (db,date) => {
 };
 
 // Hourly sales count (activity)
-const getHourlySales = async (db,date) => {
+const getHourlySales = async (db, date) => {
   const query = `
     SELECT
       TO_CHAR(date, 'HH24') AS hour_24,
@@ -615,8 +614,8 @@ const getHourlySales = async (db,date) => {
   // Fill missing hours (10 AM – 10 PM)
   const formatted = [];
   for (let hour = 10; hour <= 22; hour++) {
-    const found = rows.find(r => parseInt(r.hour_24, 10) === hour);
-    const displayHour = ((hour + 11) % 12 + 1) + (hour >= 12 ? " PM" : " AM");
+    const found = rows.find((r) => parseInt(r.hour_24, 10) === hour);
+    const displayHour = ((hour + 11) % 12) + 1 + (hour >= 12 ? " PM" : " AM");
     formatted.push({
       hour: displayHour,
       sales: found ? parseInt(found.invoice_count, 10) : 0,
@@ -626,7 +625,7 @@ const getHourlySales = async (db,date) => {
   return formatted;
 };
 
-const getInvoicesByDate = async (db,date) => {
+const getInvoicesByDate = async (db, date) => {
   const sql = `
     SELECT 
       invoice_number,
@@ -658,7 +657,7 @@ const getNextReturnInvoiceNumber = async (db) => {
   return `RET-${String(num + 1).padStart(3, "0")}`;
 };
 
-const saveVoidInvoices = async (db,invoiceNumbers) => {
+const saveVoidInvoices = async (db, invoiceNumbers) => {
   const results = [];
 
   for (const original of invoiceNumbers) {
@@ -678,7 +677,7 @@ const saveVoidInvoices = async (db,invoiceNumbers) => {
   return results;
 };
 
-const getVoidedInvoicesByDate = async (db,date) => {
+const getVoidedInvoicesByDate = async (db, date) => {
   const sql = `
 SELECT
   v.id,
@@ -704,7 +703,7 @@ ORDER BY v.created_at ASC;
   return result.rows;
 };
 
-const getInvoiceForReturn = async (db,invoice_number) => {
+const getInvoiceForReturn = async (db, invoice_number) => {
   const headerQuery = `
     SELECT 
       invoice_number,
@@ -747,7 +746,7 @@ const getInvoiceForReturn = async (db,invoice_number) => {
   };
 };
 
-const saveVoidInvoiceQR = async (db,return_invoice_number, qr) => {
+const saveVoidInvoiceQR = async (db, return_invoice_number, qr) => {
   const query = `
     UPDATE void_invoices
     SET qrcode_response = $2
@@ -758,7 +757,7 @@ const saveVoidInvoiceQR = async (db,return_invoice_number, qr) => {
   return result.rows[0];
 };
 
-const getUnsharedInvoices = async (db,date) => {
+const getUnsharedInvoices = async (db, date) => {
   const sql = `
     SELECT 
       invoice_number,
@@ -774,7 +773,7 @@ const getUnsharedInvoices = async (db,date) => {
   return res.rows;
 };
 
-const saveInvoiceQR = async (db,invoice_number, qr) => {
+const saveInvoiceQR = async (db, invoice_number, qr) => {
   const sql = `
     UPDATE invoice_header
     SET qr = $2, updated_at = NOW()
@@ -785,7 +784,7 @@ const saveInvoiceQR = async (db,invoice_number, qr) => {
   return res.rows[0];
 };
 
-const getPosCounts = async (db,date) => {
+const getPosCounts = async (db, date) => {
   const sql = `
     SELECT 
       pos,
@@ -800,7 +799,7 @@ const getPosCounts = async (db,date) => {
   return rows;
 };
 
-const getLast7DaysIncome = async (db,date) => {
+const getLast7DaysIncome = async (db, date) => {
   const sql = `
     SELECT
       TO_CHAR(d.day, 'YYYY-MM-DD') AS day,
@@ -838,7 +837,6 @@ const getAllClients = async (db) => {
 };
 
 const updateInvoiceFull = async (db, invoice_number, header, lines) => {
-
   try {
     await db.query("BEGIN");
 
@@ -848,7 +846,7 @@ const updateInvoiceFull = async (db, invoice_number, header, lines) => {
     // ✅ CHECK IF INVOICE IS LOCKED
     const qrRes = await db.query(
       `SELECT qr FROM invoice_header WHERE invoice_number = $1`,
-      [invoice_number]
+      [invoice_number],
     );
 
     if (qrRes.rows.length === 0) {
@@ -860,7 +858,7 @@ const updateInvoiceFull = async (db, invoice_number, header, lines) => {
     // ✅ CHECK IF REFUNDS EXIST
     const refundRes = await db.query(
       `SELECT 1 FROM refund_invoice_header WHERE original_invoice_number = $1 LIMIT 1`,
-      [invoice_number]
+      [invoice_number],
     );
 
     const hasRefunds = refundRes.rows.length > 0;
@@ -868,14 +866,18 @@ const updateInvoiceFull = async (db, invoice_number, header, lines) => {
     // ✅ IF LOCKED/HAS_REFUNDS → ONLY ALLOW NOTES UPDATE
     if (isLocked || hasRefunds) {
       // Only update header notes field
-const headerSql = `
+      const headerSql = `
   UPDATE invoice_header
   SET notes=$1, reference=$2, updated_at=NOW()
   WHERE invoice_number=$3
   RETURNING *;
 `;
 
-await db.query(headerSql, [header.notes, header.reference || null, invoice_number]);
+      await db.query(headerSql, [
+        header.notes,
+        header.reference || null,
+        invoice_number,
+      ]);
 
       // Update line item notes only
       for (const ln of lines) {
@@ -883,7 +885,7 @@ await db.query(headerSql, [header.notes, header.reference || null, invoice_numbe
           `UPDATE invoice_lines 
            SET notes = $1 
            WHERE invoice_number = $2 AND item_number = $3`,
-          [ln.notes || null, invoice_number, ln.item_number]
+          [ln.notes || null, invoice_number, ln.item_number],
         );
       }
 
@@ -893,7 +895,7 @@ await db.query(headerSql, [header.notes, header.reference || null, invoice_numbe
 
     // ✅ IF NOT LOCKED → FULL UPDATE (existing code)
     // 1) Update header
-const headerSql = `
+    const headerSql = `
   UPDATE invoice_header
   SET client=$1, notes=$2, reference=$3, type2=$4, currency=$5,
       client_contact=$6, client_detail=$7, client_det_code=$8,
@@ -902,20 +904,20 @@ const headerSql = `
   RETURNING *;
 `;
 
-await db.query(headerSql, [
-  header.client,
-  header.notes,
-  header.reference || null, // ✅ NEW
-  header.type2,
-  header.currency,
-  header.client_contact,
-  header.client_detail,
-  header.client_det_code,
-  header.client_id,
-  header.type,
-  header.date,
-  invoice_number,
-]);
+    await db.query(headerSql, [
+      header.client,
+      header.notes,
+      header.reference || null, // ✅ NEW
+      header.type2,
+      header.currency,
+      header.client_contact,
+      header.client_detail,
+      header.client_det_code,
+      header.client_id,
+      header.type,
+      header.date,
+      invoice_number,
+    ]);
 
     // 🔄 REVERT OLD STOCK (IN)
     const oldLines = await db.query(
@@ -924,30 +926,29 @@ await db.query(headerSql, [
       FROM invoice_lines
       WHERE invoice_number = $1
       `,
-      [invoice_number]
+      [invoice_number],
     );
 
     for (const ln of oldLines.rows) {
       if (ln.item_id && ln.storage_id) {
-      await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'IN','invoice-edit',$5,$6)`,
-        [
-          `${invoice_number}-REV`,
-          ln.item_id,
-          ln.storage_id,
-          ln.qty,
-          header.date,                         // ✅ invoice date
-          `Revert invoice ${invoice_number}`
-        ]
-      );
+        await db.query(
+          `SELECT adjust_stock($1,$2,$3,$4,'IN','invoice-edit',$5,$6)`,
+          [
+            `${invoice_number}-REV`,
+            ln.item_id,
+            ln.storage_id,
+            ln.qty,
+            header.date, // ✅ invoice date
+            `Revert invoice ${invoice_number}`,
+          ],
+        );
       }
     }
 
     // 2) Delete old lines
-    await db.query(
-      `DELETE FROM invoice_lines WHERE invoice_number=$1`,
-      [invoice_number]
-    );
+    await db.query(`DELETE FROM invoice_lines WHERE invoice_number=$1`, [
+      invoice_number,
+    ]);
 
     // 3) Insert updated lines
     let headerTotal = 0;
@@ -961,9 +962,9 @@ await db.query(headerSql, [
 
       const itemRes = await db.query(
         "SELECT is_stocked, default_storage_id FROM items WHERE id = $1",
-        [ln.item_id]
+        [ln.item_id],
       );
-// comment
+      // comment
       const isStocked = itemRes.rows[0]?.is_stocked === true;
       const defaultStorage = itemRes.rows[0]?.default_storage_id ?? null;
 
@@ -1016,30 +1017,30 @@ await db.query(headerSql, [
           ln.item_code || null,
           typeof ln.unit_number === "number" ? ln.unit_number : null,
           ln.exempt || false,
-          storageId
-        ]
+          storageId,
+        ],
       );
 
       // 🔻 APPLY NEW STOCK (OUT)
       if (ln.item_id && storageId) {
-      await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'OUT','invoice-edit',$5,$6)`,
-        [
-          invoice_number,
-          ln.item_id,
-          storageId,
-          qty,
-          header.date,                         // ✅ same invoice date
-          `Updated invoice ${invoice_number}`
-        ]
-      );
+        await db.query(
+          `SELECT adjust_stock($1,$2,$3,$4,'OUT','invoice-edit',$5,$6)`,
+          [
+            invoice_number,
+            ln.item_id,
+            storageId,
+            qty,
+            header.date, // ✅ same invoice date
+            `Updated invoice ${invoice_number}`,
+          ],
+        );
       }
     }
 
     // Update header total
     await db.query(
       "UPDATE invoice_header SET total=$1 WHERE invoice_number=$2",
-      [headerTotal, invoice_number]
+      [headerTotal, invoice_number],
     );
 
     await db.query("COMMIT");
@@ -1064,7 +1065,7 @@ const getAllCategories = async (db) => {
   return result.rows;
 };
 
-const getItemsByCategory = async (db,categoryId) => {
+const getItemsByCategory = async (db, categoryId) => {
   const sql = `
     SELECT 
       i.id,
@@ -1109,7 +1110,7 @@ const getFavoriteItems = async (db) => {
   return result.rows;
 };
 
-const toggleFavoriteItem = async (db,itemId) => {
+const toggleFavoriteItem = async (db, itemId) => {
   const sql = `
     UPDATE items
     SET fav = NOT fav
@@ -1130,7 +1131,7 @@ const getAllUnits = async (db) => {
   return res.rows;
 };
 
-const createUnit = async (db,{ name, description }) => {
+const createUnit = async (db, { name, description }) => {
   const sql = `
     INSERT INTO units (name, description)
     VALUES ($1, $2)
@@ -1140,7 +1141,7 @@ const createUnit = async (db,{ name, description }) => {
   return res.rows[0];
 };
 
-const updateUnit = async (db,id, { name, description }) => {
+const updateUnit = async (db, id, { name, description }) => {
   const sql = `
     UPDATE units
     SET name = $1,
@@ -1152,7 +1153,7 @@ const updateUnit = async (db,id, { name, description }) => {
   return res.rows[0];
 };
 
-const createCategory = async (db,{ name }) => {
+const createCategory = async (db, { name }) => {
   const sql = `
     INSERT INTO categories (name)
     VALUES ($1)
@@ -1162,7 +1163,7 @@ const createCategory = async (db,{ name }) => {
   return res.rows[0];
 };
 
-const updateCategory = async (db,id, { name }) => {
+const updateCategory = async (db, id, { name }) => {
   const sql = `
     UPDATE categories
     SET name = $1
@@ -1173,8 +1174,7 @@ const updateCategory = async (db,id, { name }) => {
   return res.rows[0];
 };
 
-const createItem = async (db,data) => {
-
+const createItem = async (db, data) => {
   try {
     await db.query("BEGIN");
 
@@ -1207,48 +1207,40 @@ const createItem = async (db,data) => {
       data.usual_sales_qty || 1,
       data.notes || null,
       data.is_stocked ?? true,
-      data.default_storage_id || null
+      data.default_storage_id || null,
     ]);
 
     const item = itemRes.rows[0];
 
-// Initial stock per storage (ONLY if stocked)
-if (item.is_stocked && Array.isArray(data.storages)) {
-  const initDate =
-    data.initial_stock_date || new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    // Initial stock per storage (ONLY if stocked)
+    if (item.is_stocked && Array.isArray(data.storages)) {
+      const initDate =
+        data.initial_stock_date || new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
-  for (const s of data.storages) {
-    if (!s.qty || s.qty <= 0) continue;
+      for (const s of data.storages) {
+        if (!s.qty || s.qty <= 0) continue;
 
-    await db.query(
-      `SELECT adjust_stock($1,$2,$3,$4,'IN','init',$5,$6)`,
-      [
-        `INIT-${item.id}`,
-        item.id,
-        s.storage_id,
-        s.qty,
-        initDate, // ✅ NEW (date)
-        "Initial stock on item creation"
-      ]
-    );
-  }
-}
-
+        await db.query(`SELECT adjust_stock($1,$2,$3,$4,'IN','init',$5,$6)`, [
+          `INIT-${item.id}`,
+          item.id,
+          s.storage_id,
+          s.qty,
+          initDate, // ✅ NEW (date)
+          "Initial stock on item creation",
+        ]);
+      }
+    }
 
     await db.query("COMMIT");
     return item;
-
   } catch (err) {
     await db.query("ROLLBACK");
     throw err;
   } finally {
-    
   }
 };
 
-
-
-const getItemById = async (db,id) => {
+const getItemById = async (db, id) => {
   const sql = `
 SELECT 
   i.id,
@@ -1275,8 +1267,7 @@ WHERE i.id = $1
   return res.rows[0];
 };
 
-
-const updateItem = async (db,id, data) => {
+const updateItem = async (db, id, data) => {
   const sql = `
     UPDATE items
 SET code=$1,
@@ -1295,22 +1286,22 @@ SET code=$1,
 WHERE id=$14
 RETURNING *;
   `;
-const res = await db.query(sql, [
-  data.code,
-  data.name,
-  data.price_with_tax,
-  data.tax_percentage,
-  data.category,
-  data.fav,
-  data.unit,
-  data.is_stocked ? data.minimum_qty_alert : 0,
-  data.usual_discount_percentage,
-  data.usual_sales_qty,
-  data.notes,
-  data.is_stocked ?? true,
-  data.default_storage_id || null,
-  id
-]);
+  const res = await db.query(sql, [
+    data.code,
+    data.name,
+    data.price_with_tax,
+    data.tax_percentage,
+    data.category,
+    data.fav,
+    data.unit,
+    data.is_stocked ? data.minimum_qty_alert : 0,
+    data.usual_discount_percentage,
+    data.usual_sales_qty,
+    data.notes,
+    data.is_stocked ?? true,
+    data.default_storage_id || null,
+    id,
+  ]);
   return res.rows[0];
 };
 
@@ -1324,7 +1315,7 @@ const getAllStorages = async (db) => {
   return res.rows;
 };
 
-const createStorage = async (db,{ name }) => {
+const createStorage = async (db, { name }) => {
   const sql = `
     INSERT INTO storages (name)
     VALUES ($1)
@@ -1334,7 +1325,7 @@ const createStorage = async (db,{ name }) => {
   return res.rows[0];
 };
 
-const updateStorage = async (db,id, { name }) => {
+const updateStorage = async (db, id, { name }) => {
   const sql = `
     UPDATE storages
     SET name = $1
@@ -1362,7 +1353,7 @@ const getStorageOverview = async (db) => {
   return res.rows;
 };
 
-const getStorageItems = async (db,storageId) => {
+const getStorageItems = async (db, storageId) => {
   const sql = `
     SELECT
     i.id AS item_id,
@@ -1380,12 +1371,10 @@ const getStorageItems = async (db,storageId) => {
   return res.rows;
 };
 
-const getStorageLogs = async (db,{
-  limit = 100,
-  offset = 0,
-  dateFrom = null,
-  dateTo = null
-}) => {
+const getStorageLogs = async (
+  db,
+  { limit = 100, offset = 0, dateFrom = null, dateTo = null },
+) => {
   const params = [];
   let where = "";
 
@@ -1430,15 +1419,18 @@ const getStorageLogs = async (db,{
   return res.rows;
 };
 
-const adjustStorageManually = async (db,{
-  item_id,
-  qty,
-  type,               // IN | OUT | TRANSFER
-  from_storage_id,
-  to_storage_id,
-  notes,
-  date                // ✅ NEW
-}) => {
+const adjustStorageManually = async (
+  db,
+  {
+    item_id,
+    qty,
+    type, // IN | OUT | TRANSFER
+    from_storage_id,
+    to_storage_id,
+    notes,
+    date, // ✅ NEW
+  },
+) => {
   try {
     await db.query("BEGIN");
 
@@ -1446,31 +1438,43 @@ const adjustStorageManually = async (db,{
     const txDate = date || new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
     if (type === "IN") {
-      await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'IN','manual',$5,$6)`,
-        [txId, item_id, to_storage_id, qty, txDate, notes]
-      );
+      await db.query(`SELECT adjust_stock($1,$2,$3,$4,'IN','manual',$5,$6)`, [
+        txId,
+        item_id,
+        to_storage_id,
+        qty,
+        txDate,
+        notes,
+      ]);
     }
 
     if (type === "OUT") {
-      await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'OUT','manual',$5,$6)`,
-        [txId, item_id, from_storage_id, qty, txDate, notes]
-      );
+      await db.query(`SELECT adjust_stock($1,$2,$3,$4,'OUT','manual',$5,$6)`, [
+        txId,
+        item_id,
+        from_storage_id,
+        qty,
+        txDate,
+        notes,
+      ]);
     }
 
     if (type === "TRANSFER") {
-        // OUT
-        await db.query(
-          `SELECT adjust_stock($1,$2,$3,$4,'OUT','transfer',$5,$6)`,
-          [txId, item_id, from_storage_id, qty, txDate, notes]
-        );
+      // OUT
+      await db.query(
+        `SELECT adjust_stock($1,$2,$3,$4,'OUT','transfer',$5,$6)`,
+        [txId, item_id, from_storage_id, qty, txDate, notes],
+      );
 
-        // IN
-        await db.query(
-          `SELECT adjust_stock($1,$2,$3,$4,'IN','transfer',$5,$6)`,
-          [txId, item_id, to_storage_id, qty, txDate, notes]
-        );
+      // IN
+      await db.query(`SELECT adjust_stock($1,$2,$3,$4,'IN','transfer',$5,$6)`, [
+        txId,
+        item_id,
+        to_storage_id,
+        qty,
+        txDate,
+        notes,
+      ]);
     }
 
     await db.query("COMMIT");
@@ -1478,7 +1482,6 @@ const adjustStorageManually = async (db,{
     await db.query("ROLLBACK");
     throw err;
   } finally {
-    
   }
 };
 
@@ -1496,7 +1499,7 @@ const getAllItems = async (db) => {
 
 // ================= CLIENTS =================
 
-const createClient = async (db,data) => {
+const createClient = async (db, data) => {
   const sql = `
     INSERT INTO clients (
       name,
@@ -1520,14 +1523,14 @@ const createClient = async (db,data) => {
     data.dob || null,
     data.notes || null,
     data.detail_type || null,
-    data.detail_value || null
+    data.detail_value || null,
   ];
 
   const res = await db.query(sql, values);
   return res.rows[0];
 };
 
-const updateClient = async (db,id, data) => {
+const updateClient = async (db, id, data) => {
   const sql = `
     UPDATE clients
     SET
@@ -1553,18 +1556,18 @@ const updateClient = async (db,id, data) => {
     data.notes || null,
     data.detail_type || null,
     data.detail_value || null,
-    id
+    id,
   ];
 
   const res = await db.query(sql, values);
   return res.rows[0];
 };
 
-const deleteClient = async (db,id) => {
+const deleteClient = async (db, id) => {
   await db.query(`DELETE FROM clients WHERE id = $1`, [id]);
 };
 
-const getClientById = async (db,id) => {
+const getClientById = async (db, id) => {
   const sql = `
     SELECT *
     FROM clients
@@ -1574,7 +1577,7 @@ const getClientById = async (db,id) => {
   return res.rows[0];
 };
 
-const getClientMonthlyTotals = async (db,clientId, year) => {
+const getClientMonthlyTotals = async (db, clientId, year) => {
   const sql = `
     SELECT
       m.month_num,
@@ -1595,7 +1598,7 @@ const getClientMonthlyTotals = async (db,clientId, year) => {
   return res.rows;
 };
 
-const getClientMonthlySalesCount = async (db,clientId, year) => {
+const getClientMonthlySalesCount = async (db, clientId, year) => {
   const sql = `
     SELECT
       m.month_num,
@@ -1616,7 +1619,7 @@ const getClientMonthlySalesCount = async (db,clientId, year) => {
   return res.rows;
 };
 
-const getClientLastInvoices = async (db,clientId, limit = 10) => {
+const getClientLastInvoices = async (db, clientId, limit = 10) => {
   const sql = `
     SELECT
       invoice_number,
@@ -1632,7 +1635,7 @@ const getClientLastInvoices = async (db,clientId, limit = 10) => {
   return res.rows;
 };
 
-const getClientInvoicesByDateRange = async (db,clientId, from, to) => {
+const getClientInvoicesByDateRange = async (db, clientId, from, to) => {
   const sql = `
     SELECT
       invoice_number,
@@ -1648,7 +1651,7 @@ const getClientInvoicesByDateRange = async (db,clientId, from, to) => {
   return res.rows;
 };
 
-const searchItemsGlobal = async (db,q, limit = 20) => {
+const searchItemsGlobal = async (db, q, limit = 20) => {
   const isNumber = /^\d+$/.test(q);
 
   const sql = `
@@ -1671,11 +1674,7 @@ const searchItemsGlobal = async (db,q, limit = 20) => {
     LIMIT $3;
   `;
 
-  const params = [
-    `%${q}%`,
-    isNumber ? Number(q) : null, 
-    limit
-  ];
+  const params = [`%${q}%`, isNumber ? Number(q) : null, limit];
 
   const res = await db.query(sql, params);
   return res.rows;
@@ -1701,7 +1700,7 @@ const getNextRefundInvoiceNumber = async (db) => {
   return `RFD-${String(num + 1).padStart(3, "0")}`;
 };
 
-const getRefundSummaryForOriginal = async (db,originalInvoiceNumber) => {
+const getRefundSummaryForOriginal = async (db, originalInvoiceNumber) => {
   const sql = `
     SELECT
       ril.item_number,
@@ -1717,7 +1716,7 @@ const getRefundSummaryForOriginal = async (db,originalInvoiceNumber) => {
   return res.rows;
 };
 
-const getRefundInvoices = async (db,limit = 100, offset = 0) => {
+const getRefundInvoices = async (db, limit = 100, offset = 0) => {
   const sql = `
     SELECT
       refund_invoice_number,
@@ -1734,7 +1733,7 @@ const getRefundInvoices = async (db,limit = 100, offset = 0) => {
   return res.rows;
 };
 
-const getRefundFullInvoice = async (db,refund_invoice_number) => {
+const getRefundFullInvoice = async (db, refund_invoice_number) => {
   const headerSql = `
  SELECT
     rih.refund_invoice_number,
@@ -1783,14 +1782,16 @@ const getRefundFullInvoice = async (db,refund_invoice_number) => {
   };
 };
 
-const createRefundInvoice = async (db,{
-  original_invoice_number,
-  refund_date,
-  refund_reason,
-  lines,
-  return_to_storage = true
-}) => {
-
+const createRefundInvoice = async (
+  db,
+  {
+    original_invoice_number,
+    refund_date,
+    refund_reason,
+    lines,
+    return_to_storage = true,
+  },
+) => {
   const shouldReturnToStorage = return_to_storage === true;
 
   try {
@@ -1809,7 +1810,7 @@ const createRefundInvoice = async (db,{
       WHERE invoice_number = $1
       ORDER BY item_number;
       `,
-      [original_invoice_number]
+      [original_invoice_number],
     );
 
     if (origLinesRes.rows.length === 0) {
@@ -1822,7 +1823,7 @@ const createRefundInvoice = async (db,{
         qty: Number(r.qty || 0),
         total: Number(r.total || 0),
         item_id: r.item_id ? Number(r.item_id) : null,
-        storage_id: r.storage_id ? Number(r.storage_id) : null
+        storage_id: r.storage_id ? Number(r.storage_id) : null,
       });
     }
 
@@ -1838,7 +1839,7 @@ const createRefundInvoice = async (db,{
       WHERE rih.original_invoice_number = $1
       GROUP BY ril.item_number;
       `,
-      [original_invoice_number]
+      [original_invoice_number],
     );
 
     const refundedMap = new Map();
@@ -1848,11 +1849,11 @@ const createRefundInvoice = async (db,{
 
     // 3) Validate incoming lines and compute header total (based on original line net/unit)
     const picked = (lines || [])
-      .map(x => ({
+      .map((x) => ({
         item_number: Number(x.item_number),
-        refund_qty: Number(x.refund_qty)
+        refund_qty: Number(x.refund_qty),
       }))
-      .filter(x => x.item_number && x.refund_qty > 0);
+      .filter((x) => x.item_number && x.refund_qty > 0);
 
     if (picked.length === 0) {
       throw new Error("No refund quantities provided");
@@ -1873,11 +1874,11 @@ const createRefundInvoice = async (db,{
 
       if (ln.refund_qty > available) {
         throw new Error(
-          `Refund qty too high on line ${ln.item_number}. Available: ${available}`
+          `Refund qty too high on line ${ln.item_number}. Available: ${available}`,
         );
       }
 
-      const unitNet = orig.qty === 0 ? 0 : (orig.total / orig.qty); // original net per 1 unit (incl tax)
+      const unitNet = orig.qty === 0 ? 0 : orig.total / orig.qty; // original net per 1 unit (incl tax)
       refundTotal += unitNet * ln.refund_qty;
     }
 
@@ -1885,7 +1886,6 @@ const createRefundInvoice = async (db,{
 
     // 4) Generate refund invoice number and insert header
     const refund_invoice_number = await getNextRefundInvoiceNumber(db);
-
 
     const headerIns = await db.query(
       `
@@ -1899,8 +1899,13 @@ const createRefundInvoice = async (db,{
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
       `,
-      [refund_invoice_number, original_invoice_number, refund_reason,  refund_date, // ← from controller
- refundTotal]
+      [
+        refund_invoice_number,
+        original_invoice_number,
+        refund_reason,
+        refund_date, // ← from controller
+        refundTotal,
+      ],
     );
 
     // 5) Insert lines + return stock (IN)
@@ -1916,31 +1921,24 @@ const createRefundInvoice = async (db,{
         VALUES ($1, $2, $3)
         RETURNING *;
         `,
-        [refund_invoice_number, ln.item_number, ln.refund_qty]
+        [refund_invoice_number, ln.item_number, ln.refund_qty],
       );
 
       insertedLines.push(lineIns.rows[0]);
 
       // Return stock
-// 🔁 OPTIONAL: Return stock only if enabled
-   if (
-      shouldReturnToStorage &&
-      orig.item_id &&
-      orig.storage_id
-    ) {
-      await db.query(
-        `SELECT adjust_stock($1,$2,$3,$4,'IN','refund',$5,$6)`,
-        [
+      // 🔁 OPTIONAL: Return stock only if enabled
+      if (shouldReturnToStorage && orig.item_id && orig.storage_id) {
+        await db.query(`SELECT adjust_stock($1,$2,$3,$4,'IN','refund',$5,$6)`, [
           refund_invoice_number,
           orig.item_id,
           orig.storage_id,
           ln.refund_qty,
           refund_date, // ✅ refund date
-          `Refund of ${original_invoice_number} (line ${ln.item_number})`
-        ]
-      );
-    }
-console.log("RETURN STOCK:", shouldReturnToStorage);
+          `Refund of ${original_invoice_number} (line ${ln.item_number})`,
+        ]);
+      }
+      console.log("RETURN STOCK:", shouldReturnToStorage);
     }
 
     await db.query("COMMIT");
@@ -1949,11 +1947,10 @@ console.log("RETURN STOCK:", shouldReturnToStorage);
     await db.query("ROLLBACK");
     throw err;
   } finally {
-    
   }
 };
 
-const saveRefundInvoiceQR = async (db,refund_invoice_number, qr) => {
+const saveRefundInvoiceQR = async (db, refund_invoice_number, qr) => {
   const sql = `
     UPDATE refund_invoice_header
     SET qr = $2, updated_at = NOW()
@@ -1964,7 +1961,7 @@ const saveRefundInvoiceQR = async (db,refund_invoice_number, qr) => {
   return res.rows[0];
 };
 
-const getInvoicesByDateRange = async (db,from, to) => {
+const getInvoicesByDateRange = async (db, from, to) => {
   const sql = `
     SELECT
       invoice_number,
@@ -1981,7 +1978,7 @@ const getInvoicesByDateRange = async (db,from, to) => {
   return rows;
 };
 
-const uploadCompanyLogo = async (db,file) => {
+const uploadCompanyLogo = async (db, file) => {
   const ext = file.originalname.split(".").pop();
   const key = `company/logo-${Date.now()}.${ext}`;
 
@@ -1991,7 +1988,7 @@ const uploadCompanyLogo = async (db,file) => {
       Key: key,
       Body: file.buffer,
       ContentType: file.mimetype,
-    })
+    }),
   );
 
   // store ONLY the key
@@ -2000,19 +1997,19 @@ const uploadCompanyLogo = async (db,file) => {
   if (existing.rows.length > 0) {
     await db.query(
       `UPDATE company_config SET logo_url=$1, updated_at=NOW() WHERE id=$2`,
-      [key, existing.rows[0].id]
+      [key, existing.rows[0].id],
     );
   } else {
     await db.query(
       `INSERT INTO company_config (company_name, logo_url) VALUES ('', $1)`,
-      [key]
+      [key],
     );
   }
 
   return key;
 };
 
-const getCompanyLogoSignedUrl = async (db,key) => {
+const getCompanyLogoSignedUrl = async (db, key) => {
   if (!key) return null;
 
   const command = new GetObjectCommand({
@@ -2026,7 +2023,7 @@ const getCompanyLogoSignedUrl = async (db,key) => {
 // =========================
 // REPORTS
 // =========================
-const getGeneralSalesReport = async (db,{ from, to, limit, offset }) => {
+const getGeneralSalesReport = async (db, { from, to, limit, offset }) => {
   try {
     // 1️⃣ Paginated rows
     const rowsRes = await db.query(
@@ -2042,7 +2039,7 @@ const getGeneralSalesReport = async (db,{ from, to, limit, offset }) => {
       ORDER BY invoice_number ASC
       LIMIT $3 OFFSET $4
       `,
-      [from, to, limit, offset]
+      [from, to, limit, offset],
     );
 
     // 2️⃣ Total sum + count (NO limit / offset)
@@ -2054,26 +2051,22 @@ const getGeneralSalesReport = async (db,{ from, to, limit, offset }) => {
       FROM invoice_header
       WHERE date::date BETWEEN $1 AND $2
       `,
-      [from, to]
+      [from, to],
     );
 
     return {
       rows: rowsRes.rows,
       total_sum: Number(totalRes.rows[0].total_sum),
-      total_count: Number(totalRes.rows[0].total_count)
+      total_count: Number(totalRes.rows[0].total_count),
     };
   } finally {
-    
   }
 };
 
-const getSalesByClientReport = async (db,{
-  from,
-  to,
-  client_id,
-  limit,
-  offset
-}) => {
+const getSalesByClientReport = async (
+  db,
+  { from, to, client_id, limit, offset },
+) => {
   try {
     const rowsRes = await db.query(
       `
@@ -2089,7 +2082,7 @@ const getSalesByClientReport = async (db,{
       ORDER BY invoice_number ASC
       LIMIT $4 OFFSET $5
       `,
-      [client_id, from, to, limit, offset]
+      [client_id, from, to, limit, offset],
     );
 
     const totalRes = await db.query(
@@ -2101,26 +2094,19 @@ const getSalesByClientReport = async (db,{
       WHERE client_id = $1
         AND date::date BETWEEN $2 AND $3
       `,
-      [client_id, from, to]
+      [client_id, from, to],
     );
 
     return {
       rows: rowsRes.rows,
       total_sum: Number(totalRes.rows[0].total_sum),
-      total_count: Number(totalRes.rows[0].total_count)
+      total_count: Number(totalRes.rows[0].total_count),
     };
   } finally {
-    
   }
 };
 
-const getSalesByAreaReport = async (db,{
-  from,
-  to,
-  area,
-  limit,
-  offset
-}) => {
+const getSalesByAreaReport = async (db, { from, to, area, limit, offset }) => {
   try {
     const rowsRes = await db.query(
       `
@@ -2136,7 +2122,7 @@ const getSalesByAreaReport = async (db,{
       ORDER BY invoice_number ASC
       LIMIT $4 OFFSET $5
       `,
-      [area, from, to, limit, offset]
+      [area, from, to, limit, offset],
     );
 
     const totalRes = await db.query(
@@ -2148,26 +2134,22 @@ const getSalesByAreaReport = async (db,{
       WHERE type2 = $1
         AND date::date BETWEEN $2 AND $3
       `,
-      [area, from, to]
+      [area, from, to],
     );
 
     return {
       rows: rowsRes.rows,
       total_sum: Number(totalRes.rows[0].total_sum),
-      total_count: Number(totalRes.rows[0].total_count)
+      total_count: Number(totalRes.rows[0].total_count),
     };
   } finally {
-    
   }
 };
 
-const getSalesByClientDetailedReport = async (db, {
-  from,
-  to,
-  client_id,
-  limit,
-  offset
-}) => {
+const getSalesByClientDetailedReport = async (
+  db,
+  { from, to, client_id, limit, offset },
+) => {
   try {
     // 1️⃣ Paginated detailed rows (invoice lines)
     const rowsRes = await db.query(
@@ -2191,7 +2173,7 @@ const getSalesByClientDetailedReport = async (db, {
       ORDER BY ih.date ASC, il.invoice_number ASC, il.item_number ASC
       LIMIT $4 OFFSET $5
       `,
-      [client_id, from, to, limit, offset]
+      [client_id, from, to, limit, offset],
     );
 
     // 2️⃣ Total count (NO pagination)
@@ -2205,24 +2187,21 @@ const getSalesByClientDetailedReport = async (db, {
         ih.client_id = $1
         AND ih.date::date BETWEEN $2 AND $3
       `,
-      [client_id, from, to]
+      [client_id, from, to],
     );
 
     return {
       rows: rowsRes.rows,
-      total_count: Number(countRes.rows[0].total_count)
+      total_count: Number(countRes.rows[0].total_count),
     };
   } finally {
   }
 };
 
-const getItemsSoldForClientTotals = async (db, {
-  from,
-  to,
-  client_id,
-  limit,
-  offset
-}) => {
+const getItemsSoldForClientTotals = async (
+  db,
+  { from, to, client_id, limit, offset },
+) => {
   try {
     // 1️⃣ Aggregated rows (paginated)
     const rowsRes = await db.query(
@@ -2250,7 +2229,7 @@ const getItemsSoldForClientTotals = async (db, {
         item_name ASC
       LIMIT $4 OFFSET $5
       `,
-      [client_id, from, to, limit, offset]
+      [client_id, from, to, limit, offset],
     );
 
     // 2️⃣ Total distinct items count (NO pagination)
@@ -2268,23 +2247,23 @@ const getItemsSoldForClientTotals = async (db, {
         GROUP BY il.item_id
       ) t
       `,
-      [client_id, from, to]
+      [client_id, from, to],
     );
 
     return {
       rows: rowsRes.rows,
-      total_count: Number(countRes.rows[0].total_count)
+      total_count: Number(countRes.rows[0].total_count),
     };
   } finally {
   }
 };
 
-const getEinvoicingReport = async (db,{ from, to, status, limit, offset }) => {
+const getEinvoicingReport = async (db, { from, to, status, limit, offset }) => {
   try {
-const whereStatus =
-  status === "shared"
-    ? "(qr IS NOT NULL AND qr <> $3)"
-    : "(qr IS NULL OR qr = $3)";
+    const whereStatus =
+      status === "shared"
+        ? "(qr IS NOT NULL AND qr <> $3)"
+        : "(qr IS NULL OR qr = $3)";
 
     const rowsQuery = `
       SELECT
@@ -2314,26 +2293,21 @@ const whereStatus =
       to,
       DEFAULT_QR,
       limit,
-      offset
+      offset,
     ]);
 
-    const sumRes = await db.query(sumQuery, [
-      from,
-      to,
-      DEFAULT_QR
-    ]);
+    const sumRes = await db.query(sumQuery, [from, to, DEFAULT_QR]);
 
     return {
       rows: rowsRes.rows,
       total_count: sumRes.rows[0].total_count,
-      total_sum: sumRes.rows[0].total_sum
+      total_sum: sumRes.rows[0].total_sum,
     };
   } finally {
-    
   }
 };
 
-const getTaxDeclarationReport = async (db,{ from, to }) => {
+const getTaxDeclarationReport = async (db, { from, to }) => {
   try {
     /* -------- LOCAL + EXEMPT -------- */
     const localAndExemptQuery = `
@@ -2402,14 +2376,14 @@ const getTaxDeclarationReport = async (db,{ from, to }) => {
           percentage: Number(r.tax_percentage),
           total_sales: Number(r.total_sales),
           total_tax: Number(r.total_tax),
-          total_with_tax: Number(r.total_with_tax)
+          total_with_tax: Number(r.total_with_tax),
         });
       } else {
         exempt = {
           percentage: 0,
           total_sales: Number(r.total_sales),
           total_tax: 0,
-          total_with_tax: Number(r.total_with_tax)
+          total_with_tax: Number(r.total_with_tax),
         };
       }
     }
@@ -2417,7 +2391,7 @@ const getTaxDeclarationReport = async (db,{ from, to }) => {
     const exportRow = exportRes.rows[0] || {
       total_sales: 0,
       total_tax: 0,
-      total_with_tax: 0
+      total_with_tax: 0,
     };
 
     const grandTotals = {
@@ -2426,13 +2400,12 @@ const getTaxDeclarationReport = async (db,{ from, to }) => {
         (exempt?.total_sales || 0) +
         Number(exportRow.total_sales || 0),
 
-      total_tax:
-        local.reduce((s, r) => s + r.total_tax, 0),
+      total_tax: local.reduce((s, r) => s + r.total_tax, 0),
 
       total_with_tax:
         local.reduce((s, r) => s + r.total_with_tax, 0) +
         (exempt?.total_with_tax || 0) +
-        Number(exportRow.total_with_tax || 0)
+        Number(exportRow.total_with_tax || 0),
     };
 
     return {
@@ -2440,16 +2413,15 @@ const getTaxDeclarationReport = async (db,{ from, to }) => {
       exempt,
       export: {
         percentage: 0,
-        ...exportRow
+        ...exportRow,
       },
-      grand_totals: grandTotals
+      grand_totals: grandTotals,
     };
   } finally {
-    
   }
 };
 
-const getRefundsReport = async (db,{ from, to, limit, offset }) => {
+const getRefundsReport = async (db, { from, to, limit, offset }) => {
   try {
     const rowsRes = await db.query(
       `
@@ -2468,7 +2440,7 @@ const getRefundsReport = async (db,{ from, to, limit, offset }) => {
       ORDER BY r.refund_date DESC
       LIMIT $3 OFFSET $4
       `,
-      [from, to, limit, offset]
+      [from, to, limit, offset],
     );
 
     const totalsRes = await db.query(
@@ -2480,26 +2452,22 @@ const getRefundsReport = async (db,{ from, to, limit, offset }) => {
       WHERE refund_date >= $1
         AND refund_date <  $2
       `,
-      [from, to]
+      [from, to],
     );
 
     return {
       rows: rowsRes.rows,
       total_count: Number(totalsRes.rows[0].total_count),
-      total_sum: Number(totalsRes.rows[0].total_sum)
+      total_sum: Number(totalsRes.rows[0].total_sum),
     };
   } finally {
-    
   }
 };
 
-const getRefundsByClientReport = async (db,{
-  client_id,
-  from,
-  to,
-  limit,
-  offset
-}) => {
+const getRefundsByClientReport = async (
+  db,
+  { client_id, from, to, limit, offset },
+) => {
   try {
     const rowsRes = await db.query(
       `
@@ -2519,7 +2487,7 @@ const getRefundsByClientReport = async (db,{
       ORDER BY r.refund_date DESC
       LIMIT $4 OFFSET $5
       `,
-      [client_id, from, to, limit, offset]
+      [client_id, from, to, limit, offset],
     );
 
     const totalsRes = await db.query(
@@ -2534,20 +2502,19 @@ const getRefundsByClientReport = async (db,{
         AND r.refund_date >= $2
         AND r.refund_date <  $3
       `,
-      [client_id, from, to]
+      [client_id, from, to],
     );
 
     return {
       rows: rowsRes.rows,
       total_count: Number(totalsRes.rows[0].total_count),
-      total_sum: Number(totalsRes.rows[0].total_sum)
+      total_sum: Number(totalsRes.rows[0].total_sum),
     };
   } finally {
-    
   }
 };
 
-const getItemsSalesReport = async (db,{ from, to, limit, offset }) => {
+const getItemsSalesReport = async (db, { from, to, limit, offset }) => {
   try {
     const rowsRes = await db.query(
       `
@@ -2569,7 +2536,7 @@ const getItemsSalesReport = async (db,{ from, to, limit, offset }) => {
       ORDER BY total_sales DESC
       LIMIT $3 OFFSET $4
       `,
-      [from, to, limit, offset]
+      [from, to, limit, offset],
     );
 
     const totalsRes = await db.query(
@@ -2584,26 +2551,22 @@ const getItemsSalesReport = async (db,{ from, to, limit, offset }) => {
         ih.date::date BETWEEN $1 AND $2
         AND il.item_id IS NOT NULL
       `,
-      [from, to]
+      [from, to],
     );
 
     return {
       rows: rowsRes.rows,
       items_count: Number(totalsRes.rows[0].items_count),
-      grand_total_sales: Number(totalsRes.rows[0].grand_total_sales)
+      grand_total_sales: Number(totalsRes.rows[0].grand_total_sales),
     };
   } finally {
-    
   }
 };
 
-const getItemSalesDetailsReport = async (db,{
-  item_id,
-  from,
-  to,
-  limit,
-  offset
-}) => {
+const getItemSalesDetailsReport = async (
+  db,
+  { item_id, from, to, limit, offset },
+) => {
   try {
     const rowsRes = await db.query(
       `
@@ -2627,7 +2590,7 @@ const getItemSalesDetailsReport = async (db,{
       ORDER BY ih.date DESC, il.invoice_number DESC
       LIMIT $4 OFFSET $5
       `,
-      [item_id, from, to, limit, offset]
+      [item_id, from, to, limit, offset],
     );
 
     const totalsRes = await db.query(
@@ -2643,21 +2606,20 @@ const getItemSalesDetailsReport = async (db,{
         il.item_id = $1
         AND ih.date::date BETWEEN $2 AND $3
       `,
-      [item_id, from, to]
+      [item_id, from, to],
     );
 
     return {
       rows: rowsRes.rows,
       records_count: Number(totalsRes.rows[0].records_count),
       total_sales: Number(totalsRes.rows[0].total_sales),
-      total_qty: Number(totalsRes.rows[0].total_qty)
+      total_qty: Number(totalsRes.rows[0].total_qty),
     };
   } finally {
-    
   }
 };
 
-const getStorageInventoryReport = async (db,{ storage_id }) => {
+const getStorageInventoryReport = async (db, { storage_id }) => {
   try {
     const res = await db.query(
       `
@@ -2672,26 +2634,20 @@ const getStorageInventoryReport = async (db,{ storage_id }) => {
       WHERE si.storage_id = $1
       ORDER BY i.name;
       `,
-      [storage_id]
+      [storage_id],
     );
 
     return {
-      rows: res.rows
+      rows: res.rows,
     };
   } finally {
-    
   }
 };
 
-const getTransactionLogsReport = async (db,{
-  from,
-  to,
-  item_id,
-  storage_id,
-  direction,
-  limit,
-  offset
-}) => {
+const getTransactionLogsReport = async (
+  db,
+  { from, to, item_id, storage_id, direction, limit, offset },
+) => {
   try {
     const res = await db.query(
       `
@@ -2722,18 +2678,17 @@ const getTransactionLogsReport = async (db,{
         storage_id || null,
         direction || "BOTH",
         limit,
-        offset
-      ]
+        offset,
+      ],
     );
 
     return res.rows;
   } finally {
-    
   }
 };
 
 // ================= DASHBOARD KPIs =================
-const getDashboardKpis = async (db,year) => {
+const getDashboardKpis = async (db, year) => {
   const salesRes = await db.query(
     `
     SELECT
@@ -2742,7 +2697,7 @@ const getDashboardKpis = async (db,year) => {
     FROM invoice_header
     WHERE EXTRACT(YEAR FROM date) = $1
     `,
-    [year]
+    [year],
   );
 
   const refundsRes = await db.query(
@@ -2751,7 +2706,7 @@ const getDashboardKpis = async (db,year) => {
     FROM refund_invoice_header
     WHERE EXTRACT(YEAR FROM refund_date) = $1
     `,
-    [year]
+    [year],
   );
 
   const totalSales = Number(salesRes.rows[0].total_sales);
@@ -2761,12 +2716,11 @@ const getDashboardKpis = async (db,year) => {
     total_sales: totalSales,
     total_refunds: totalRefunds,
     net_profit: totalSales - totalRefunds,
-    invoice_count: Number(salesRes.rows[0].invoice_count)
+    invoice_count: Number(salesRes.rows[0].invoice_count),
   };
 };
 
-
-const getDashboardOverview = async (db,year) => {
+const getDashboardOverview = async (db, year) => {
   // 1) Monthly net (sales - refunds) for selected year
   const monthlyNetRes = await db.query(
     `
@@ -2797,7 +2751,7 @@ const getDashboardOverview = async (db,year) => {
     LEFT JOIN refunds ON refunds.m = months.m
     ORDER BY months.m;
     `,
-    [year]
+    [year],
   );
 
   // 2) Monthly average invoice total (month sum / month count) for selected year
@@ -2825,7 +2779,7 @@ const getDashboardOverview = async (db,year) => {
     LEFT JOIN agg ON agg.m = months.m
     ORDER BY months.m;
     `,
-    [year]
+    [year],
   );
 
   // 3) Low stock alerts (NOT year-based)
@@ -2842,7 +2796,7 @@ const getDashboardOverview = async (db,year) => {
       AND (stock_qty - minimum_qty_alert) < 0
     ORDER BY (stock_qty - minimum_qty_alert) ASC
     LIMIT 50;
-    `
+    `,
   );
 
   // 4) Recent sales (last 10 invoices) (NOT year-based)
@@ -2860,7 +2814,7 @@ const getDashboardOverview = async (db,year) => {
     FROM invoice_header
     ORDER BY invoice_number DESC
     LIMIT 10;
-    `
+    `,
   );
 
   return {
@@ -2868,11 +2822,11 @@ const getDashboardOverview = async (db,year) => {
     monthly_net: monthlyNetRes.rows,
     monthly_avg_invoice: monthlyAvgRes.rows,
     low_stock: lowStockRes.rows,
-    recent_sales: recentSalesRes.rows
+    recent_sales: recentSalesRes.rows,
   };
 };
 
-const getDashboardSales = async (db,year) => {
+const getDashboardSales = async (db, year) => {
   // 1) Monthly sales totals
   const monthlySalesTotalsRes = await db.query(
     `
@@ -2894,7 +2848,7 @@ const getDashboardSales = async (db,year) => {
     LEFT JOIN agg ON agg.m = months.m
     ORDER BY months.m;
     `,
-    [year]
+    [year],
   );
 
   // 2) Monthly sales count
@@ -2918,7 +2872,7 @@ const getDashboardSales = async (db,year) => {
     LEFT JOIN agg ON agg.m = months.m
     ORDER BY months.m;
     `,
-    [year]
+    [year],
   );
 
   // 3) Monthly refunds totals
@@ -2942,7 +2896,7 @@ const getDashboardSales = async (db,year) => {
     LEFT JOIN agg ON agg.m = months.m
     ORDER BY months.m;
     `,
-    [year]
+    [year],
   );
 
   // 4) Sales by type2 (local / export / development)
@@ -2967,7 +2921,7 @@ const getDashboardSales = async (db,year) => {
     LEFT JOIN agg ON agg.type2 = types.type2
     ORDER BY types.type2;
     `,
-    [year]
+    [year],
   );
 
   return {
@@ -2979,13 +2933,13 @@ const getDashboardSales = async (db,year) => {
   };
 };
 
-const getDashboardInventory = async (db,year) => {
-
+const getDashboardInventory = async (db, year) => {
   try {
     /* ===========================
        1) Top 3 sold items / month
        =========================== */
-    const topItemsRes = await db.query(`
+    const topItemsRes = await db.query(
+      `
       WITH months AS (
         SELECT generate_series(1,12) AS month
       ),
@@ -3024,7 +2978,9 @@ const getDashboardInventory = async (db,year) => {
       LEFT JOIN ranked r ON r.month = m.month
       GROUP BY m.month
       ORDER BY m.month;
-    `, [year]);
+    `,
+      [year],
+    );
 
     /* ===========================
        2) Dead items (top 5)
@@ -3045,7 +3001,8 @@ const getDashboardInventory = async (db,year) => {
     /* ===========================
        3) Monthly IN / OUT totals
        =========================== */
-    const inOutRes = await db.query(`
+    const inOutRes = await db.query(
+      `
       SELECT
         EXTRACT(MONTH FROM created_at)::int AS month,
         SUM(CASE WHEN direction = 'IN'  THEN qty ELSE 0 END) AS in_qty,
@@ -3054,24 +3011,25 @@ const getDashboardInventory = async (db,year) => {
       WHERE EXTRACT(YEAR FROM created_at) = $1
       GROUP BY month
       ORDER BY month;
-    `, [year]);
+    `,
+      [year],
+    );
 
     return {
       top_items_monthly: topItemsRes.rows,
       dead_items: deadItemsRes.rows,
       monthly_inout: inOutRes.rows,
     };
-
   } finally {
-    
   }
 };
 
-const getDashboardClients = async (db,year) => {
+const getDashboardClients = async (db, year) => {
   // ============================
   // TOP 3 CLIENTS PER MONTH – SPENDING
   // ============================
-  const spendingMonthly = await db.query(`
+  const spendingMonthly = await db.query(
+    `
     WITH ranked AS (
   SELECT
     EXTRACT(MONTH FROM ih.date)::int AS month,
@@ -3105,12 +3063,15 @@ FROM ranked
 WHERE rn <= 3
 GROUP BY month
 ORDER BY month;
-  `, [year]);
+  `,
+    [year],
+  );
 
   // ============================
   // TOP 3 CLIENTS PER MONTH – SALES COUNT
   // ============================
-  const countMonthly = await db.query(`
+  const countMonthly = await db.query(
+    `
     WITH ranked AS (
   SELECT
     EXTRACT(MONTH FROM ih.date)::int AS month,
@@ -3144,12 +3105,15 @@ FROM ranked
 WHERE rn <= 3
 GROUP BY month
 ORDER BY month;
-  `, [year]);
+  `,
+    [year],
+  );
 
   // ============================
   // KPI – TOP 3 SPENDING (YEAR)
   // ============================
-  const topSpending = await db.query(`
+  const topSpending = await db.query(
+    `
     SELECT
       c.id,
       c.name,
@@ -3160,12 +3124,15 @@ ORDER BY month;
     GROUP BY c.id, c.name
     ORDER BY total_spent DESC
     LIMIT 10
-  `, [year]);
+  `,
+    [year],
+  );
 
   // ============================
   // KPI – TOP 3 SALES COUNT (YEAR)
   // ============================
-  const topSales = await db.query(`
+  const topSales = await db.query(
+    `
     SELECT
       c.id,
       c.name,
@@ -3176,24 +3143,92 @@ ORDER BY month;
     GROUP BY c.id, c.name
     ORDER BY sales_count DESC
     LIMIT 10
-  `, [year]);
+  `,
+    [year],
+  );
 
   return {
     spending_monthly: spendingMonthly.rows,
     count_monthly: countMonthly.rows,
     top_spending_clients: topSpending.rows,
-    top_sales_clients: topSales.rows
+    top_sales_clients: topSales.rows,
   };
+};
+
+// ─── 1. Daily KPIs (total sales + invoice count for a given date) ───────────
+const getMobileDailyKpis = async (db, date) => {
+  const res = await db.query(
+    `
+    SELECT
+      COALESCE(SUM(total), 0) AS total_sales,
+      COUNT(*)::int           AS invoice_count
+    FROM invoice_header
+    WHERE date::date = $1::date
+    `,
+    [date]
+  );
+
+  return {
+    date,
+    total_sales: Number(res.rows[0].total_sales),
+    invoice_count: res.rows[0].invoice_count,
+  };
+};
+
+
+// ─── 2. Monthly KPIs (total sales amount + invoice count for a given month) ──
+const getMobileMonthlyKpis = async (db, year, month) => {
+  const monthStr = String(month).padStart(2, "0");
+
+  const from = `${year}-${monthStr}-01`;
+
+  const res = await db.query(
+    `
+    SELECT
+      COALESCE(SUM(total), 0) AS total_sales,
+      COUNT(*)::int           AS invoice_count
+    FROM invoice_header
+    WHERE date::date >= $1::date
+      AND date::date <  ($1::date + INTERVAL '1 month')
+    `,
+    [from]
+  );
+
+  return {
+    year,
+    month,
+    total_sales: Number(res.rows[0].total_sales),
+    invoice_count: res.rows[0].invoice_count,
+  };
+};
+
+
+// ─── 3. Low-stock alerts (same logic as desktop) ────────────────────────────
+const getMobileLowStock = async (db) => {
+  const res = await db.query(
+    `
+    SELECT
+      id,
+      name,
+      stock_qty,
+      minimum_qty_alert,
+      (minimum_qty_alert - stock_qty) AS deficit
+    FROM items
+    WHERE is_stocked = true
+      AND (stock_qty - minimum_qty_alert) < 0
+    ORDER BY (stock_qty - minimum_qty_alert) ASC
+    LIMIT 50
+    `,
+  );
+
+  return res.rows;
 };
 
 const deleteStorageTransaction = async (db, log_id) => {
   try {
     await db.query("BEGIN");
 
-    await db.query(
-      `SELECT delete_stock_transaction($1)`,
-      [log_id]
-    );
+    await db.query(`SELECT delete_stock_transaction($1)`, [log_id]);
 
     await db.query("COMMIT");
   } catch (err) {
@@ -3223,7 +3258,7 @@ const getNextReceiptVoucherNumber = async (db) => {
 
 const createDueBalance = async (
   db,
-  { reason, date, amount, client_id, notes }
+  { reason, date, amount, client_id, notes },
 ) => {
   try {
     const dueDate =
@@ -3238,7 +3273,7 @@ const createDueBalance = async (
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
       `,
-      [reason, dueDate, amount, client_id, notes || null]
+      [reason, dueDate, amount, client_id, notes || null],
     );
 
     return result.rows[0];
@@ -3250,7 +3285,7 @@ const createDueBalance = async (
 const updateDueBalance = async (
   db,
   dueBalanceId,
-  { reason, date, amount, notes }
+  { reason, date, amount, notes },
 ) => {
   try {
     const result = await db.query(
@@ -3265,7 +3300,7 @@ const updateDueBalance = async (
       WHERE id = $5
       RETURNING *;
       `,
-      [reason, date, amount, notes, dueBalanceId]
+      [reason, date, amount, notes, dueBalanceId],
     );
 
     if (result.rows.length === 0) {
@@ -3286,7 +3321,7 @@ const deleteDueBalance = async (db, dueBalanceId) => {
       WHERE id = $1
       RETURNING *;
       `,
-      [dueBalanceId]
+      [dueBalanceId],
     );
 
     if (result.rows.length === 0) {
@@ -3316,7 +3351,7 @@ const getDueBalanceById = async (db, dueBalanceId) => {
         ON c.id = db.client_id
       WHERE db.id = $1;
       `,
-      [dueBalanceId]
+      [dueBalanceId],
     );
 
     if (result.rows.length === 0) {
@@ -3331,14 +3366,7 @@ const getDueBalanceById = async (db, dueBalanceId) => {
 
 const createReceiptVoucher = async (
   db,
-  {
-    due_balance_id,
-    date,
-    type,
-    amount,
-    reason,
-    notes
-  }
+  { due_balance_id, date, type, amount, reason, notes },
 ) => {
   try {
     // 1️⃣ get client_id from due balance
@@ -3348,7 +3376,7 @@ const createReceiptVoucher = async (
       FROM due_balances
       WHERE id = $1
       `,
-      [due_balance_id]
+      [due_balance_id],
     );
 
     if (dueRes.rows.length === 0) {
@@ -3382,8 +3410,8 @@ const createReceiptVoucher = async (
         type,
         amount,
         reason || null,
-        notes || null
-      ]
+        notes || null,
+      ],
     );
 
     return result.rows[0];
@@ -3395,11 +3423,10 @@ const createReceiptVoucher = async (
 const updateReceiptVoucher = async (
   db,
   receiptVoucherId,
-  { date, type, amount, reason, notes }
+  { date, type, amount, reason, notes },
 ) => {
   try {
-    const rvDate =
-      date && !Number.isNaN(Date.parse(date)) ? date : null;
+    const rvDate = date && !Number.isNaN(Date.parse(date)) ? date : null;
 
     const result = await db.query(
       `
@@ -3413,14 +3440,7 @@ const updateReceiptVoucher = async (
       WHERE id = $6
       RETURNING *;
       `,
-      [
-        rvDate,
-        type,
-        amount,
-        reason,
-        notes,
-        receiptVoucherId
-      ]
+      [rvDate, type, amount, reason, notes, receiptVoucherId],
     );
 
     if (result.rows.length === 0) {
@@ -3441,7 +3461,7 @@ const deleteReceiptVoucher = async (db, receiptVoucherId) => {
       WHERE id = $1
       RETURNING *;
       `,
-      [receiptVoucherId]
+      [receiptVoucherId],
     );
 
     if (result.rows.length === 0) {
@@ -3461,8 +3481,8 @@ const createReceiptCheque = async (
     cheque_number,
     cheque_amount,
     due_date,
-    beneficiary_bank
-  }
+    beneficiary_bank,
+  },
 ) => {
   try {
     const chequeDueDate =
@@ -3482,8 +3502,8 @@ const createReceiptCheque = async (
         cheque_number,
         cheque_amount,
         chequeDueDate,
-        beneficiary_bank
-      ]
+        beneficiary_bank,
+      ],
     );
 
     return result.rows[0];
@@ -3495,7 +3515,7 @@ const createReceiptCheque = async (
 const updateReceiptCheque = async (
   db,
   chequeId,
-  { cheque_number, cheque_amount, due_date, beneficiary_bank }
+  { cheque_number, cheque_amount, due_date, beneficiary_bank },
 ) => {
   try {
     const result = await db.query(
@@ -3509,13 +3529,7 @@ const updateReceiptCheque = async (
       WHERE id = $5
       RETURNING *;
       `,
-      [
-        cheque_number,
-        cheque_amount,
-        due_date,
-        beneficiary_bank,
-        chequeId
-      ]
+      [cheque_number, cheque_amount, due_date, beneficiary_bank, chequeId],
     );
 
     if (result.rows.length === 0) {
@@ -3536,7 +3550,7 @@ const deleteReceiptCheque = async (db, chequeId) => {
       WHERE id = $1
       RETURNING *;
       `,
-      [chequeId]
+      [chequeId],
     );
 
     if (result.rows.length === 0) {
@@ -3551,13 +3565,7 @@ const deleteReceiptCheque = async (db, chequeId) => {
 
 const getDueBalances = async (
   db,
-  {
-    page = 1,
-    limit = 20,
-    client_id,
-    from_date,
-    to_date
-  }
+  { page = 1, limit = 20, client_id, from_date, to_date },
 ) => {
   const offset = (page - 1) * limit;
 
@@ -3630,7 +3638,7 @@ const getDueBalances = async (
 
   const [dataRes, countRes] = await Promise.all([
     db.query(dataQuery, dataValues),
-    db.query(countQuery, values)
+    db.query(countQuery, values),
   ]);
 
   return {
@@ -3639,11 +3647,10 @@ const getDueBalances = async (
       page,
       limit,
       total: Number(countRes.rows[0].total),
-      totalPages: Math.ceil(countRes.rows[0].total / limit)
-    }
+      totalPages: Math.ceil(countRes.rows[0].total / limit),
+    },
   };
 };
-
 
 const getReceiptVouchersByDueBalance = async (db, dueBalanceId) => {
   try {
@@ -3660,7 +3667,7 @@ const getReceiptVouchersByDueBalance = async (db, dueBalanceId) => {
       WHERE rv.due_balance_id = $1
       ORDER BY rv.date ASC, rv.id ASC;
       `,
-      [dueBalanceId]
+      [dueBalanceId],
     );
 
     return result.rows;
@@ -3687,7 +3694,7 @@ const getReceiptVoucherDetails = async (db, receiptVoucherId) => {
         ON c.id = rv.client_id
       WHERE rv.id = $1;
       `,
-      [receiptVoucherId]
+      [receiptVoucherId],
     );
 
     if (rvRes.rows.length === 0) {
@@ -3711,7 +3718,7 @@ const getReceiptVoucherDetails = async (db, receiptVoucherId) => {
         WHERE receipt_voucher_id = $1
         ORDER BY id ASC;
         `,
-        [receiptVoucherId]
+        [receiptVoucherId],
       );
 
       cheques = chequeRes.rows;
@@ -3725,25 +3732,16 @@ const getReceiptVoucherDetails = async (db, receiptVoucherId) => {
       date: receipt.date,
       reason: receipt.reason,
       notes: receipt.notes,
-      cheques
+      cheques,
     };
   } catch (err) {
     throw err;
   }
 };
 
-
 const createStandaloneReceipt = async (
   db,
-  {
-    client_id,
-    date,
-    amount,
-    type,
-    reason,
-    notes,
-    cheques = []
-  }
+  { client_id, date, amount, type, reason, notes, cheques = [] },
 ) => {
   try {
     await db.query("BEGIN");
@@ -3759,7 +3757,7 @@ const createStandaloneReceipt = async (
       VALUES ($1, $2, $3, $4, $5)
       RETURNING id;
       `,
-      [reason, finalDate, amount, client_id, notes || null]
+      [reason, finalDate, amount, client_id, notes || null],
     );
 
     const due_balance_id = dueRes.rows[0].id;
@@ -3783,8 +3781,8 @@ const createStandaloneReceipt = async (
         type,
         amount,
         reason || null,
-        notes || null
-      ]
+        notes || null,
+      ],
     );
 
     const receipt_voucher_id = rvRes.rows[0].id;
@@ -3803,8 +3801,8 @@ const createStandaloneReceipt = async (
             ch.cheque_number,
             ch.cheque_amount,
             ch.due_date,
-            ch.beneficiary_bank
-          ]
+            ch.beneficiary_bank,
+          ],
         );
       }
     }
@@ -3813,7 +3811,7 @@ const createStandaloneReceipt = async (
 
     return {
       due_balance_id,
-      receipt_voucher_id
+      receipt_voucher_id,
     };
   } catch (err) {
     await db.query("ROLLBACK");
@@ -3823,7 +3821,7 @@ const createStandaloneReceipt = async (
 
 const getClientReceiptsTotals = async (
   db,
-  { client_id, from_date, to_date }
+  { client_id, from_date, to_date },
 ) => {
   if (!client_id) {
     throw new Error("client_id is required");
@@ -3865,10 +3863,10 @@ const getClientReceiptsTotals = async (
   return {
     total_balance: Number(res.rows[0].total_balance),
     total_paid: Number(res.rows[0].total_paid),
-    total_outstanding: Number(res.rows[0].total_outstanding)
+    total_outstanding: Number(res.rows[0].total_outstanding),
   };
 };
- 
+
 // ===== receipts dashboard block =====
 
 const getReceiptsMonthlyDueVsPaid = async (db, year) => {
@@ -3915,7 +3913,7 @@ const getTopClientsByOutstanding = async (db, year) => {
 
   return (await db.query(query, [year])).rows;
 };
- 
+
 const getTopOutstandingBalances = async (db, year) => {
   const query = `
     SELECT
@@ -3940,7 +3938,7 @@ const getTopOutstandingBalances = async (db, year) => {
   return (await db.query(query, [year])).rows;
 };
 
- const getAgingBalances = async (db) => {
+const getAgingBalances = async (db) => {
   const query = `
     SELECT
       db.id,
@@ -3963,32 +3961,34 @@ const getTopOutstandingBalances = async (db, year) => {
   return (await db.query(query)).rows;
 };
 
-
 const getReceiptsDashboard = async (db, year) => {
   const [
     monthly_due_vs_paid,
     top_clients_outstanding,
     top_outstanding_balances,
-    aging_balances
+    aging_balances,
   ] = await Promise.all([
     getReceiptsMonthlyDueVsPaid(db, year),
     getTopClientsByOutstanding(db, year),
     getTopOutstandingBalances(db, year),
-    getAgingBalances(db)
+    getAgingBalances(db),
   ]);
 
   return {
     monthly_due_vs_paid,
     top_clients_outstanding,
     top_outstanding_balances,
-    aging_balances
+    aging_balances,
   };
 };
 
 // ===============================
 // Report: Receipts by Client (RV list)
 // ===============================
-const getClientReceiptsReport = async (db, { client_id, from, to, limit, offset }) => {
+const getClientReceiptsReport = async (
+  db,
+  { client_id, from, to, limit, offset },
+) => {
   if (!client_id) throw new Error("client_id is required");
   if (!from || !to) throw new Error("from and to are required");
 
@@ -4008,7 +4008,7 @@ const getClientReceiptsReport = async (db, { client_id, from, to, limit, offset 
     ORDER BY rv.date ASC, rv.id ASC
     LIMIT $4 OFFSET $5
     `,
-    [client_id, from, to, limit, offset]
+    [client_id, from, to, limit, offset],
   );
 
   // 2️⃣ Totals
@@ -4023,13 +4023,13 @@ const getClientReceiptsReport = async (db, { client_id, from, to, limit, offset 
     WHERE db.client_id = $1
       AND db.date BETWEEN $2 AND $3
     `,
-    [client_id, from, to]
+    [client_id, from, to],
   );
 
   return {
     rows: rowsRes.rows,
     total_sum: Number(totalRes.rows[0].total_sum),
-    total_count: Number(totalRes.rows[0].total_count)
+    total_count: Number(totalRes.rows[0].total_count),
   };
 };
 
@@ -4047,7 +4047,7 @@ const getPrintableDueBalance = async (db, dueBalanceId) => {
     LEFT JOIN clients c ON c.id = db.client_id
     WHERE db.id = $1
     `,
-    [dueBalanceId]
+    [dueBalanceId],
   );
 
   if (dueRes.rows.length === 0) {
@@ -4067,7 +4067,7 @@ const getPrintableDueBalance = async (db, dueBalanceId) => {
     WHERE rv.due_balance_id = $1
     ORDER BY rv.date ASC, rv.id ASC
     `,
-    [dueBalanceId]
+    [dueBalanceId],
   );
 
   // 3️⃣ Totals
@@ -4083,13 +4083,13 @@ const getPrintableDueBalance = async (db, dueBalanceId) => {
     WHERE db.id = $1
     GROUP BY db.amount
     `,
-    [dueBalanceId]
+    [dueBalanceId],
   );
 
   return {
     due: dueRes.rows[0],
     receipts: rvRes.rows,
-    totals: totalsRes.rows[0]
+    totals: totalsRes.rows[0],
   };
 };
 
@@ -4191,5 +4191,8 @@ module.exports = {
   getClientReceiptsTotals,
   getReceiptsDashboard,
   getClientReceiptsReport,
-  getPrintableDueBalance
+  getPrintableDueBalance,
+  getMobileDailyKpis,
+  getMobileMonthlyKpis,
+  getMobileLowStock,
 };

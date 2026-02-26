@@ -59,6 +59,10 @@ router.get("/receipt-vouchers/:id", invoiceController.getReceiptVoucherDetails);
 
 router.post("/receipts/standalone", invoiceController.createStandaloneReceipt);
  
+router.get("/stats/mobile-daily-kpis",   invoiceController.getMobileDailyKpis);
+router.get("/stats/mobile-monthly-kpis", invoiceController.getMobileMonthlyKpis);
+router.get("/stats/mobile-low-stock",    invoiceController.getMobileLowStock);
+
 router.get("/receipts/totals", invoiceController.getClientReceiptsTotals);
 
 router.get("/stats/dashboard-receipts", invoiceController.getReceiptsDashboard);

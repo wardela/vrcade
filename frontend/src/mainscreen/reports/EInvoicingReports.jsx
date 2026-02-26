@@ -97,17 +97,27 @@ const handlePrint = useReactToPrint({
     body { -webkit-print-color-adjust: exact; }
   `
 });
-
+  const [taxData, setTaxData] = useState(null);
 useEffect(() => {
-  if (pendingPrint && printRows.length > 0) {
+  if (!pendingPrint) return;
+
+  const readyForShared =
+    reportType === REPORTS.SHARED &&
+    company &&
+    printRows.length > 0;
+
+  const readyForTax =
+    reportType === REPORTS.TAX &&
+    company &&
+    !!taxData;
+
+  if (readyForShared || readyForTax) {
     handlePrint();
     setPendingPrint(false);
   }
-}, [pendingPrint, printRows]);
-
-
+}, [pendingPrint, reportType, printRows, taxData, company, handlePrint]);
   /* ===== Tax Declaration State ===== */
-  const [taxData, setTaxData] = useState(null);
+
 
   const [loading, setLoading] = useState(false);
 
@@ -271,12 +281,19 @@ useEffect(() => {
   {/* ================= RIGHT SIDE ================= */}
   <div>
     <button
-      onClick={async () => {
-        if (reportType === REPORTS.SHARED) {
-          await fetchEInvoicingForPrint();
-        }
-        setPendingPrint(true);
-      }}
+onClick={async () => {
+  if (reportType === REPORTS.SHARED) {
+    await fetchEInvoicingForPrint();
+    setPendingPrint(true);
+    return;
+  }
+
+  // TAX
+  if (!taxData) {
+    await fetchTaxDeclaration(); // ensures printable has data
+  }
+  setPendingPrint(true);
+}}
       className="h-10 px-6 rounded-lg border text-sm"
     >
       {t("EInvoicingReports.actions.print")}
