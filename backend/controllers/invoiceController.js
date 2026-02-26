@@ -2424,6 +2424,48 @@ return res.status(201).json({
   }
 };
 
+const getMobileDailyKpis = async (req, res) => {
+  try {
+    // Default to today if no date is provided
+    const date = req.query.date || new Date().toISOString().slice(0, 10);
+
+    const data = await invoiceService.getMobileDailyKpis(req.db, date);
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("getMobileDailyKpis error:", err);
+    res.status(500).json({ message: "Error fetching daily KPIs" });
+  }
+};
+
+// ─── GET /api/invoices/stats/mobile-monthly-kpis?year=2025&month=6 ──────────
+const getMobileMonthlyKpis = async (req, res) => {
+  try {
+    const now   = new Date();
+    const year  = parseInt(req.query.year)  || now.getFullYear();
+    const month = parseInt(req.query.month) || now.getMonth() + 1; // 1-12
+
+    if (month < 1 || month > 12) {
+      return res.status(400).json({ message: "month must be between 1 and 12" });
+    }
+
+    const data = await invoiceService.getMobileMonthlyKpis(req.db, year, month);
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("getMobileMonthlyKpis error:", err);
+    res.status(500).json({ message: "Error fetching monthly KPIs" });
+  }
+};
+
+// ─── GET /api/invoices/stats/mobile-low-stock ────────────────────────────────
+const getMobileLowStock = async (req, res) => {
+  try {
+    const items = await invoiceService.getMobileLowStock(req.db);
+    res.status(200).json(items);
+  } catch (err) {
+    console.error("getMobileLowStock error:", err);
+    res.status(500).json({ message: "Error fetching low stock alerts" });
+  }
+};
 module.exports = {
   getInvoices,
   getInvoiceDetails,
@@ -2521,5 +2563,8 @@ module.exports = {
   getReceiptsDashboard,
   getClientReceiptsReport,
   getPrintableDueBalance,
-  createPosInvoice
+  createPosInvoice,
+  getMobileDailyKpis,
+  getMobileMonthlyKpis,
+  getMobileLowStock,
 };
