@@ -2307,119 +2307,172 @@ const getEinvoicingReport = async (db, { from, to, status, limit, offset }) => {
   }
 };
 
+
 const getTaxDeclarationReport = async (db, { from, to }) => {
-  try {
-    /* -------- LOCAL + EXEMPT -------- */
-    const localAndExemptQuery = `
-      /* LOCAL */
+  const q = `
+    /* =========================
+       1) SALES (normal invoices)
+       ========================= */
+    WITH sales_base AS (
       SELECT
-        il.tax AS tax_percentage,
-        'LOCAL' AS tax_category,
-        SUM(
-          CASE WHEN il.tax = 0 THEN il.total
-               ELSE il.total / (1 + il.tax / 100) END
-        ) AS total_sales,
-        SUM(
-          CASE WHEN il.tax = 0 THEN 0
-               ELSE il.total - (il.total / (1 + il.tax / 100)) END
-        ) AS total_tax,
-        SUM(il.total) AS total_with_tax
+        ih.type2,
+        COALESCE(il.exempt, false) AS exempt,
+        COALESCE(ROUND(il.tax)::int, 0) AS tax_int,
+        il.total AS amount
       FROM invoice_header ih
-      JOIN invoice_lines il ON il.invoice_number = ih.invoice_number
-      WHERE ih.type2 = 'local'
+      JOIN invoice_lines il
+        ON il.invoice_number = ih.invoice_number
+      WHERE ih.type2 IN ('local', 'export', 'development')
         AND ih.date >= $1 AND ih.date < $2
-      GROUP BY il.tax
-
-      UNION ALL
-
-      /* NON LOCAL EXEMPT */
+    ),
+    sales_bucketed AS (
       SELECT
-        0 AS tax_percentage,
-        'NON_LOCAL_EXEMPT' AS tax_category,
-        SUM(il.total),
-        0,
-        SUM(il.total)
-      FROM invoice_header ih
-      JOIN invoice_lines il ON il.invoice_number = ih.invoice_number
-      WHERE ih.type2 <> 'local'
-        AND il.exempt = true
-        AND ih.date >= $1 AND ih.date < $2;
-    `;
+        type2,
+        CASE
+          WHEN type2 IN ('export', 'development') THEN
+            CASE WHEN exempt THEN 'exempt' ELSE '0' END
+          ELSE
+            CASE WHEN exempt THEN 'exempt' ELSE tax_int::text END
+        END AS bucket,
+        COALESCE(SUM(amount), 0) AS sales_total
+      FROM sales_base
+      GROUP BY type2, bucket
+    ),
 
-    const exportQuery = `
+    /* =========================
+       2) REFUNDS (linked to original invoice)
+       - classify by ORIGINAL invoice header/lines
+       - sum only refunded items/qty
+       ========================= */
+    refunds_base AS (
       SELECT
-        SUM(
-          CASE WHEN il.tax = 0 THEN il.total
-               ELSE il.total / (1 + il.tax / 100) END
-        ) AS total_sales,
-        SUM(
-          CASE WHEN il.tax = 0 THEN 0
-               ELSE il.total - (il.total / (1 + il.tax / 100)) END
-        ) AS total_tax,
-        SUM(il.total) AS total_with_tax
-      FROM invoice_header ih
-      JOIN invoice_lines il ON il.invoice_number = ih.invoice_number
-      WHERE ih.type2 = 'export'
-        AND ih.date >= $1 AND ih.date < $2;
-    `;
+        ih.type2,
+        COALESCE(il.exempt, false) AS exempt,
+        COALESCE(ROUND(il.tax)::int, 0) AS tax_int,
 
-    const localRes = await db.query(localAndExemptQuery, [from, to]);
-    const exportRes = await db.query(exportQuery, [from, to]);
+        /* refund amount proportional to refunded qty */
+        (
+          (il.total / NULLIF(il.qty, 0)) * ril.refund_qty
+        )::numeric(12,3) AS amount
 
-    /* -------- STRUCTURE DATA -------- */
-    const local = [];
-    let exempt = null;
+      FROM refund_invoice_header rih
+      JOIN refund_invoice_lines ril
+        ON ril.refund_invoice_number = rih.refund_invoice_number
 
-    for (const r of localRes.rows) {
-      if (r.tax_category === "LOCAL") {
-        local.push({
-          percentage: Number(r.tax_percentage),
-          total_sales: Number(r.total_sales),
-          total_tax: Number(r.total_tax),
-          total_with_tax: Number(r.total_with_tax),
-        });
-      } else {
-        exempt = {
-          percentage: 0,
-          total_sales: Number(r.total_sales),
-          total_tax: 0,
-          total_with_tax: Number(r.total_with_tax),
-        };
-      }
-    }
+      /* original invoice header (for type2 + date filtering on original invoice) */
+      JOIN invoice_header ih
+        ON ih.invoice_number = rih.original_invoice_number
 
-    const exportRow = exportRes.rows[0] || {
-      total_sales: 0,
-      total_tax: 0,
-      total_with_tax: 0,
-    };
+      /* original invoice line (to get exempt/tax/total/qty) */
+      JOIN invoice_lines il
+        ON il.invoice_number = rih.original_invoice_number
+       AND il.item_number = ril.item_number
 
-    const grandTotals = {
-      total_sales:
-        local.reduce((s, r) => s + r.total_sales, 0) +
-        (exempt?.total_sales || 0) +
-        Number(exportRow.total_sales || 0),
+      WHERE ih.type2 IN ('local', 'export', 'development')
+        AND ih.date >= $1 AND ih.date < $2
+    ),
+    refunds_bucketed AS (
+      SELECT
+        type2,
+        CASE
+          WHEN type2 IN ('export', 'development') THEN
+            CASE WHEN exempt THEN 'exempt' ELSE '0' END
+          ELSE
+            CASE WHEN exempt THEN 'exempt' ELSE tax_int::text END
+        END AS bucket,
+        COALESCE(SUM(amount), 0) AS refunds_total
+      FROM refunds_base
+      GROUP BY type2, bucket
+    )
 
-      total_tax: local.reduce((s, r) => s + r.total_tax, 0),
+    /* =========================
+       3) Merge buckets (sales + refunds)
+       ========================= */
+    SELECT
+      COALESCE(s.type2, r.type2) AS type2,
+      COALESCE(s.bucket, r.bucket) AS bucket,
+      COALESCE(s.sales_total, 0) AS sales_total,
+      COALESCE(r.refunds_total, 0) AS refunds_total,
+      (COALESCE(s.sales_total, 0) - COALESCE(r.refunds_total, 0)) AS grand_total
+    FROM sales_bucketed s
+    FULL OUTER JOIN refunds_bucketed r
+      ON r.type2 = s.type2
+     AND r.bucket = s.bucket
+    ORDER BY 1, 2;
+  `;
 
-      total_with_tax:
-        local.reduce((s, r) => s + r.total_with_tax, 0) +
-        (exempt?.total_with_tax || 0) +
-        Number(exportRow.total_with_tax || 0),
-    };
+  const res = await db.query(q, [from, to]);
 
+  // Helper: fetch bucket row (sales/refunds/grand)
+  const getBucket = (type2, bucket) => {
+    const row = res.rows.find((r) => r.type2 === type2 && r.bucket === String(bucket));
     return {
-      local,
-      exempt,
-      export: {
-        percentage: 0,
-        ...exportRow,
-      },
-      grand_totals: grandTotals,
+      sales_total: Number(row?.sales_total || 0),
+      refunds_total: Number(row?.refunds_total || 0),
+      grand_total: Number(row?.grand_total || 0),
     };
-  } finally {
-  }
+  };
+
+  // export
+  const exportSales = {
+    zero_tax: getBucket("export", "0"),
+    exempt: getBucket("export", "exempt"),
+  };
+
+  // development
+  const developmentSales = {
+    zero_tax: getBucket("development", "0"),
+    exempt: getBucket("development", "exempt"),
+  };
+
+  // local (exempt + 0..16)
+  const localTaxed = {};
+  for (let i = 0; i <= 16; i++) localTaxed[i] = getBucket("local", String(i));
+
+  const localSales = {
+    exempt: getBucket("local", "exempt"),
+    taxed: localTaxed,
+  };
+
+  // overall totals (sum grand totals)
+  const grand_total =
+    exportSales.zero_tax.grand_total +
+    exportSales.exempt.grand_total +
+    developmentSales.zero_tax.grand_total +
+    developmentSales.exempt.grand_total +
+    localSales.exempt.grand_total +
+    Object.values(localSales.taxed).reduce((s, v) => s + (v.grand_total || 0), 0);
+
+  // Optional: also return global sales/refunds totals if you want
+  const sales_total =
+    exportSales.zero_tax.sales_total +
+    exportSales.exempt.sales_total +
+    developmentSales.zero_tax.sales_total +
+    developmentSales.exempt.sales_total +
+    localSales.exempt.sales_total +
+    Object.values(localSales.taxed).reduce((s, v) => s + (v.sales_total || 0), 0);
+
+  const refunds_total =
+    exportSales.zero_tax.refunds_total +
+    exportSales.exempt.refunds_total +
+    developmentSales.zero_tax.refunds_total +
+    developmentSales.exempt.refunds_total +
+    localSales.exempt.refunds_total +
+    Object.values(localSales.taxed).reduce((s, v) => s + (v.refunds_total || 0), 0);
+
+  return {
+    export_sales: exportSales,
+    development_sales: developmentSales,
+    local_sales: localSales,
+    totals: {
+      sales_total,
+      refunds_total,
+      grand_total,
+    },
+  };
 };
+
+
 
 const getRefundsReport = async (db, { from, to, limit, offset }) => {
   try {
@@ -2687,6 +2740,146 @@ const getTransactionLogsReport = async (
   }
 };
 
+const getSalesRefundsCombinedReport = async (db, { from, to, limit, offset }) => {
+  // net tolerance: exclude fully-refunded invoices
+  const EPS = 0.0005;
+
+  // 1) paginated rows
+  const rowsRes = await db.query(
+    `
+    WITH refund_agg AS (
+      SELECT
+        r.original_invoice_number,
+        SUM(COALESCE(r.total, 0))::numeric AS refund_total,
+        STRING_AGG(r.refund_invoice_number::text, ', ' ORDER BY r.refund_date DESC) AS refund_invoice_numbers,
+        MAX(r.refund_date) AS last_refund_date
+      FROM refund_invoice_header r
+      WHERE r.refund_date::date BETWEEN $1 AND $2
+      GROUP BY r.original_invoice_number
+    )
+    SELECT
+      h.invoice_number,
+      TO_CHAR(h.date, 'DD-MM-YYYY') AS date,
+      h.client,
+      h.total::numeric AS invoice_total,
+
+      COALESCE(ra.refund_invoice_numbers, '') AS refund_invoice_number,
+      COALESCE(ra.refund_total, 0)::numeric AS refund_total,
+
+      (h.total::numeric - COALESCE(ra.refund_total, 0)::numeric) AS grand_total
+    FROM invoice_header h
+    LEFT JOIN refund_agg ra
+      ON ra.original_invoice_number = h.invoice_number
+    WHERE h.date::date BETWEEN $1 AND $2
+      AND (h.total::numeric - COALESCE(ra.refund_total, 0)::numeric) > $5
+    ORDER BY h.invoice_number ASC
+    LIMIT $3 OFFSET $4
+    `,
+    [from, to, limit, offset, EPS]
+  );
+
+  // 2) totals (no limit/offset)
+  const totalsRes = await db.query(
+    `
+    WITH refund_agg AS (
+      SELECT
+        r.original_invoice_number,
+        SUM(COALESCE(r.total, 0))::numeric AS refund_total
+      FROM refund_invoice_header r
+      WHERE r.refund_date::date BETWEEN $1 AND $2
+      GROUP BY r.original_invoice_number
+    )
+    SELECT
+      COUNT(*)::int AS total_count,
+      COALESCE(SUM(h.total::numeric - COALESCE(ra.refund_total, 0)::numeric), 0)::numeric AS total_sum
+    FROM invoice_header h
+    LEFT JOIN refund_agg ra
+      ON ra.original_invoice_number = h.invoice_number
+    WHERE h.date::date BETWEEN $1 AND $2
+      AND (h.total::numeric - COALESCE(ra.refund_total, 0)::numeric) > $3
+    `,
+    [from, to, EPS]
+  );
+
+  return {
+    rows: rowsRes.rows,
+    total_count: Number(totalsRes.rows[0].total_count || 0),
+    total_sum: Number(totalsRes.rows[0].total_sum || 0),
+  };
+};
+
+const getSalesRefundsCombinedByClientReport = async (
+  db,
+  { from, to, client_id, limit, offset }
+) => {
+  const EPS = 0.0005;
+
+  const rowsRes = await db.query(
+    `
+    WITH refund_agg AS (
+      SELECT
+        r.original_invoice_number,
+        SUM(COALESCE(r.total, 0))::numeric AS refund_total,
+        STRING_AGG(
+          r.refund_invoice_number::text,
+          ', ' ORDER BY r.refund_date DESC
+        ) AS refund_invoice_numbers
+      FROM refund_invoice_header r
+      WHERE r.refund_date::date BETWEEN $1 AND $2
+      GROUP BY r.original_invoice_number
+    )
+    SELECT
+      h.invoice_number,
+      TO_CHAR(h.date, 'DD-MM-YYYY') AS date,
+      h.client,
+      h.total::numeric AS invoice_total,
+      COALESCE(ra.refund_invoice_numbers, '') AS refund_invoice_number,
+      COALESCE(ra.refund_total, 0)::numeric AS refund_total,
+      (h.total::numeric - COALESCE(ra.refund_total, 0)::numeric) AS grand_total
+    FROM invoice_header h
+    LEFT JOIN refund_agg ra
+      ON ra.original_invoice_number = h.invoice_number
+    WHERE h.date::date BETWEEN $1 AND $2
+      AND h.client_id = $3
+      AND (h.total::numeric - COALESCE(ra.refund_total, 0)::numeric) > $6
+    ORDER BY h.invoice_number ASC
+    LIMIT $4 OFFSET $5
+    `,
+    [from, to, client_id, limit, offset, EPS]
+  );
+
+  const totalsRes = await db.query(
+    `
+    WITH refund_agg AS (
+      SELECT
+        r.original_invoice_number,
+        SUM(COALESCE(r.total, 0))::numeric AS refund_total
+      FROM refund_invoice_header r
+      WHERE r.refund_date::date BETWEEN $1 AND $2
+      GROUP BY r.original_invoice_number
+    )
+    SELECT
+      COUNT(*)::int AS total_count,
+      COALESCE(
+        SUM(h.total::numeric - COALESCE(ra.refund_total, 0)::numeric),
+        0
+      )::numeric AS total_sum
+    FROM invoice_header h
+    LEFT JOIN refund_agg ra
+      ON ra.original_invoice_number = h.invoice_number
+    WHERE h.date::date BETWEEN $1 AND $2
+      AND h.client_id = $3
+      AND (h.total::numeric - COALESCE(ra.refund_total, 0)::numeric) > $4
+    `,
+    [from, to, client_id, EPS]
+  );
+
+  return {
+    rows: rowsRes.rows,
+    total_count: Number(totalsRes.rows[0].total_count || 0),
+    total_sum: Number(totalsRes.rows[0].total_sum || 0),
+  };
+};
 // ================= DASHBOARD KPIs =================
 const getDashboardKpis = async (db, year) => {
   const salesRes = await db.query(
@@ -4167,6 +4360,8 @@ module.exports = {
   getItemSalesDetailsReport,
   getStorageInventoryReport,
   getTransactionLogsReport,
+  getSalesRefundsCombinedReport,
+  getSalesRefundsCombinedByClientReport,
   getDashboardKpis,
   getDashboardOverview,
   getDashboardSales,

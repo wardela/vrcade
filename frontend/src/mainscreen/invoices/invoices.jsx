@@ -1609,31 +1609,32 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
 </div>
 
   {/* Table of Items */}
-<div className="flex-grow p-3 overflow-y-auto relative">
-<div>
-  <table className="w-full border-collapse text-sm rounded-md overflow-hidden shadow">
-  <thead className="bg-gray-100 border-b text-gray-700 text-sm">
+{/* Table of Items */}
+<div className="flex-grow min-h-0 pb-2">
+  <div className="h-full overflow-auto  ">
+    <table className="w-full border-collapse text-sm">
+      <thead className="text-gray-700 text-sm">
     <tr>
-      <th className="border p-2 text-center w-12">{t("Invoices.items.exempt")}</th>
-      <th className="border p-2 text-center w-12">#</th>
-      <th className="border p-2 text-center w-24">{t("Invoices.items.item_id")}</th>
-      <th className="border p-2 text-start w-40">{t("Invoices.items.name")}</th>
-      <th className="border p-2 text-start w-40">{t("Invoices.items.item_notes")}</th>
-      <th className="border p-2 text-start w-28">{t("Invoices.items.unit_price_incl")}</th>
-      <th className="border p-2 text-start w-20">{t("Invoices.items.tax_percent")}</th>
-      <th className="border p-2 text-start w-28">{t("Invoices.items.unit_price_excl")}</th>
-      <th className="border p-2 text-start w-20">{t("Invoices.items.unit")}</th>
-      <th className="border p-2 text-start w-20">{t("Invoices.items.qty")}</th>
-      <th className="border p-2 text-start w-40">{t("Invoices.items.storage")}</th>
+      <th className=" sticky top-0 z-20 bg-gray-100 border p-2 text-center w-12">{t("Invoices.items.exempt")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-center w-12">#</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-center w-24">{t("Invoices.items.item_id")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-40">{t("Invoices.items.name")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-40">{t("Invoices.items.item_notes")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-28">{t("Invoices.items.unit_price_incl")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-20">{t("Invoices.items.tax_percent")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-28">{t("Invoices.items.unit_price_excl")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-20">{t("Invoices.items.unit")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-20">{t("Invoices.items.qty")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-40">{t("Invoices.items.storage")}</th>
       {showDiscount && (
-      <th className="border p-2 text-start w-24">{t("Invoices.items.discount_percent")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-24">{t("Invoices.items.discount_percent")}</th>
       )}
       {showDiscount && (
-      <th className="border p-2 text-start w-28">{t("Invoices.items.discount_value")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-28">{t("Invoices.items.discount_value")}</th>
       )}
-      <th className="border p-2 text-start w-32">{t("Invoices.items.tax_value")}</th>
-      <th className="border p-2 text-start w-32">{t("Invoices.items.total_incl")}</th>
-      <th className="border p-2 text-center w-12">{t("Invoices.items.delete")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-32">{t("Invoices.items.tax_value")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-start w-32">{t("Invoices.items.total_incl")}</th>
+      <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-center w-12">{t("Invoices.items.delete")}</th>
     </tr>
   </thead>
 
@@ -2019,29 +2020,24 @@ className={`w-full border rounded px-2 py-1
   </tbody>
 </table>
 </div>
-{/* Sticky Add Empty Line */}
-<div className="sticky  p-2 flex justify-start z-10">
-<button
-  onClick={addEmptyLine}
-  disabled={!isEditable}
-  className={`px-3 py-1 text-xs rounded-xl border transition
-    ${
-      isEditable
-        ? "border-[#2f788a] text-[#2f788a] hover:bg-[#f0f8fa]"
-        : "border-gray-300 text-gray-400 cursor-not-allowed"
-    }
-  `}
->
-  {t("Invoices.add_empty_line")}
-</button>
 
-</div>
 
 </div>
 {/* + Add Line Button */}
-<div className="p-4 flex justify-start">
+<div className=" gap-2 flex justify-end pe-2 pb-2 text-xs">
+  {isEditable && (
+  <div className=" flex justify-start">
+    <button
+      onClick={addEmptyLine}
+      className="px-4 py-2 bg-[#fffff] text-[#2f788a] rounded hover:bg-gray-200 transition shadow border border-2 border-[#2f788a]"
+    >
+      {t("Invoices.add_empty_line")}
+    </button>
+  </div>
+)}
+
 {isEditable && (
-  <div className="p-4 flex justify-start">
+  <div className=" flex justify-start">
     <button
       onClick={() => isEditable && setShowItemModal(true)}
       className="px-4 py-2 bg-[#2f788a] text-white rounded hover:bg-[#276472] transition shadow"

@@ -8,6 +8,8 @@ import SalesByClientReportPrint from "./printables/SalesByClientReportPrint";
 import SalesByAreaReportPrint from "./printables/SalesByAreaReportPrint";
 import SalesByClientDetailedReportPrint from "./printables/SalesByClientDetailedReportPrint";
 import ItemsSoldForClientTotalsReportPrint from "./printables/ItemsSoldForClientTotalsReportPrint";
+import SalesRefundsCombinedReport from "./SalesRefundsCombinedReport";
+import SalesRefundsCombinedByClientReport from "./SalesRefundsCombinedByClientReport";
 import { useTranslation } from "react-i18next";
 const PAGE_SIZE = 100;
 
@@ -224,7 +226,8 @@ const fetchItemsSoldForClientTotals = async (newOffset = 0) => {
     setLoading(false);
   }
 };
-
+const combinedRef = useRef();
+const combinedByClientRef = useRef();
 const applyReport = async () => {
   if (reportType === "general") {
     fetchGeneralSales();
@@ -237,6 +240,15 @@ const applyReport = async () => {
 if (reportType === "by_client_detailed") {
   if (!selectedClient) return;
   fetchSalesByClientDetailed();
+}
+
+if (reportType === "sales_refunds_combined") {
+  combinedRef.current?.apply();
+}
+
+if (reportType === "sales_refunds_combined_by_client") {
+  if (!selectedClient) return;
+  combinedByClientRef.current?.apply();
 }
 
 if (reportType === "by_client_items_totals") {
@@ -382,7 +394,8 @@ const canApplyReport = (() => {
 if (
   reportType === "by_client" ||
   reportType === "by_client_detailed" ||
-  reportType === "by_client_items_totals"
+  reportType === "by_client_items_totals" ||
+  reportType === "sales_refunds_combined_by_client"
 ) {
   return !!selectedClient;
 }
@@ -440,6 +453,12 @@ const getInvoiceGroupColor = (rows) => {
         <option value="by_client_items_totals">
           {t("SalesReports.report_types.by_client_items_totals")}
         </option>
+        <option value="sales_refunds_combined">
+  {t("SalesReports.report_types.sales_refunds_combined")}
+</option>
+<option value="sales_refunds_combined_by_client">
+  {t("SalesReports.report_types.sales_refunds_combined_by_client")}
+</option>
       </select>
     </div>
 
@@ -470,9 +489,10 @@ const getInvoiceGroupColor = (rows) => {
     </div>
 
     {/* Select Client */}
-    {(reportType === "by_client" ||
-      reportType === "by_client_detailed" ||
-      reportType === "by_client_items_totals")
+{(reportType === "by_client" ||
+  reportType === "by_client_detailed" ||
+  reportType === "by_client_items_totals" ||
+  reportType === "sales_refunds_combined_by_client")
       && (
       <button
         onClick={() => setClientModalOpen(true)}
@@ -493,6 +513,7 @@ const getInvoiceGroupColor = (rows) => {
     {/* Selected Client Display */}
     {(reportType === "by_client" ||
       reportType === "by_client_detailed" ||
+      reportType === "sales_refunds_combined_by_client" ||
       reportType === "by_client_items_totals") && selectedClient && (
       <div>
         <label className="block text-xs text-gray-500 mb-1">
@@ -578,6 +599,14 @@ if (reportType === "by_client_items_totals") {
   await fetchItemsSoldForClientTotalsForPrint();
   setPendingPrint(true);
 }
+if (reportType === "sales_refunds_combined") {
+  if (!company) return;
+  await combinedRef.current?.print();
+}
+if (reportType === "sales_refunds_combined_by_client") {
+  if (!company || !selectedClient) return;
+  await combinedByClientRef.current?.print();
+}
         if (reportType === "by_client") {
           if (!selectedClient) return;
           setPrintMode("by_client");
@@ -592,8 +621,25 @@ if (reportType === "by_client_items_totals") {
   </div>
 
 </div>
-
-
+{reportType === "sales_refunds_combined" && (
+  <SalesRefundsCombinedReport
+    ref={combinedRef}
+    dateFrom={dateFrom}
+    dateTo={dateTo}
+    company={company}
+    pageSize={PAGE_SIZE}
+  />
+)}
+{reportType === "sales_refunds_combined_by_client" && (
+  <SalesRefundsCombinedByClientReport
+    ref={combinedByClientRef}
+    dateFrom={dateFrom}
+    dateTo={dateTo}
+    company={company}
+    selectedClient={selectedClient}
+    pageSize={PAGE_SIZE}
+  />
+)}
       {/* ================= GENERAL SALES TABLE ================= */}
       {reportType === "general" && (
   <div className="border rounded-lg bg-white flex flex-col flex-1 min-h-0">
@@ -1134,8 +1180,6 @@ Reports by currency Coming Soon !</div>
   />
 )}
 </div>
-
-
     </div>
   );
 }

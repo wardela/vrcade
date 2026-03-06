@@ -1698,6 +1698,59 @@ const getTransactionsReport = async (req, res) => {
   }
 };
 
+
+const getSalesRefundsCombinedReportController = async (req, res) => {
+  try {
+    const db = req.db; // or however you inject tenant db
+    const { from, to } = req.query;
+
+    const limit = Number(req.query.limit || 100);
+    const offset = Number(req.query.offset || 0);
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "from and to are required" });
+    }
+
+    const data = await invoiceService.getSalesRefundsCombinedReport(db, {
+      from,
+      to,
+      limit,
+      offset,
+    });
+
+    return res.json(data);
+  } catch (err) {
+    console.error("getSalesRefundsCombinedReportController error:", err);
+    return res.status(500).json({ message: "Failed to fetch combined report" });
+  }
+};
+
+const getSalesRefundsCombinedByClientReportController = async (req, res) => {
+  try {
+    const db = req.db;
+    const { from, to, client_id } = req.query;
+
+    const limit = Number(req.query.limit || 100);
+    const offset = Number(req.query.offset || 0);
+
+    if (!from || !to || !client_id) {
+      return res.status(400).json({ message: "from, to and client_id are required" });
+    }
+
+    const data = await invoiceService.getSalesRefundsCombinedByClientReport(db, {
+      from,
+      to,
+      client_id: Number(client_id),
+      limit,
+      offset,
+    });
+
+    return res.json(data);
+  } catch (err) {
+    console.error("getSalesRefundsCombinedByClientReportController error:", err);
+    return res.status(500).json({ message: "Failed to fetch combined by client report" });
+  }
+};
 // ====== Dashboard ======
 const getDashboardKpis = async (req, res) => {
   try {
@@ -2538,6 +2591,8 @@ module.exports = {
   getItemSalesDetailsReport,
   getStorageInventoryReport,
   getTransactionsReport,
+  getSalesRefundsCombinedReportController,
+  getSalesRefundsCombinedByClientReportController,
   getDashboardKpis,
   getDashboardOverview,
   getDashboardSales,
