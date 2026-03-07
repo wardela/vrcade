@@ -201,6 +201,169 @@ useEffect(() => {
       fetchTaxDeclaration();
     }
   };
+const isNonZero = (n) => Math.abs(Number(n || 0)) > 0.0005; // tolerance for numeric(12,3)
+const keepRow = (r) => isNonZero(r?.sales_total) || isNonZero(r?.refunds_total);
+
+function TaxBucketsSection({ title, rows, bold = false }) {
+  if (!rows || rows.length === 0) return null;
+
+  const totals = rows.reduce(
+    (acc, r) => {
+      acc.sales_total += Number(r.sales_total || 0);
+      acc.refunds_total += Number(r.refunds_total || 0);
+      acc.grand_total += Number(r.grand_total || 0);
+      return acc;
+    },
+    { sales_total: 0, refunds_total: 0, grand_total: 0 }
+  );
+
+  return (
+    <div className="bg-white border rounded-lg shadow-sm">
+      <div className="px-4 py-3 border-b bg-gray-50">
+        <h3 className="font-semibold text-gray-700 tracking-wide">{title}</h3>
+      </div>
+
+      <table className="min-w-full text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="px-4 py-2 text-start">{t("EInvoicingReports.table.type")}</th>
+            <th className="px-4 py-2 text-end">{t("EInvoicingReports.table.sales_total")}</th>
+            <th className="px-4 py-2 text-end">{t("EInvoicingReports.table.refunds_total")}</th>
+            <th className="px-4 py-2 text-end">{t("EInvoicingReports.table.grand_total")}</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className={`border-t ${bold ? "font-semibold" : ""}`}>
+              <td className="px-4 py-2">{r.label}</td>
+              <td className="px-4 py-2 text-end">{Number(r.sales_total || 0).toFixed(3)}</td>
+              <td className="px-4 py-2 text-end">{Number(r.refunds_total || 0).toFixed(3)}</td>
+              <td className="px-4 py-2 text-end">{Number(r.grand_total || 0).toFixed(3)}</td>
+            </tr>
+          ))}
+
+          <tr className="border-t bg-gray-50 font-semibold">
+            <td className="px-4 py-2">{t("EInvoicingReports.table.total_row")}</td>
+            <td className="px-4 py-2 text-end">{totals.sales_total.toFixed(3)}</td>
+            <td className="px-4 py-2 text-end">{totals.refunds_total.toFixed(3)}</td>
+            <td className="px-4 py-2 text-end">{totals.grand_total.toFixed(3)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ===== Local calculations helpers =====
+const num = (v) => Number(v || 0);
+const fmt3 = (v) => num(v).toFixed(3);
+
+// parse percentage from labels like "5 %", "16 %", etc.
+// returns null if not a percentage label (exempt)
+const parsePctFromLabel = (label) => {
+  const s = String(label || "").trim();
+  const m = s.match(/^(\d+(?:\.\d+)?)\s*%$/);
+  return m ? Number(m[1]) : null;
+};
+
+// LOCAL table: Type / Sales / Refunds / Before Tax / Tax / Grand Total
+function LocalBucketsSection({ title, rows }) {
+  if (!rows || rows.length === 0) return null;
+
+  const computedRows = rows.map((r) => {
+    const label = String(r.label || "");
+    const sales = num(r.sales_total);
+    const refunds = num(r.refunds_total);
+
+    // net = grand_total logically (sales - refunds). Use computed to be safe.
+    const net = sales - refunds;
+
+    // exempt row stays exempt (no % math)
+    const isExempt =
+      label === t("EInvoicingReports.tax_sections.exempt") ||
+      label.toLowerCase() === "exempt";
+
+    const pct = isExempt ? null : parsePctFromLabel(label);
+
+    // If pct is null (not percent) or pct is 0 => before_tax = net, tax = 0
+    if (pct === null || pct === 0) {
+      return {
+        ...r,
+        before_tax: net,
+        tax_amount: 0,
+        grand_total_calc: net,
+      };
+    }
+
+    // Your formula:
+    // before tax = net / (1 + pct/100)
+    const before_tax = net / (1 + pct / 100);
+    const tax_amount = net - before_tax;
+
+    return {
+      ...r,
+      before_tax,
+      tax_amount,
+      grand_total_calc: net,
+    };
+  });
+
+  const totals = computedRows.reduce(
+    (acc, r) => {
+      acc.sales_total += num(r.sales_total);
+      acc.refunds_total += num(r.refunds_total);
+      acc.before_tax += num(r.before_tax);
+      acc.tax_amount += num(r.tax_amount);
+      acc.grand_total += num(r.grand_total_calc);
+      return acc;
+    },
+    { sales_total: 0, refunds_total: 0, before_tax: 0, tax_amount: 0, grand_total: 0 }
+  );
+
+  return (
+    <div className="bg-white border rounded-lg shadow-sm">
+      <div className="px-4 py-3 border-b bg-gray-50">
+        <h3 className="font-semibold text-gray-700 tracking-wide">{title}</h3>
+      </div>
+
+      <table className="min-w-full text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="px-4 py-2 text-start">{t("EInvoicingReports.table.type")}</th>
+            <th className="px-4 py-2 text-end">{t("EInvoicingReports.table.sales_total")}</th>
+            <th className="px-4 py-2 text-end">{t("EInvoicingReports.table.refunds_total")}</th>
+            <th className="px-4 py-2 text-end">{t("EInvoicingReports.table.total_no_tax")}</th>
+            <th className="px-4 py-2 text-end">{t("EInvoicingReports.table.tax")}</th>
+            <th className="px-4 py-2 text-end">{t("EInvoicingReports.table.grand_total")}</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {computedRows.map((r, i) => (
+            <tr key={i} className="border-t">
+              <td className="px-4 py-2">{r.label}</td>
+              <td className="px-4 py-2 text-end">{fmt3(r.sales_total)}</td>
+              <td className="px-4 py-2 text-end">{fmt3(r.refunds_total)}</td>
+              <td className="px-4 py-2 text-end">{fmt3(r.before_tax)}</td>
+              <td className="px-4 py-2 text-end">{fmt3(r.tax_amount)}</td>
+              <td className="px-4 py-2 text-end font-semibold">{fmt3(r.grand_total_calc)}</td>
+            </tr>
+          ))}
+
+          <tr className="border-t bg-gray-50 font-semibold">
+            <td className="px-4 py-2">{t("EInvoicingReports.table.total_row")}</td>
+            <td className="px-4 py-2 text-end">{fmt3(totals.sales_total)}</td>
+            <td className="px-4 py-2 text-end">{fmt3(totals.refunds_total)}</td>
+            <td className="px-4 py-2 text-end">{fmt3(totals.before_tax)}</td>
+            <td className="px-4 py-2 text-end">{fmt3(totals.tax_amount)}</td>
+            <td className="px-4 py-2 text-end">{fmt3(totals.grand_total)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
   return (
     <div className="flex flex-col h-full">
@@ -336,20 +499,52 @@ onClick={async () => {
         )}
 
         {/* ===== Tax Declaration ===== */}
-        {reportType === REPORTS.TAX && taxData && (
-          <div className="space-y-6">
-            <TaxSection title={t("EInvoicingReports.tax_sections.local")} rows={taxData.local} />
-            {taxData.exempt && (
-              <TaxSection title={t("EInvoicingReports.tax_sections.exempt")} rows={[taxData.exempt]} />
-            )}
-            <TaxSection title={t("EInvoicingReports.tax_sections.export")} rows={[taxData.export]} />
-            <TaxSection
-              title={t("EInvoicingReports.tax_sections.grand_total")}
-              rows={[taxData.grand_totals]}
-              bold
-            />
-          </div>
-        )}
+{reportType === REPORTS.TAX && taxData && (
+  <div className="space-y-6">
+    <TaxBucketsSection
+      title={t("EInvoicingReports.tax_sections.export")}
+rows={[
+  { label: "0 %", ...(taxData.export_sales?.zero_tax || {}) },
+  { label: t("EInvoicingReports.tax_sections.exempt"), ...(taxData.export_sales?.exempt || {}) },
+].filter(keepRow)}
+    />
+
+    <TaxBucketsSection
+      title={t("EInvoicingReports.tax_sections.development") || "Development Sales"}
+rows={[
+  { label: "0 %", ...(taxData.development_sales?.zero_tax || {}) },
+  { label: t("EInvoicingReports.tax_sections.exempt"), ...(taxData.development_sales?.exempt || {}) },
+].filter(keepRow)}
+    />
+
+<LocalBucketsSection
+  title={t("EInvoicingReports.tax_sections.local")}
+  rows={[
+    // IMPORTANT: keep exempt label as "EXEMPT" (not 0%)
+    { label: t("EInvoicingReports.tax_sections.exempt"), ...(taxData.local_sales?.exempt || {}) },
+
+    // taxed buckets: 0%..16%
+    ...Array.from({ length: 17 }, (_, i) => ({
+      label: `${i} %`,
+      ...(taxData.local_sales?.taxed?.[i] || {}),
+    })),
+  ].filter(keepRow)}
+/>
+
+    <TaxBucketsSection
+      title={t("EInvoicingReports.tax_sections.grand_total")}
+      rows={[
+        {
+          label: "TOTAL",
+          sales_total: taxData.totals?.sales_total || 0,
+          refunds_total: taxData.totals?.refunds_total || 0,
+          grand_total: taxData.totals?.grand_total || 0,
+        },
+      ]}
+      bold
+    />
+  </div>
+)}
       </div>
 <div className="hidden">
   {company && reportType === REPORTS.SHARED && (

@@ -1150,7 +1150,9 @@
     "by_client_detailed": "Sales by Client (Detailed)",
     "by_area": "Sales by Area",
     "by_currency": "Sales by Currency",
-    "by_client_items_totals": "Items Sold for Client (Totals)"
+    "by_client_items_totals": "Items Sold for Client (Totals)",
+    "sales_refunds_combined": "Sales & Refunds Combined",
+    "sales_refunds_combined_by_client": "Sales & Refunds Combined by Client"
   },
 
   "areas": {
@@ -1259,6 +1261,12 @@
       "total": "Total",
       "status": "Status",
 
+      "type": "Type",
+      "sales_total": "Sales Total",
+      "refunds_total": "Refunds Total",
+      "grand_total": "Grand Total",
+      "total_row": "TOTAL",
+
       "percent": "%",
       "total_no_tax": "Total (No Tax)",
       "tax": "Tax",
@@ -1278,6 +1286,7 @@
       "local": "LOCAL",
       "exempt": "EXEMPT",
       "export": "EXPORT",
+      "development": "DEVELOPMENT",
       "grand_total": "GRAND TOTAL"
     }
   },

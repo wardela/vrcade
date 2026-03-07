@@ -138,7 +138,8 @@ router.get("/reports/items/sales", invoiceController.getItemsSalesReport);
 router.get("/reports/items/sales/details", invoiceController.getItemSalesDetailsReport);
 router.get("/reports/storage/inventory", invoiceController.getStorageInventoryReport);
 router.get("/reports/storage/transactions", invoiceController.getTransactionsReport);
-
+router.get("/reports/sales/sales-refunds-combined", invoiceController.getSalesRefundsCombinedReportController);
+router.get("/reports/sales/sales-refunds-combined-by-client", invoiceController.getSalesRefundsCombinedByClientReportController);
 // ======== Dashboard =========
 router.get("/stats/dashboard-kpis", invoiceController.getDashboardKpis);
 router.get("/stats/dashboard-overview", invoiceController.getDashboardOverview);

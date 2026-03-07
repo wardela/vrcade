@@ -1153,7 +1153,9 @@
     "by_client_detailed": "المبيعات حسب العميل (تفصيلي)",
     "by_area": "المبيعات حسب المنطقة",
     "by_currency": "المبيعات حسب العملة",
-    "by_client_items_totals": "الأصناف المباعة للعميل (إجمالي)"
+    "by_client_items_totals": "الأصناف المباعة للعميل (إجمالي)",
+    "sales_refunds_combined": "تقرير المبيعات والمرتجعات",
+    "sales_refunds_combined_by_client": "تقرير المبيعات والمرتجعات حسب العميل"
   },
 
   "areas": {
@@ -1231,7 +1233,7 @@
     }
   },
 
-  "EInvoicingReports": {
+ "EInvoicingReports": {
     "filters": {
       "report": "التقرير",
       "from": "من",
@@ -1261,6 +1263,12 @@
       "total": "الإجمالي",
       "status": "الحالة",
 
+      "type": "النوع",
+      "sales_total": "إجمالي المبيعات",
+      "refunds_total": "إجمالي المرتجعات",
+      "grand_total": "الإجمالي النهائي",
+      "total_row": "الإجمالي",
+
       "percent": "%",
       "total_no_tax": "الإجمالي بدون ضريبة",
       "tax": "الضريبة",
@@ -1280,6 +1288,7 @@
       "local": "محلي",
       "exempt": "معفى",
       "export": "تصدير",
+      "development": "تطوير",
       "grand_total": "الإجمالي الكلي"
     }
   },
