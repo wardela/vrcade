@@ -46,7 +46,7 @@
       "title": "Magnification",
       "description": "Increase visual size for better readability",
       "level": "Magnification level",
-      "footer": "Starts at 100% and increases only"
+      "footer": "Starts at 90%. Use Ctrl +/- or the buttons to adjust."
     },
 
     "about": {

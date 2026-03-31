@@ -1,7 +1,7 @@
 // src/config.js
 
 // ✅ manually toggle this when you switch environments
-const isProduction = false;
+const isProduction = true;
 
 // ✅ define your backend IPs
 const LOCAL_IP = "http://localhost:3002";

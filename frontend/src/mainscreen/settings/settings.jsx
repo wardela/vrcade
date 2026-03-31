@@ -9,6 +9,11 @@ const TABS = [
   { key: "about", label: "Contact & About" },
 ];
 
+const DEFAULT_ZOOM = 90;
+const ZOOM_STEP = 5;
+
+const factorToPercent = (factor) => Math.round(Number(factor) * 100);
+
 export default function Settings({ onClose }) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState("language");
@@ -24,14 +29,47 @@ export default function Settings({ onClose }) {
   /* ===============================
      ZOOM
   =============================== */
-  const [zoom, setZoom] = useState(
-    Number(localStorage.getItem("appZoom")) || 100
-  );
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
 
-useEffect(() => {
-  document.documentElement.style.zoom = `${zoom}%`;
-  localStorage.setItem("appZoom", zoom);
-}, [zoom]);
+  useEffect(() => {
+    const zoomApi = window.api?.zoom;
+    if (!zoomApi) return undefined;
+
+    let mounted = true;
+    zoomApi
+      .get()
+      .then((factor) => {
+        if (!mounted || !Number.isFinite(factor)) return;
+        setZoom(factorToPercent(factor));
+      })
+      .catch(() => {});
+
+    const unsubscribe = zoomApi.onChanged?.((factor) => {
+      if (!Number.isFinite(factor)) return;
+      setZoom(factorToPercent(factor));
+    });
+
+    return () => {
+      mounted = false;
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  const changeZoom = async (deltaPercent) => {
+    const zoomApi = window.api?.zoom;
+    if (!zoomApi) return;
+
+    try {
+      const factor = await zoomApi.changePercent(deltaPercent);
+      if (Number.isFinite(factor)) {
+        setZoom(factorToPercent(factor));
+      }
+    } catch {
+      // No-op: keeps settings usable if zoom IPC is unavailable.
+    }
+  };
 
 
   return (
@@ -223,18 +261,13 @@ useEffect(() => {
 
                   <div className="flex items-center justify-between">
 
-                    {/* Decrease (disabled at 100%) */}
+                    {/* Decrease */}
                     <button
-                      onClick={() => setZoom((z) => Math.max(100, z - 5))}
-                      disabled={zoom <= 100}
-                      className={`w-14 h-14 rounded-full border
-                        flex items-center justify-center
-                        text-2xl font-medium transition
-                        ${
-                          zoom <= 100
-                            ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                            : "border-gray-300 text-gray-700 hover:bg-gray-100"
-                        }`}
+                      onClick={() => changeZoom(-ZOOM_STEP)}
+                      className="w-14 h-14 rounded-full border border-gray-300
+                                flex items-center justify-center
+                                text-2xl font-medium text-gray-700
+                                hover:bg-gray-100 transition"
                     >
                       −
                     </button>
@@ -251,7 +284,7 @@ useEffect(() => {
 
                     {/* Increase */}
                     <button
-                      onClick={() => setZoom((z) => Math.min(150, z + 5))}
+                      onClick={() => changeZoom(ZOOM_STEP)}
                       className="w-14 h-14 rounded-full border border-gray-300
                                 flex items-center justify-center
                                 text-2xl font-medium text-gray-700
