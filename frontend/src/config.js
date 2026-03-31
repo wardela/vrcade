@@ -1,11 +1,9 @@
 // src/config.js
+// In development, leave baseURL empty so requests like /api/... go through Vite proxy.
+// In production, use VITE_API_BASE_URL when provided, else fallback to hosted backend.
+const SERVER_IP = "http://82.29.179.227:8082";
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim();
 
-// ✅ manually toggle this when you switch environments
-const isProduction = true;
-
-// ✅ define your backend IPs
-const LOCAL_IP = "http://localhost:3002";
-const SERVER_IP = "http://82.29.179.227:8082"; // your hosted backend IP
-
-// ✅ export whichever one you're using
-export const BASE_URL = isProduction ? SERVER_IP : LOCAL_IP;
+export const BASE_URL = import.meta.env.DEV
+  ? ""
+  : configuredApiBase || SERVER_IP;
