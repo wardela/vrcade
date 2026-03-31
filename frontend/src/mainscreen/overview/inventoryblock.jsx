@@ -5,10 +5,13 @@ import {
   AreaChart, Area, ResponsiveContainer
 } from "recharts";
 import { useTranslation } from "react-i18next";
+import {
+  CHART_PALETTE,
+  CHART_SERIES,
+  useChartTheme,
+} from "../../theme/chartTheme";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-const COLORS = ["#2f788a", "#4fa3b1", "#9bd4de"];
 
 function Spinner() {
   return (
@@ -24,6 +27,7 @@ export default function DashboardInventoryBlock() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const {t} = useTranslation();
+  const chartTheme = useChartTheme();
 
   const fetchData = async (y) => {
     setLoading(true);
@@ -110,12 +114,20 @@ const topItemsMax = useMemo(() => {
     data={topItems}
     margin={{ top: 10, right: 10, left: 18, bottom: 0 }}
   >
-    <CartesianGrid strokeDasharray="3 3" />
-    <XAxis dataKey="month" />
+    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+    <XAxis
+      dataKey="month"
+      tick={{ fill: chartTheme.axis, fontSize: 12 }}
+      axisLine={{ stroke: chartTheme.axisLine }}
+      tickLine={{ stroke: chartTheme.axisLine }}
+    />
     <YAxis
       width={50}
       domain={[0, Math.ceil(topItemsMax * 1.1)]}
       allowDecimals={false}
+      tick={{ fill: chartTheme.axis, fontSize: 12 }}
+      axisLine={{ stroke: chartTheme.axisLine }}
+      tickLine={{ stroke: chartTheme.axisLine }}
     />
 
     <Tooltip
@@ -126,12 +138,22 @@ const topItemsMax = useMemo(() => {
         if (name === "rank3") return [value, row.rank3_name || "—"];
         return [value, name];
       }}
+      contentStyle={chartTheme.tooltipStyle}
+      labelStyle={chartTheme.tooltipLabelStyle}
+      itemStyle={chartTheme.tooltipItemStyle}
+      cursor={chartTheme.tooltipCursor}
     />
 
-    <Brush dataKey="month" height={25} />
-    <Bar dataKey="rank1" fill={COLORS[0]} />
-    <Bar dataKey="rank2" fill={COLORS[1]} />
-    <Bar dataKey="rank3" fill={COLORS[2]} />
+    <Brush
+      dataKey="month"
+      height={25}
+      fill={chartTheme.brush.fill}
+      stroke={chartTheme.brush.stroke}
+      travellerStroke={chartTheme.brush.travellerStroke}
+    />
+    <Bar dataKey="rank1" fill={CHART_PALETTE[0]} />
+    <Bar dataKey="rank2" fill={CHART_PALETTE[1]} />
+    <Bar dataKey="rank3" fill={CHART_PALETTE[2]} />
   </BarChart>
 </ResponsiveContainer>
 
@@ -200,25 +222,39 @@ const topItemsMax = useMemo(() => {
     ) : (
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={inOut}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis />
-          <Tooltip />
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+          <XAxis
+            dataKey="month"
+            tick={{ fill: chartTheme.axis, fontSize: 12 }}
+            axisLine={{ stroke: chartTheme.axisLine }}
+            tickLine={{ stroke: chartTheme.axisLine }}
+          />
+          <YAxis
+            tick={{ fill: chartTheme.axis, fontSize: 12 }}
+            axisLine={{ stroke: chartTheme.axisLine }}
+            tickLine={{ stroke: chartTheme.axisLine }}
+          />
+          <Tooltip
+            contentStyle={chartTheme.tooltipStyle}
+            labelStyle={chartTheme.tooltipLabelStyle}
+            itemStyle={chartTheme.tooltipItemStyle}
+            cursor={chartTheme.tooltipCursor}
+          />
 
           <Area
             dataKey="in"
             stackId="1"
-            stroke="#16a34a"
-            fill="#16a34a"
-            fillOpacity={0.25}
+            stroke={CHART_SERIES.success}
+            fill={CHART_SERIES.success}
+            fillOpacity={chartTheme.areaOpacity}
             name={t("DashInventory.stock_in")}
           />
           <Area
             dataKey="out"
             stackId="1"
-            stroke="#dc2626"
-            fill="#dc2626"
-            fillOpacity={0.25}
+            stroke={CHART_SERIES.danger}
+            fill={CHART_SERIES.danger}
+            fillOpacity={chartTheme.areaOpacity}
             name={t("DashInventory.stock_out")}
           />
         </AreaChart>

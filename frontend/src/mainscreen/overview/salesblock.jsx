@@ -19,6 +19,11 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import {
+  CHART_PALETTE,
+  CHART_SERIES,
+  useChartTheme,
+} from "../../theme/chartTheme";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -39,6 +44,7 @@ export default function DashboardSalesBlock({ title }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const { t } = useTranslation();
+  const chartTheme = useChartTheme();
   const resolvedTitle = title ?? t("SalesDash.title");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true); // initial load
@@ -108,8 +114,6 @@ export default function DashboardSalesBlock({ title }) {
     }));
   }, [data]);
 
-  const PIE_COLORS = ["#2f788a", "#6b7280", "#406ea2ff"]; // blue/gray family
-
   const HeaderBar = (
     <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border rounded-t-xl shadow-sm">
       <div className="flex flex-col">
@@ -169,16 +173,31 @@ export default function DashboardSalesBlock({ title }) {
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={monthlySalesTotals}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip formatter={(v) => money(v)} />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+            <XAxis
+              dataKey="month"
+              tick={{ fill: chartTheme.axis, fontSize: 12 }}
+              axisLine={{ stroke: chartTheme.axisLine }}
+              tickLine={{ stroke: chartTheme.axisLine }}
+            />
+            <YAxis
+              tick={{ fill: chartTheme.axis, fontSize: 12 }}
+              axisLine={{ stroke: chartTheme.axisLine }}
+              tickLine={{ stroke: chartTheme.axisLine }}
+            />
+            <Tooltip
+              formatter={(v) => money(v)}
+              contentStyle={chartTheme.tooltipStyle}
+              labelStyle={chartTheme.tooltipLabelStyle}
+              itemStyle={chartTheme.tooltipItemStyle}
+              cursor={chartTheme.tooltipCursor}
+            />
             <Area
               type="monotone"
               dataKey="total"
-              stroke="#2f788a"
-              fill="#2f788a"
-              fillOpacity={0.2}
+              stroke={CHART_SERIES.primary}
+              fill={CHART_SERIES.primary}
+              fillOpacity={chartTheme.areaOpacity}
               strokeWidth={2}
             />
           </AreaChart>
@@ -199,11 +218,26 @@ export default function DashboardSalesBlock({ title }) {
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={monthlySalesCount}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            <Bar dataKey="count" fill="#2f788a" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+            <XAxis
+              dataKey="month"
+              tick={{ fill: chartTheme.axis, fontSize: 12 }}
+              axisLine={{ stroke: chartTheme.axisLine }}
+              tickLine={{ stroke: chartTheme.axisLine }}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fill: chartTheme.axis, fontSize: 12 }}
+              axisLine={{ stroke: chartTheme.axisLine }}
+              tickLine={{ stroke: chartTheme.axisLine }}
+            />
+            <Tooltip
+              contentStyle={chartTheme.tooltipStyle}
+              labelStyle={chartTheme.tooltipLabelStyle}
+              itemStyle={chartTheme.tooltipItemStyle}
+              cursor={chartTheme.tooltipCursor}
+            />
+            <Bar dataKey="count" fill={CHART_SERIES.primary} />
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -225,14 +259,19 @@ export default function DashboardSalesBlock({ title }) {
   ) : (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
-        <Tooltip formatter={(v) => money(v)} />
+        <Tooltip
+          formatter={(v) => money(v)}
+          contentStyle={chartTheme.tooltipStyle}
+          labelStyle={chartTheme.tooltipLabelStyle}
+          itemStyle={chartTheme.tooltipItemStyle}
+        />
 
         <Legend
           verticalAlign="bottom"
           align="center"
           iconType="circle"
           formatter={(value) => (
-            <span className="text-sm text-gray-700">{value}</span>
+            <span style={{ color: chartTheme.legend }}>{value}</span>
           )}
         />
 
@@ -245,7 +284,7 @@ export default function DashboardSalesBlock({ title }) {
           {salesByType2.map((_, i) => (
             <Cell
               key={i}
-              fill={PIE_COLORS[i % PIE_COLORS.length]}
+              fill={CHART_PALETTE[i % CHART_PALETTE.length]}
             />
           ))}
         </Pie>
@@ -268,17 +307,32 @@ export default function DashboardSalesBlock({ title }) {
       ) : (
         <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={monthlyRefundTotals}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip formatter={(v) => money(v)} />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+            <XAxis
+              dataKey="month"
+              tick={{ fill: chartTheme.axis, fontSize: 12 }}
+              axisLine={{ stroke: chartTheme.axisLine }}
+              tickLine={{ stroke: chartTheme.axisLine }}
+            />
+            <YAxis
+              tick={{ fill: chartTheme.axis, fontSize: 12 }}
+              axisLine={{ stroke: chartTheme.axisLine }}
+              tickLine={{ stroke: chartTheme.axisLine }}
+            />
+            <Tooltip
+              formatter={(v) => money(v)}
+              contentStyle={chartTheme.tooltipStyle}
+              labelStyle={chartTheme.tooltipLabelStyle}
+              itemStyle={chartTheme.tooltipItemStyle}
+              cursor={chartTheme.tooltipCursor}
+            />
 
             <Area
             type="monotone"
             dataKey="refunds"
-            stroke="#873636ff"
-            fill="#89373785"
-            fillOpacity={0.25}
+            stroke={CHART_SERIES.danger}
+            fill={CHART_SERIES.danger}
+            fillOpacity={chartTheme.areaOpacity}
             strokeWidth={2}
             dot={false}
             />

@@ -11,8 +11,8 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { useTranslation } from "react-i18next";
+import { CHART_PALETTE, useChartTheme } from "../../theme/chartTheme";
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const COLORS = ["#2f788a", "#4fa3b1", "#9bd4de"];
 
 function Spinner() {
   return (
@@ -28,6 +28,7 @@ export default function ClientsDashboardBlock() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const {t} = useTranslation();
+  const chartTheme = useChartTheme();
   const fetchData = async (y) => {
     setLoading(true);
     const res = await api.get(
@@ -154,9 +155,18 @@ const countChart = useMemo(() => {
             {loading ? <Spinner /> : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={spendingChart}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                    axisLine={{ stroke: chartTheme.axisLine }}
+                    tickLine={{ stroke: chartTheme.axisLine }}
+                  />
+                  <YAxis
+                    tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                    axisLine={{ stroke: chartTheme.axisLine }}
+                    tickLine={{ stroke: chartTheme.axisLine }}
+                  />
                   <Tooltip
                     formatter={(value, name, props) => {
                         const row = props.payload;
@@ -165,13 +175,23 @@ const countChart = useMemo(() => {
                         if (name === "rank3") return [value, row.rank3_name || "—"];
                         return [value, name];
                     }}
+                    contentStyle={chartTheme.tooltipStyle}
+                    labelStyle={chartTheme.tooltipLabelStyle}
+                    itemStyle={chartTheme.tooltipItemStyle}
+                    cursor={chartTheme.tooltipCursor}
+                  />
+
+                    <Brush
+                      dataKey="month"
+                      height={25}
+                      fill={chartTheme.brush.fill}
+                      stroke={chartTheme.brush.stroke}
+                      travellerStroke={chartTheme.brush.travellerStroke}
                     />
 
-                    <Brush dataKey="month" height={25} />
-
-                    <Bar dataKey="rank1" fill={COLORS[0]} />
-                    <Bar dataKey="rank2" fill={COLORS[1]} />
-                    <Bar dataKey="rank3" fill={COLORS[2]} />
+                    <Bar dataKey="rank1" fill={CHART_PALETTE[0]} />
+                    <Bar dataKey="rank2" fill={CHART_PALETTE[1]} />
+                    <Bar dataKey="rank3" fill={CHART_PALETTE[2]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -233,9 +253,18 @@ const countChart = useMemo(() => {
             {loading ? <Spinner /> : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={countChart}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                    axisLine={{ stroke: chartTheme.axisLine }}
+                    tickLine={{ stroke: chartTheme.axisLine }}
+                  />
+                  <YAxis
+                    tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                    axisLine={{ stroke: chartTheme.axisLine }}
+                    tickLine={{ stroke: chartTheme.axisLine }}
+                  />
                   <Tooltip
   formatter={(value, name, props) => {
     const row = props.payload;
@@ -244,13 +273,23 @@ const countChart = useMemo(() => {
     if (name === "rank3") return [value, row.rank3_name || "—"];
     return [value, name];
   }}
+  contentStyle={chartTheme.tooltipStyle}
+  labelStyle={chartTheme.tooltipLabelStyle}
+  itemStyle={chartTheme.tooltipItemStyle}
+  cursor={chartTheme.tooltipCursor}
 />
 
-<Brush dataKey="month" height={25} />
+<Brush
+  dataKey="month"
+  height={25}
+  fill={chartTheme.brush.fill}
+  stroke={chartTheme.brush.stroke}
+  travellerStroke={chartTheme.brush.travellerStroke}
+/>
 
-<Bar dataKey="rank1" fill={COLORS[0]} />
-<Bar dataKey="rank2" fill={COLORS[1]} />
-<Bar dataKey="rank3" fill={COLORS[2]} />
+<Bar dataKey="rank1" fill={CHART_PALETTE[0]} />
+<Bar dataKey="rank2" fill={CHART_PALETTE[1]} />
+<Bar dataKey="rank3" fill={CHART_PALETTE[2]} />
 
                 </BarChart>
               </ResponsiveContainer>

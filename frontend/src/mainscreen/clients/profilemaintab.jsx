@@ -17,6 +17,7 @@ import {
   Bar
 } from "recharts";
 import InvoiceViewPopup from "./InvoiceViewPopup";
+import { CHART_SERIES, useChartTheme } from "../../theme/chartTheme";
 
 export default function ProfileMainTab({ client, canEditClient }) {
   const [clientData, setClientData] = useState(null);
@@ -29,6 +30,7 @@ const [monthlyTotals, setMonthlyTotals] = useState([]);
 const [loadingMonthly, setLoadingMonthly] = useState(false);
 const [invoiceToPrint, setInvoiceToPrint] = useState(null);
 const {t} = useTranslation();
+const chartTheme = useChartTheme();
     const [company, setCompany] = useState(null);
     
     useEffect(() => {
@@ -355,14 +357,28 @@ setPrintInvoiceData({
       <div className="w-full h-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={monthlyTotals}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+            <XAxis
+              dataKey="month"
+              tick={{ fill: chartTheme.axis, fontSize: 12 }}
+              axisLine={{ stroke: chartTheme.axisLine }}
+              tickLine={{ stroke: chartTheme.axisLine }}
+            />
+            <YAxis
+              tick={{ fill: chartTheme.axis, fontSize: 12 }}
+              axisLine={{ stroke: chartTheme.axisLine }}
+              tickLine={{ stroke: chartTheme.axisLine }}
+            />
+            <Tooltip
+              contentStyle={chartTheme.tooltipStyle}
+              labelStyle={chartTheme.tooltipLabelStyle}
+              itemStyle={chartTheme.tooltipItemStyle}
+              cursor={chartTheme.tooltipCursor}
+            />
             <Line
               type="monotone"
               dataKey="total"
-              stroke="#2f788a"
+              stroke={CHART_SERIES.primary}
               strokeWidth={3}
               dot={false}
             />
@@ -419,13 +435,28 @@ setPrintInvoiceData({
     ) : (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={monthlySalesCount}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+          <XAxis
+            dataKey="month"
+            tick={{ fill: chartTheme.axis, fontSize: 12 }}
+            axisLine={{ stroke: chartTheme.axisLine }}
+            tickLine={{ stroke: chartTheme.axisLine }}
+          />
+          <YAxis
+            allowDecimals={false}
+            tick={{ fill: chartTheme.axis, fontSize: 12 }}
+            axisLine={{ stroke: chartTheme.axisLine }}
+            tickLine={{ stroke: chartTheme.axisLine }}
+          />
+          <Tooltip
+            contentStyle={chartTheme.tooltipStyle}
+            labelStyle={chartTheme.tooltipLabelStyle}
+            itemStyle={chartTheme.tooltipItemStyle}
+            cursor={chartTheme.tooltipCursor}
+          />
           <Bar
             dataKey="count"
-            fill="#1B3C53"
+            fill={CHART_SERIES.deep}
             radius={[6, 6, 0, 0]}
           />
         </BarChart>

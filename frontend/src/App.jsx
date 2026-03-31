@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getDirFromLang } from "./utils/lang";
 import api from "./utils/axiosInstance";
+import { clearStoragePreservingTheme } from "./theme/ThemeProvider";
 
 export default function App() {
   const { i18n } = useTranslation();
@@ -25,7 +26,7 @@ export default function App() {
   
   useEffect(() => {
     const handleSessionExpired = () => {
-      localStorage.clear();
+      clearStoragePreservingTheme(localStorage);
       sessionStorage.clear();
       setSessionExpired(true);
     };
@@ -40,7 +41,7 @@ export default function App() {
   // ==========================================
   useEffect(() => {
 const handleForceLogout = () => {
-  localStorage.clear();
+  clearStoragePreservingTheme(localStorage);
 
   // 👇 tell login WHY we were logged out
   localStorage.setItem("logout_reason", "PLAN_EXPIRED");
@@ -68,13 +69,13 @@ useEffect(() => {
       const expired = payload.exp * 1000 < Date.now();
 
       if (expired) {
-        localStorage.clear();
+        clearStoragePreservingTheme(localStorage);
         sessionStorage.clear();
         setSessionExpired(true);
         clearInterval(interval);
       }
     } catch {
-      localStorage.clear();
+      clearStoragePreservingTheme(localStorage);
       sessionStorage.clear();
       setSessionExpired(true);
       clearInterval(interval);
@@ -93,7 +94,7 @@ useEffect(() => {
 
       // optional extra safety if backend returns active flag
       if (res.data?.active === false) {
-        localStorage.clear();
+        clearStoragePreservingTheme(localStorage);
         sessionStorage.clear();
         window.dispatchEvent(new Event("force-logout"));
       }

@@ -29,7 +29,14 @@ html[dir="rtl"] .rtl-flip {
   @media print {
   body {
     margin: 0;
+    background: white;
     color: black;
+  }
+
+  html,
+  #root {
+    background: white !important;
+    color: black !important;
   }
 
   .page {

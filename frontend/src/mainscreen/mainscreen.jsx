@@ -15,6 +15,7 @@ import Settings from "./settings/settings";
 import ReceiptsScreen from "./receipts/ReceiptsScreen";
 import POSScreen from "./POS/posscreen";
 import { useTranslation } from "react-i18next";
+import { useAppTheme } from "../theme/ThemeProvider";
 
 const MainScreen = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -25,6 +26,7 @@ const [loggingOut, setLoggingOut] = useState(false);
 const [isSalesExpanded, setIsSalesExpanded] = useState(false);
 const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
 const { t } = useTranslation();
+const { theme, isDark, toggleTheme } = useAppTheme();
 
 const logout = () => {
   window.location.hash = "#/login";
@@ -71,13 +73,13 @@ const raw = localStorage.getItem("permissions");
       <div className="relative flex h-full w-full ">
         {/* Sidebar */}
 <div
-  className={`absolute top-0 flex flex-col bg-gray-600 text-white border-[#2f788a] h-full transition-all duration-150 z-50
+  className={`app-sidebar absolute top-0 flex flex-col bg-gray-600 text-white border-[#2f788a] h-full transition-all duration-150 z-50
     ${isCollapsed ? "w-[70px]" : "w-60"} start-0 border-e overflow-hidden`}
   onMouseEnter={() => setIsCollapsed(false)}
   onMouseLeave={() => setIsCollapsed(true)}
 >
   {/* Logo */}
-  <div className="h-20 border-b border-gray-500 mb-2 bg-white flex items-center justify-center overflow-hidden">
+  <div className="app-sidebar-logo h-20 border-b border-gray-500 mb-2 bg-white flex items-center justify-center overflow-hidden">
     {isCollapsed ? (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -361,6 +363,68 @@ const raw = localStorage.getItem("permissions");
 
   {/* Bottom Section */}
   <div className="mt-auto">
+    <div className="border-t border-gray-500 px-2 py-2">
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="app-theme-toggle"
+        title={t("settings.theme.quick_toggle")}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="app-theme-toggle__icon">
+            {isDark ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.596.748-3.752A9.753 9.753 0 1 0 21.752 15.002Z"
+                />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 3v1.5m0 15V21m9-9h-1.5M4.5 12H3m15.364 6.364-1.06-1.06M6.697 6.697l-1.06-1.06m12.727 0-1.06 1.06M6.697 17.303l-1.06 1.06M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
+                />
+              </svg>
+            )}
+          </span>
+
+          {!isCollapsed && (
+            <div className="min-w-0 text-start">
+              <div className="text-sm font-medium">
+                {t("settings.theme.title")}
+              </div>
+              <div className="text-xs text-white/70">
+                {t(`settings.theme.mode_${theme}`)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!isCollapsed && (
+          <span className="app-theme-toggle__badge">
+            {t("settings.theme.actions.toggle")}
+          </span>
+        )}
+      </button>
+    </div>
+
     {canView("users") && (
       <div className="border-t border-gray-500">
         <NavLink
@@ -454,7 +518,7 @@ const raw = localStorage.getItem("permissions");
   </div>
 </div>
         {/* Main Body */}
-        <div className="flex-grow max-h-screen ms-[70px] transition-all duration-300 bg-gray-100">
+        <div className="app-main-content flex-grow max-h-screen ms-[70px] transition-all duration-300 bg-gray-100">
         <Routes>
           <Route path="/" element={<Navigate to={firstAllowedRoute} replace />} />
           
@@ -539,7 +603,7 @@ const raw = localStorage.getItem("permissions");
 {showLogoutConfirm && (
   <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[999]">
 
-    <div className="bg-white rounded-2xl shadow-2xl w-80 p-6 text-center border border-gray-200">
+    <div className="app-modal-card bg-white rounded-2xl shadow-2xl w-80 p-6 text-center border border-gray-200">
 
       {/* Icon */}
       <div className="flex justify-center mb-3">
