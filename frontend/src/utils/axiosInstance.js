@@ -1,5 +1,6 @@
 import axios from "axios";
 import { BASE_URL } from "../config";
+import { clearStoragePreservingTheme } from "../theme/ThemeProvider";
 
 let isSessionExpiredHandled = false;
 
@@ -39,7 +40,7 @@ api.interceptors.response.use(
     // PLAN EXPIRED
     // ============================
     if (status === 403 && code === "PLAN_EXPIRED") {
-      localStorage.clear();
+      clearStoragePreservingTheme(localStorage);
       window.dispatchEvent(new Event("force-logout"));
       return Promise.reject(error);
     }
@@ -54,7 +55,7 @@ api.interceptors.response.use(
     ) {
       isSessionExpiredHandled = true;
 
-      localStorage.clear();
+      clearStoragePreservingTheme(localStorage);
 
       window.dispatchEvent(
         new CustomEvent("session-expired")

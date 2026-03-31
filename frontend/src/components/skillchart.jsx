@@ -10,15 +10,24 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { CHART_SERIES, useChartTheme } from '../theme/chartTheme';
 
 const SkillChart = ({ data, skillName }) => {
+const chartTheme = useChartTheme();
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-gradient-to-br from-[#03102f] via-black to-[#03102f]  border-[#5ce1e6] rounded-md px-4 py-2 shadow-md text-sm text-white backdrop-blur-sm">
-        <p className="mb-1 text-[#5ce1e6] font-semibold">{label}</p>
-        <p>Level: <span className="font-bold text-white">{payload[0].value}</span></p>
+      <div
+        className="rounded-md px-4 py-2 shadow-md text-sm backdrop-blur-sm"
+        style={chartTheme.tooltipStyle}
+      >
+        <p className="mb-1 font-semibold" style={{ color: CHART_SERIES.primary }}>
+          {label}
+        </p>
+        <p style={{ color: chartTheme.tooltipItemStyle.color }}>
+          Level: <span className="font-bold" style={{ color: chartTheme.tooltipLabelStyle.color }}>{payload[0].value}</span>
+        </p>
       </div>
     );
   }
@@ -33,13 +42,21 @@ const CustomTooltip = ({ active, payload, label }) => {
           data={data}
           margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-          <XAxis dataKey="week" stroke="#ccc" />
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+          <XAxis
+            dataKey="week"
+            stroke={chartTheme.axis}
+            tick={{ fill: chartTheme.axis, fontSize: 12 }}
+            axisLine={{ stroke: chartTheme.axisLine }}
+            tickLine={{ stroke: chartTheme.axisLine }}
+          />
           <YAxis
-            stroke="#ccc"
+            stroke={chartTheme.axis}
             domain={[1, 5]}
             ticks={[1, 2, 3, 4, 5]}
             tickLine={false}
+            tick={{ fill: chartTheme.axis, fontSize: 12 }}
+            axisLine={{ stroke: chartTheme.axisLine }}
             />
           <Tooltip content={<CustomTooltip />} />
 
@@ -47,7 +64,7 @@ const CustomTooltip = ({ active, payload, label }) => {
           <Line
             type="monotone"
             dataKey="level"
-            stroke="#5ce1e6"
+            stroke={CHART_SERIES.primary}
             strokeWidth={2}
             activeDot={{ r: 6 }}
           />

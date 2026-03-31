@@ -38,7 +38,9 @@
     "react-datepicker": "^7.6.0",
     "react-dom": "^18.3.1",
     "react-i18next": "^15.4.0",
+    "react-router-dom": "^7.13.1",
     "react-to-print": "^2.14.13",
+    "recharts": "^3.8.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

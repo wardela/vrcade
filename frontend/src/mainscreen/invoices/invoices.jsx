@@ -1194,8 +1194,8 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
   `}
 >
 {/* Header */}
-<div className="p-6 border-b shadow flex flex-col gap-4">
-<div className="flex items-center justify-between mb-4">
+<div className="p-6 border-b shadow flex flex-col gap-4 pb-1">
+<div className="flex items-center justify-between ">
   {/* Title */}
 <div className="flex items-center gap-3">
   {isSidebarCollapsed && (
@@ -1548,33 +1548,40 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
 </div>
 </div>
 <div className={isLocked ? "pointer-events-auto" : ""}>
-<div className="flex items-center justify-end gap-2"> 
+
+<div className="flex items-center justify-between "> 
+
+<div className="flex items-center gap-2">
+
+
+{isEditable && (
+  <div className=" flex justify-start text-xs">
+    <button
+      onClick={() => isEditable && setShowItemModal(true)}
+      className="px-4 py-1 bg-[#2f788a] text-white rounded hover:bg-[#276472] transition shadow border border-2 border-[#2f788a]"
+    >
+      {t("Invoices.add_item")}
+    </button>
+  </div>
+)}
+{isEditable && (
+  <div className=" flex justify-start text-xs">
+    <button
+      onClick={addEmptyLine}
+      className="px-4 py-1 bg-[#fffff] text-[#2f788a] rounded hover:bg-gray-200 transition shadow border border-2 border-[#2f788a]"
+    >
+      {t("Invoices.add_empty_line")}
+    </button>
+  </div>
+)}
+</div>
+  <div className="flex items-center gap-1 text-sm text-gray-500">
 <button
   onClick={() => setIsHeaderCollapsed((prev) => !prev)}
   className="p-2 rounded-md border border-gray-300 hover:bg-gray-100 transition flex items-center justify-center"
   title={isHeaderCollapsed ? "Expand header" : "Collapse header"}
 >
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className={`w-6 h-6 transition-transform duration-300 ${
-      isHeaderCollapsed ? "rotate-180" : "rotate-0"
-    }`}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="m4.5 18.75 7.5-7.5 7.5 7.5"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="m4.5 12.75 7.5-7.5 7.5 7.5"
-    />
-  </svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-chevrons-up-down-icon lucide-list-chevrons-up-down"><path d="M3 5h8"/><path d="M3 12h8"/><path d="M3 19h8"/><path d="m15 8 3-3 3 3"/><path d="m15 16 3 3 3-3"/></svg>
 </button>
 <button
   onClick={() => setShowDiscount(prev => !prev)}
@@ -1607,13 +1614,14 @@ const isReadOnlyUser = !canAddInvoice && !canEditInvoice;
 </div>
 </div>
 </div>
+</div>
 
   {/* Table of Items */}
 {/* Table of Items */}
 <div className="flex-grow min-h-0 pb-2">
   <div className="h-full overflow-auto  ">
-    <table className="w-full border-collapse text-sm">
-      <thead className="text-gray-700 text-sm">
+    <table className="w-full border-collapse text-xs">
+      <thead className="text-gray-700 text-xs">
     <tr>
       <th className=" sticky top-0 z-20 bg-gray-100 border p-2 text-center w-12">{t("Invoices.items.exempt")}</th>
       <th className="sticky top-0 z-20 bg-gray-100 border p-2 text-center w-12">#</th>
@@ -2024,28 +2032,8 @@ className={`w-full border rounded px-2 py-1
 
 </div>
 {/* + Add Line Button */}
-<div className=" gap-2 flex justify-end pe-2 pb-2 text-xs">
-  {isEditable && (
-  <div className=" flex justify-start">
-    <button
-      onClick={addEmptyLine}
-      className="px-4 py-2 bg-[#fffff] text-[#2f788a] rounded hover:bg-gray-200 transition shadow border border-2 border-[#2f788a]"
-    >
-      {t("Invoices.add_empty_line")}
-    </button>
-  </div>
-)}
-
-{isEditable && (
-  <div className=" flex justify-start">
-    <button
-      onClick={() => isEditable && setShowItemModal(true)}
-      className="px-4 py-2 bg-[#2f788a] text-white rounded hover:bg-[#276472] transition shadow"
-    >
-      {t("Invoices.add_item")}
-    </button>
-  </div>
-)}
+<div className=" gap-2 flex justify-end pe-2 pb-2 ">
+  
 </div>
 
 

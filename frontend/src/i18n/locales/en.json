@@ -20,9 +20,34 @@
     "subtitle": "Application preferences",
 
     "tabs": {
+      "theme": "Theme",
       "language": "Language",
       "zoom": "Zoom",
       "about": "Contact & About"
+    },
+
+    "theme": {
+      "title": "Theme",
+      "description": "Choose how the application looks without changing your data, workflow, or layout.",
+      "quick_toggle": "Toggle theme",
+      "default_badge": "Default",
+      "mode_light": "Light",
+      "mode_dark": "Dark",
+      "actions": {
+        "enable": "Enable",
+        "active": "Active",
+        "toggle": "Switch"
+      },
+      "choices": {
+        "light": {
+          "title": "Light",
+          "description": "Keeps the current appearance exactly as the default experience."
+        },
+        "dark": {
+          "title": "Dark",
+          "description": "Adds a low-glare workspace across pages, tables, forms, and charts."
+        }
+      }
     },
 
     "language": {

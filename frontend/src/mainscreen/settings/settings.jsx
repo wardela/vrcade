@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import AppLogo from "../../components/applogo";
 import BrandLogo from "../../components/brandlogo";
+import { useAppTheme } from "../../theme/ThemeProvider";
 
 const TABS = [
+  { key: "theme", label: "Theme" },
   { key: "language", label: "Language" },
   { key: "zoom", label: "Zoom" },
   { key: "about", label: "Contact & About" },
@@ -13,6 +15,7 @@ export default function Settings({ onClose }) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState("language");
   const isArabic = i18n.language === "ar";
+  const { theme, setTheme } = useAppTheme();
   /* ===============================
      LANGUAGE (EXACT SAME LOGIC AS BEFORE)
   =============================== */
@@ -41,7 +44,7 @@ useEffect(() => {
     >
       {/* PANEL */}
 <div
-  className="bg-white shadow-[0_20px_60px_-10px_rgba(0,0,0,0.25)] 
+  className="bg-white shadow-[0_20px_60px_-10px_rgba(0,0,0,0.25)] app-modal-card 
              w-1/2 h-full 
              border border-gray-200 
              overflow-hidden 
@@ -117,6 +120,183 @@ useEffect(() => {
 
           {/* CONTENT */}
           <div className="flex-1 p-6 overflow-y-auto">
+            {activeTab === "theme" && (
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="size-6"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.596.748-3.752A9.753 9.753 0 1 0 21.752 15.002Z"
+                      />
+                    </svg>
+                    <span>{t("settings.theme.title")}</span>
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {t("settings.theme.description")}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6 max-w-4xl">
+                  {["light", "dark"].map((option) => {
+                    const active = theme === option;
+                    const isLightOption = option === "light";
+
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setTheme(option)}
+                        className="theme-choice-card text-start rounded-3xl p-5 transition-all duration-200"
+                        data-active={active}
+                      >
+                        <div className="theme-choice-preview rounded-2xl border border-gray-200 p-4">
+                          <div className="flex gap-3 h-32">
+                            <div
+                              className="theme-choice-preview__sidebar rounded-2xl w-16 p-3 flex flex-col justify-between"
+                              style={{
+                                background:
+                                  option === "dark"
+                                    ? "linear-gradient(180deg, #0b1220, #0f172a)"
+                                    : "#4b5563",
+                              }}
+                            >
+                              <div className="h-2.5 rounded-full bg-white/70" />
+                              <div className="space-y-2">
+                                <div className="h-2 rounded-full bg-white/30" />
+                                <div className="h-2 rounded-full bg-white/20" />
+                                <div className="h-2 rounded-full bg-white/10" />
+                              </div>
+                            </div>
+
+                            <div className="flex-1 space-y-3">
+                              <div
+                                className="theme-choice-preview__surface rounded-2xl px-3 py-2.5 flex items-center justify-between"
+                                style={
+                                  option === "dark"
+                                    ? {
+                                        background: "#0f172a",
+                                        borderColor: "#334155",
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <div>
+                                  <div
+                                    className="h-2.5 rounded-full mb-2"
+                                    style={{
+                                      width: "4.5rem",
+                                      background:
+                                        option === "dark" ? "#e2e8f0" : "#111827",
+                                    }}
+                                  />
+                                  <div
+                                    className="h-2 rounded-full"
+                                    style={{
+                                      width: "6rem",
+                                      background:
+                                        option === "dark" ? "#64748b" : "#d1d5db",
+                                    }}
+                                  />
+                                </div>
+                                <div className="theme-choice-preview__line h-10 w-14 rounded-xl" />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div
+                                  className="theme-choice-preview__surface rounded-2xl p-3"
+                                  style={
+                                    option === "dark"
+                                      ? {
+                                          background: "#0f172a",
+                                          borderColor: "#334155",
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  <div
+                                    className="h-2 rounded-full mb-2"
+                                    style={{
+                                      width: "3.5rem",
+                                      background:
+                                        option === "dark" ? "#94a3b8" : "#9ca3af",
+                                    }}
+                                  />
+                                  <div className="theme-choice-preview__muted h-10 rounded-xl" />
+                                </div>
+
+                                <div
+                                  className="theme-choice-preview__surface rounded-2xl p-3"
+                                  style={
+                                    option === "dark"
+                                      ? {
+                                          background: "#0f172a",
+                                          borderColor: "#334155",
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  <div
+                                    className="h-2 rounded-full mb-2"
+                                    style={{
+                                      width: "3.5rem",
+                                      background:
+                                        option === "dark" ? "#94a3b8" : "#9ca3af",
+                                    }}
+                                  />
+                                  <div
+                                    className="theme-choice-preview__line h-10 rounded-xl"
+                                    style={{ opacity: isLightOption ? 0.8 : 1 }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 flex items-start justify-between gap-4">
+                          <div>
+                            <div className="text-base font-semibold text-gray-900">
+                              {t(`settings.theme.choices.${option}.title`)}
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {t(`settings.theme.choices.${option}.description`)}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-2">
+                            {isLightOption && (
+                              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#2f788a]">
+                                {t("settings.theme.default_badge")}
+                              </span>
+                            )}
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                active
+                                  ? "bg-[#2f788a] text-white"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {active
+                                ? t("settings.theme.actions.active")
+                                : t("settings.theme.actions.enable")}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* ===============================
                 LANGUAGE TAB

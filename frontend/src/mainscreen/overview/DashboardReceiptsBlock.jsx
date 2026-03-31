@@ -12,6 +12,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import { CHART_SERIES, useChartTheme } from "../../theme/chartTheme";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -34,6 +35,7 @@ export default function DashboardReceiptsBlock() {
   const [loading, setLoading] = useState(true);
   const [yearLoading, setYearLoading] = useState(false);
   const { t } = useTranslation();
+  const chartTheme = useChartTheme();
 
   const fetchData = async (y, { yearChange = false } = {}) => {
     try {
@@ -136,24 +138,39 @@ export default function DashboardReceiptsBlock() {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={monthlyChart}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={money} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                      axisLine={{ stroke: chartTheme.axisLine }}
+                      tickLine={{ stroke: chartTheme.axisLine }}
+                    />
+                    <YAxis
+                      tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                      axisLine={{ stroke: chartTheme.axisLine }}
+                      tickLine={{ stroke: chartTheme.axisLine }}
+                    />
+                    <Tooltip
+                      formatter={money}
+                      contentStyle={chartTheme.tooltipStyle}
+                      labelStyle={chartTheme.tooltipLabelStyle}
+                      itemStyle={chartTheme.tooltipItemStyle}
+                      cursor={chartTheme.tooltipCursor}
+                    />
                     <Area 
                       type="monotone"
                       dataKey="due" 
-                      stroke="#dc2626" 
-                      fill="#dc2626" 
-                      fillOpacity={0.2}
+                      stroke={CHART_SERIES.danger} 
+                      fill={CHART_SERIES.danger} 
+                      fillOpacity={chartTheme.areaOpacity}
                       strokeWidth={2}
                     />
                     <Area 
                       type="monotone"
                       dataKey="paid" 
-                      stroke="#16a34a" 
-                      fill="#16a34a" 
-                      fillOpacity={0.2}
+                      stroke={CHART_SERIES.success} 
+                      fill={CHART_SERIES.success} 
+                      fillOpacity={chartTheme.areaOpacity}
                       strokeWidth={2}
                     />
                   </AreaChart>

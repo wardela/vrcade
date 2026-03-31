@@ -16,6 +16,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import { CHART_SERIES, useChartTheme } from "../../theme/chartTheme";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -39,6 +40,7 @@ export default function DashboardOverviewBlock({
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const { t } = useTranslation();
+  const chartTheme = useChartTheme();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);      // initial load
   const [yearLoading, setYearLoading] = useState(false); // only when year changes
@@ -262,16 +264,31 @@ export default function DashboardOverviewBlock({
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={monthlyNet}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={money} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                      axisLine={{ stroke: chartTheme.axisLine }}
+                      tickLine={{ stroke: chartTheme.axisLine }}
+                    />
+                    <YAxis
+                      tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                      axisLine={{ stroke: chartTheme.axisLine }}
+                      tickLine={{ stroke: chartTheme.axisLine }}
+                    />
+                    <Tooltip
+                      formatter={money}
+                      contentStyle={chartTheme.tooltipStyle}
+                      labelStyle={chartTheme.tooltipLabelStyle}
+                      itemStyle={chartTheme.tooltipItemStyle}
+                      cursor={chartTheme.tooltipCursor}
+                    />
                     <Area
                       type="monotone"
                       dataKey="net"
-                      stroke="#2f788a"
-                      fill="#2f788a"
-                      fillOpacity={0.2}
+                      stroke={CHART_SERIES.primary}
+                      fill={CHART_SERIES.primary}
+                      fillOpacity={chartTheme.areaOpacity}
                       strokeWidth={2}
                     />
                   </AreaChart>
@@ -411,11 +428,26 @@ export default function DashboardOverviewBlock({
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyAvg}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={money} />
-                    <Bar dataKey="avg" fill="#2f788a" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                      axisLine={{ stroke: chartTheme.axisLine }}
+                      tickLine={{ stroke: chartTheme.axisLine }}
+                    />
+                    <YAxis
+                      tick={{ fill: chartTheme.axis, fontSize: 12 }}
+                      axisLine={{ stroke: chartTheme.axisLine }}
+                      tickLine={{ stroke: chartTheme.axisLine }}
+                    />
+                    <Tooltip
+                      formatter={money}
+                      contentStyle={chartTheme.tooltipStyle}
+                      labelStyle={chartTheme.tooltipLabelStyle}
+                      itemStyle={chartTheme.tooltipItemStyle}
+                      cursor={chartTheme.tooltipCursor}
+                    />
+                    <Bar dataKey="avg" fill={CHART_SERIES.primary} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
