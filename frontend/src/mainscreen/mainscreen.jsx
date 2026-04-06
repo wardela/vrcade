@@ -191,7 +191,7 @@ const raw = localStorage.getItem("permissions");
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 9.75h16.5M4.5 6.75h15A1.5 1.5 0 0 1 21 8.25v10.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.75V8.25a1.5 1.5 0 0 1 1.5-1.5ZM8.25 14.25h.008v.008H8.25v-.008Zm3.75 0h.008v.008H12v-.008Zm3.75 0h.008v.008h-.008v-.008Z" />
               </svg>
-              <span className="whitespace-nowrap text-sm">Events</span>
+              <span className="whitespace-nowrap text-sm">{t("sidebar.events")}</span>
             </NavLink>
           )}
 
@@ -238,8 +238,12 @@ const raw = localStorage.getItem("permissions");
                   <path d="m9 10 2 2 4-4"/><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M12 17v4"/><path d="M8 21h8"/>
                 </svg>
                 <span className="whitespace-nowrap text-sm">{t("UserModal.modules.pos")}</span>
-              </NavLink>
-
+  
+            </NavLink>
+            </>
+)}
+    {canView("dashboard") && (
+<>
               <NavLink
                 to="/pos-management"
                 className={({ isActive }) =>
@@ -251,7 +255,7 @@ const raw = localStorage.getItem("permissions");
                   <rect width="18" height="18" x="3" y="3" rx="2" />
                   <path d="M7 7h10M7 12h10M7 17h6" />
                 </svg>
-                <span className="whitespace-nowrap text-sm">POS Monitor</span>
+                <span className="whitespace-nowrap text-sm">{t("sidebar.pos_monitor")}</span>
               </NavLink>
             </>
           )}

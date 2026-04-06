@@ -13,6 +13,35 @@ const createPosSessionError = (message, statusCode, code, details = null) => {
 
 const toNumber = (value) => Number(value || 0);
 
+const getSessionDuration = (startedAt, endedAt) => {
+  if (!startedAt) {
+    return {
+      duration_minutes: 0,
+      duration_label: "0h 0m",
+    };
+  }
+
+  const start = new Date(startedAt);
+  const end = endedAt ? new Date(endedAt) : new Date();
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return {
+      duration_minutes: 0,
+      duration_label: "0h 0m",
+    };
+  }
+
+  const diffMs = Math.max(0, end.getTime() - start.getTime());
+  const durationMinutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(durationMinutes / 60);
+  const minutes = durationMinutes % 60;
+
+  return {
+    duration_minutes: durationMinutes,
+    duration_label: `${hours}h ${minutes}m`,
+  };
+};
+
 const normalizeSession = (row) => {
   if (!row) return null;
 
@@ -306,20 +335,36 @@ const getSessionSummary = async (
     (sum, item) => sum + toNumber(item.total_tokens),
     0,
   );
+  const duration = getSessionDuration(session.started_at, session.ended_at);
 
   return {
     ...session,
+    employee_full_name: session.full_name || null,
     invoice_count: invoiceStats.invoice_count,
+    total_sales: invoiceStats.total_sales_amount,
     total_sales_amount: invoiceStats.total_sales_amount,
     total_tokens_sold: totalTokensSold,
+    duration_minutes: duration.duration_minutes,
+    duration_label: duration.duration_label,
     sold_items_breakdown: soldItemsBreakdown,
     payment_totals: {
       cash: paymentStats.cash,
       card: paymentStats.card,
       transfer: paymentStats.transfer,
+      bank_transfer: paymentStats.transfer,
     },
+    total_cash: paymentStats.cash,
+    total_card: paymentStats.card,
+    total_bank_transfer: paymentStats.transfer,
     total_cash_received: paymentStats.total_cash_received,
     total_change_given: paymentStats.total_change_given,
+    totals: {
+      sales: invoiceStats.total_sales_amount,
+      tokens_sold: totalTokensSold,
+      cash: paymentStats.cash,
+      card: paymentStats.card,
+      bank_transfer: paymentStats.transfer,
+    },
     invoices,
   };
 };

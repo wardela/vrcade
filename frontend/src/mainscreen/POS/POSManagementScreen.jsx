@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useReactToPrint } from "react-to-print";
 import api from "../../utils/axiosInstance";
+import SessionSummaryPrint from "./SessionSummaryPrint";
+import { useTranslation } from "react-i18next";
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -22,7 +25,6 @@ const formatCount = (value) =>
     minimumFractionDigits: Number(value || 0) % 1 === 0 ? 0 : 3,
     maximumFractionDigits: 3,
   });
-const formatTokens = (value) => `${formatCount(value)} Tokens`;
 
 const getApiMessage = (error, fallbackMessage) =>
   error?.response?.data?.message || fallbackMessage;
@@ -36,19 +38,23 @@ const readPermissions = () => {
 };
 
 function NoAccess() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex h-full w-full items-center justify-center bg-base-200 p-6">
       <div className="rounded-2xl border border-base-300 bg-white px-8 py-10 text-center shadow-xl">
-        <h2 className="text-xl font-bold text-gray-900">POS Access Required</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t("POSMonitor.no_access.title")}</h2>
         <p className="mt-2 text-sm text-gray-600">
-          Your account does not have permission to open POS management.
+          {t("POSMonitor.no_access.message")}
         </p>
       </div>
     </div>
   );
 }
 
-function StatusBadge({ active, activeLabel = "Active", inactiveLabel = "Inactive" }) {
+function StatusBadge({ active, activeLabel, inactiveLabel }) {
+  const { t } = useTranslation();
+
   return (
     <span
       className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
@@ -57,12 +63,15 @@ function StatusBadge({ active, activeLabel = "Active", inactiveLabel = "Inactive
           : "bg-slate-200 text-slate-600"
       }`}
     >
-      {active ? activeLabel : inactiveLabel}
+      {active
+        ? activeLabel || t("POSMonitor.badges.active")
+        : inactiveLabel || t("POSMonitor.badges.inactive")}
     </span>
   );
 }
 
 function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEdit }) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -83,7 +92,7 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
     event.preventDefault();
 
     if (!name.trim()) {
-      setError("POS station name is required.");
+      setError(t("POSMonitor.messages.pos_name_required"));
       return;
     }
 
@@ -100,10 +109,10 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
       <div className="w-full max-w-lg rounded-3xl border border-base-300 bg-white shadow-2xl">
         <div className="border-b border-base-300 px-6 py-5">
           <h2 className="text-xl font-semibold text-gray-900">
-            {initialData ? "Edit POS Station" : "Create POS Station"}
+            {initialData ? t("POSMonitor.actions.edit_pos") : t("POSMonitor.actions.create_pos")}
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Keep the station names clear so cashiers can pick the correct one quickly.
+            {t("POSMonitor.modal.subtitle")}
           </p>
         </div>
 
@@ -115,34 +124,38 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
           )}
 
           <div>
-            <label className="text-sm font-medium text-gray-700">Name</label>
+            <label className="text-sm font-medium text-gray-700">{t("POSMonitor.fields.name")}</label>
             <input
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
               className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
-              placeholder="POS 1"
+              placeholder={t("POSMonitor.placeholders.pos_name")}
               disabled={submitting || !canEdit}
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">Description</label>
+            <label className="text-sm font-medium text-gray-700">
+              {t("POSMonitor.fields.description")}
+            </label>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               rows={3}
               className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
-              placeholder="Optional note for this station"
+              placeholder={t("POSMonitor.placeholders.description")}
               disabled={submitting || !canEdit}
             />
           </div>
 
           <label className="flex items-center justify-between rounded-2xl border border-base-300 bg-base-100 px-4 py-3">
             <div>
-              <div className="text-sm font-medium text-gray-800">Station status</div>
+              <div className="text-sm font-medium text-gray-800">
+                {t("POSMonitor.fields.station_status")}
+              </div>
               <div className="text-xs text-gray-500">
-                Inactive stations cannot be selected when starting a POS session.
+                {t("POSMonitor.modal.station_status_hint")}
               </div>
             </div>
 
@@ -162,10 +175,14 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
               onClick={onClose}
               disabled={submitting}
             >
-              Cancel
+              {t("POSMonitor.actions.cancel")}
             </button>
             <button type="submit" className="btn btn-primary" disabled={submitting || !canEdit}>
-              {submitting ? "Saving..." : initialData ? "Save Changes" : "Create POS"}
+              {submitting
+                ? t("POSMonitor.states.saving")
+                : initialData
+                  ? t("POSMonitor.actions.save_changes")
+                  : t("POSMonitor.actions.create_pos")}
             </button>
           </div>
         </form>
@@ -175,6 +192,7 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
 }
 
 function SessionDetailModal({ sessionId, onClose }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [session, setSession] = useState(null);
@@ -197,7 +215,7 @@ function SessionDetailModal({ sessionId, onClose }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(getApiMessage(err, "Failed to load session details"));
+          setError(getApiMessage(err, t("POSMonitor.messages.load_session_details_failed")));
         }
       } finally {
         if (!cancelled) {
@@ -220,14 +238,16 @@ function SessionDetailModal({ sessionId, onClose }) {
       <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-base-300 bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-base-300 px-6 py-5">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Session Details</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {t("POSMonitor.session.details_title")}
+            </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Review the full POS session breakdown for monitoring and cash-up.
+              {t("POSMonitor.session.details_subtitle")}
             </p>
           </div>
 
           <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-            Close
+            {t("POSMonitor.actions.close")}
           </button>
         </div>
 
@@ -235,7 +255,7 @@ function SessionDetailModal({ sessionId, onClose }) {
           {loading ? (
             <div className="flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-4 text-sm text-gray-600">
               <span className="loading loading-spinner loading-md text-[#2f788a]"></span>
-              Loading session details...
+              {t("POSMonitor.states.loading_session_details")}
             </div>
           ) : error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -245,15 +265,21 @@ function SessionDetailModal({ sessionId, onClose }) {
             <div className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">POS Station</div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">
+                    {t("POSMonitor.labels.pos_station")}
+                  </div>
                   <div className="mt-2 text-lg font-semibold text-gray-900">
                     {session.pos_point_name || session.pos || "—"}
                   </div>
-                  <div className="mt-1 text-sm text-gray-500">Session #{session.id}</div>
+                  <div className="mt-1 text-sm text-gray-500">
+                    {t("POSMonitor.labels.session_number", { id: session.id })}
+                  </div>
                 </div>
 
                 <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">Opened By</div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">
+                    {t("POSMonitor.labels.opened_by")}
+                  </div>
                   <div className="mt-2 text-lg font-semibold text-gray-900">
                     {session.full_name || session.username || "—"}
                   </div>
@@ -261,46 +287,50 @@ function SessionDetailModal({ sessionId, onClose }) {
                 </div>
 
                 <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">Started</div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">
+                    {t("POSMonitor.labels.started")}
+                  </div>
                   <div className="mt-2 text-sm font-semibold text-gray-900">
                     {formatDateTime(session.started_at)}
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">Ended</div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">
+                    {t("POSMonitor.labels.ended")}
+                  </div>
                   <div className="mt-2 text-sm font-semibold text-gray-900">
                     {formatDateTime(session.ended_at)}
                   </div>
                   <div className="mt-2">
                     <StatusBadge
                       active={session.status === "active" && !session.ended_at}
-                      activeLabel="Active Session"
-                      inactiveLabel="Ended Session"
+                      activeLabel={t("POSMonitor.badges.active_session")}
+                      inactiveLabel={t("POSMonitor.badges.ended_session")}
                     />
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <SummaryCard label="Invoices" value={session.invoice_count || 0} />
-                <SummaryCard label="Total Sales" value={formatCurrency(session.total_sales_amount)} />
+                <SummaryCard label={t("POSMonitor.summary.invoices")} value={session.invoice_count || 0} />
+                <SummaryCard label={t("POSMonitor.summary.total_sales")} value={formatCurrency(session.total_sales_amount)} />
                 <SummaryCard
-                  label="Total Tokens"
-                  value={formatTokens(session.total_tokens_sold)}
+                  label={t("POSMonitor.summary.total_tokens")}
+                  value={`${formatCount(session.total_tokens_sold)} ${t("POS.items.tokens")}`}
                 />
-                <SummaryCard label="Cash" value={formatCurrency(session.payment_totals?.cash)} />
-                <SummaryCard label="Card" value={formatCurrency(session.payment_totals?.card)} />
+                <SummaryCard label={t("POSMonitor.summary.cash")} value={formatCurrency(session.payment_totals?.cash)} />
+                <SummaryCard label={t("POSMonitor.summary.card")} value={formatCurrency(session.payment_totals?.card)} />
                 <SummaryCard
-                  label="Transfer"
+                  label={t("POSMonitor.summary.transfer")}
                   value={formatCurrency(session.payment_totals?.transfer)}
                 />
                 <SummaryCard
-                  label="Cash Received"
+                  label={t("POSMonitor.summary.cash_received")}
                   value={formatCurrency(session.total_cash_received)}
                 />
                 <SummaryCard
-                  label="Change Given"
+                  label={t("POSMonitor.summary.change_given")}
                   value={formatCurrency(session.total_change_given)}
                 />
               </div>
@@ -312,32 +342,34 @@ function SessionDetailModal({ sessionId, onClose }) {
                   onClick={() => setShowSoldItems((prev) => !prev)}
                 >
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-800">Sold Items Breakdown</h3>
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      {t("POSMonitor.session.sold_items_breakdown")}
+                    </h3>
                     <p className="mt-1 text-xs text-gray-500">
-                      Quantity, sales total, and token contribution for items sold in this session.
+                      {t("POSMonitor.session.sold_items_hint")}
                     </p>
                   </div>
 
                   <span className="text-sm font-medium text-[#2f788a]">
-                    {showSoldItems ? "Hide" : "Show"}
+                    {showSoldItems ? t("POSMonitor.actions.hide") : t("POSMonitor.actions.show")}
                   </span>
                 </button>
 
                 {showSoldItems && (
                   (session.sold_items_breakdown || []).length === 0 ? (
                     <div className="px-4 py-6 text-sm text-gray-500">
-                      No sold items were found for this session.
+                      {t("POSMonitor.states.no_sold_items")}
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 text-left text-gray-500">
                           <tr>
-                            <th className="px-4 py-3 font-medium">Item</th>
-                            <th className="px-4 py-3 text-right font-medium">Qty Sold</th>
-                            <th className="px-4 py-3 text-right font-medium">Total Sales</th>
-                            <th className="px-4 py-3 text-right font-medium">Tokens / Item</th>
-                            <th className="px-4 py-3 text-right font-medium">Total Tokens</th>
+                            <th className="px-4 py-3 font-medium">{t("POSMonitor.table.item")}</th>
+                            <th className="px-4 py-3 text-right font-medium">{t("POSMonitor.table.qty_sold")}</th>
+                            <th className="px-4 py-3 text-right font-medium">{t("POSMonitor.table.total_sales")}</th>
+                            <th className="px-4 py-3 text-right font-medium">{t("POSMonitor.table.tokens_per_item")}</th>
+                            <th className="px-4 py-3 text-right font-medium">{t("POSMonitor.table.total_tokens")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -372,22 +404,24 @@ function SessionDetailModal({ sessionId, onClose }) {
 
               <div className="overflow-hidden rounded-2xl border border-base-300">
                 <div className="border-b border-base-300 bg-base-100 px-4 py-3">
-                  <h3 className="text-sm font-semibold text-gray-800">Invoices in Session</h3>
+                  <h3 className="text-sm font-semibold text-gray-800">
+                    {t("POSMonitor.session.invoices_in_session")}
+                  </h3>
                 </div>
 
                 {(session.invoices || []).length === 0 ? (
                   <div className="px-4 py-6 text-sm text-gray-500">
-                    No invoices were linked to this session.
+                    {t("POSMonitor.states.no_invoices")}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 text-left text-gray-500">
                         <tr>
-                          <th className="px-4 py-3 font-medium">Invoice</th>
-                          <th className="px-4 py-3 font-medium">Client</th>
-                          <th className="px-4 py-3 font-medium">Date</th>
-                          <th className="px-4 py-3 text-right font-medium">Total</th>
+                          <th className="px-4 py-3 font-medium">{t("POSMonitor.table.invoice")}</th>
+                          <th className="px-4 py-3 font-medium">{t("POSMonitor.table.client")}</th>
+                          <th className="px-4 py-3 font-medium">{t("POSMonitor.table.date")}</th>
+                          <th className="px-4 py-3 text-right font-medium">{t("POSMonitor.table.total")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -397,7 +431,7 @@ function SessionDetailModal({ sessionId, onClose }) {
                               {invoice.invoice_number}
                             </td>
                             <td className="px-4 py-3 text-gray-600">
-                              {invoice.client || "Walk-in"}
+                              {invoice.client || t("POS.cart.walk_in")}
                             </td>
                             <td className="px-4 py-3 text-gray-600">
                               {formatDateTime(invoice.date)}
@@ -430,6 +464,7 @@ function SummaryCard({ label, value }) {
 }
 
 export default function POSManagementScreen() {
+  const { t } = useTranslation();
   const permissions = readPermissions();
   const posPerm = permissions?.pos || {};
   const canView = posPerm.view === true;
@@ -446,6 +481,19 @@ export default function POSManagementScreen() {
   const [sessionsByPosPointId, setSessionsByPosPointId] = useState({});
   const [historyLoadingFor, setHistoryLoadingFor] = useState(null);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [sessionPrintData, setSessionPrintData] = useState(null);
+  const [company, setCompany] = useState(null);
+  const [pendingPrint, setPendingPrint] = useState(false);
+  const [printingSessionId, setPrintingSessionId] = useState(null);
+  const printRef = useRef(null);
+
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    pageStyle: `
+      @page { size: A4; margin: 6mm; }
+      body { -webkit-print-color-adjust: exact; }
+    `,
+  });
 
   const loadMonitoring = async () => {
     setLoading(true);
@@ -455,7 +503,7 @@ export default function POSManagementScreen() {
       const res = await api.get("/api/pos-points/monitoring");
       setPosPoints(res.data?.pos_points || []);
     } catch (err) {
-      setError(getApiMessage(err, "Failed to load POS monitoring"));
+      setError(getApiMessage(err, t("POSMonitor.messages.load_monitoring_failed")));
     } finally {
       setLoading(false);
     }
@@ -463,7 +511,20 @@ export default function POSManagementScreen() {
 
   useEffect(() => {
     loadMonitoring();
+    api.get("/api/invoices/company").then((res) => {
+      setCompany(res.data || null);
+    }).catch(() => {
+      setCompany(null);
+    });
   }, []);
+
+  useEffect(() => {
+    if (!pendingPrint || !sessionPrintData || !company) return;
+
+    handlePrint();
+    setPendingPrint(false);
+    setPrintingSessionId(null);
+  }, [pendingPrint, sessionPrintData, company, handlePrint]);
 
   const handleOpenCreate = () => {
     setEditingPoint(null);
@@ -489,7 +550,7 @@ export default function POSManagementScreen() {
       setEditingPoint(null);
       await loadMonitoring();
     } catch (err) {
-      alert(getApiMessage(err, "Failed to save POS station"));
+      alert(getApiMessage(err, t("POSMonitor.messages.save_failed")));
     } finally {
       setSubmitting(false);
     }
@@ -512,9 +573,26 @@ export default function POSManagementScreen() {
         [posPointId]: res.data?.sessions || [],
       }));
     } catch (err) {
-      alert(getApiMessage(err, "Failed to load POS session history"));
+      alert(getApiMessage(err, t("POSMonitor.messages.load_history_failed")));
     } finally {
       setHistoryLoadingFor(null);
+    }
+  };
+
+  const handlePrintSessionSummary = async (sessionId) => {
+    try {
+      setPrintingSessionId(sessionId);
+      const [sessionRes, companyRes] = await Promise.all([
+        api.get(`/api/pos-sessions/${sessionId}/detail`),
+        company ? Promise.resolve({ data: company }) : api.get("/api/invoices/company"),
+      ]);
+
+      setSessionPrintData(sessionRes.data);
+      setCompany(companyRes.data || null);
+      setPendingPrint(true);
+    } catch (err) {
+      alert(getApiMessage(err, t("POSMonitor.messages.load_print_summary_failed")));
+      setPrintingSessionId(null);
     }
   };
 
@@ -527,19 +605,19 @@ export default function POSManagementScreen() {
       <div className="sticky top-0 z-10 border-b bg-white">
         <div className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-800">POS Management</h1>
+            <h1 className="text-2xl font-semibold text-gray-800">{t("POSMonitor.title")}</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Monitor each station, see who is currently selling, and review session history.
+              {t("POSMonitor.subtitle")}
             </p>
           </div>
 
           <div className="flex gap-3">
             <button type="button" className="btn btn-outline" onClick={loadMonitoring}>
-              Refresh
+              {t("POSMonitor.actions.refresh")}
             </button>
             {canCreate && (
               <button type="button" className="btn btn-primary" onClick={handleOpenCreate}>
-                Create POS Station
+                {t("POSMonitor.actions.create_pos")}
               </button>
             )}
           </div>
@@ -554,7 +632,7 @@ export default function POSManagementScreen() {
         ) : loading ? (
           <div className="flex items-center gap-3 rounded-2xl border border-base-300 bg-white px-5 py-4 text-sm text-gray-600 shadow-sm">
             <span className="loading loading-spinner loading-md text-[#2f788a]"></span>
-            Loading POS stations...
+            {t("POSMonitor.states.loading_pos_stations")}
           </div>
         ) : (
           <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
@@ -572,7 +650,7 @@ export default function POSManagementScreen() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <div className="text-xs uppercase tracking-[0.2em] text-[#2f788a]">
-                          POS Station
+                          {t("POSMonitor.labels.pos_station")}
                         </div>
                         <h2 className="mt-2 text-2xl font-semibold text-gray-900">
                           {posPoint.name}
@@ -585,33 +663,33 @@ export default function POSManagementScreen() {
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="rounded-2xl bg-base-100 px-4 py-3">
                         <div className="text-xs uppercase tracking-wide text-gray-500">
-                          Current Occupancy
+                          {t("POSMonitor.labels.current_occupancy")}
                         </div>
                         {activeSession ? (
                           <>
                             <div className="mt-2 font-semibold text-gray-900">
-                              {activeSession.full_name || activeSession.username || "Active user"}
+                              {activeSession.full_name || activeSession.username || t("POSMonitor.states.active_user")}
                             </div>
                             <div className="mt-1 text-sm text-gray-500">
-                              Started {formatDateTime(activeSession.started_at)}
+                              {t("POSMonitor.labels.started")} {formatDateTime(activeSession.started_at)}
                             </div>
                           </>
                         ) : (
                           <div className="mt-2 text-sm text-gray-500">
-                            No active session on this station.
+                            {t("POSMonitor.states.no_active_session")}
                           </div>
                         )}
                       </div>
 
                       <div className="rounded-2xl bg-base-100 px-4 py-3">
                         <div className="text-xs uppercase tracking-wide text-gray-500">
-                          Session History
+                          {t("POSMonitor.labels.session_history")}
                         </div>
                         <div className="mt-2 text-2xl font-semibold text-gray-900">
                           {posPoint.session_count || 0}
                         </div>
                         <div className="mt-1 text-sm text-gray-500">
-                          Total sessions recorded
+                          {t("POSMonitor.states.total_sessions_recorded")}
                         </div>
                       </div>
                     </div>
@@ -628,7 +706,7 @@ export default function POSManagementScreen() {
                         className="btn btn-outline"
                         onClick={() => toggleHistory(posPoint.id)}
                       >
-                        {isExpanded ? "Hide Sessions" : "View Sessions"}
+                        {isExpanded ? t("POSMonitor.actions.hide_sessions") : t("POSMonitor.actions.view_sessions")}
                       </button>
 
                       {canEdit && (
@@ -637,7 +715,7 @@ export default function POSManagementScreen() {
                           className="btn btn-ghost"
                           onClick={() => handleOpenEdit(posPoint)}
                         >
-                          Edit
+                          {t("POSMonitor.actions.edit")}
                         </button>
                       )}
                     </div>
@@ -646,55 +724,82 @@ export default function POSManagementScreen() {
                   {isExpanded && (
                     <div className="border-t border-base-300 bg-base-100 px-5 py-4">
                       <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-gray-800">Session History</h3>
+                        <h3 className="text-sm font-semibold text-gray-800">
+                          {t("POSMonitor.labels.session_history")}
+                        </h3>
                         {historyLoadingFor === posPoint.id && (
-                          <span className="text-xs text-gray-500">Loading...</span>
+                          <span className="text-xs text-gray-500">{t("POSMonitor.states.loading")}</span>
                         )}
                       </div>
 
                       {historyLoadingFor === posPoint.id ? (
-                        <div className="text-sm text-gray-500">Loading sessions...</div>
+                        <div className="text-sm text-gray-500">{t("POSMonitor.states.loading_sessions")}</div>
                       ) : sessions.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-base-300 px-4 py-4 text-sm text-gray-500">
-                          No sessions recorded for this POS station yet.
+                          {t("POSMonitor.states.no_sessions")}
                         </div>
                       ) : (
                         <div className="space-y-3">
                           {sessions.map((session) => (
-                            <button
+                            <div
                               key={session.id}
-                              type="button"
-                              className="flex w-full items-center justify-between rounded-2xl border border-base-300 bg-white px-4 py-4 text-left transition hover:border-[#2f788a]/40 hover:shadow-sm"
-                              onClick={() => setSelectedSessionId(session.id)}
+                              className="flex items-center justify-between gap-4 rounded-2xl border border-base-300 bg-white px-4 py-4 text-left transition hover:border-[#2f788a]/40 hover:shadow-sm"
                             >
-                              <div>
+                              <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="font-semibold text-gray-900">
-                                    Session #{session.id}
+                                    {t("POSMonitor.labels.session_number", { id: session.id })}
                                   </span>
                                   <StatusBadge
                                     active={session.status === "active" && !session.ended_at}
-                                    activeLabel="Active"
-                                    inactiveLabel="Ended"
+                                    activeLabel={t("POSMonitor.badges.active")}
+                                    inactiveLabel={t("POSMonitor.badges.ended")}
                                   />
                                 </div>
                                 <div className="mt-2 text-sm text-gray-600">
-                                  {session.full_name || session.username || "Unknown user"}
+                                  {session.full_name || session.username || t("POSMonitor.states.unknown_user")}
                                 </div>
                                 <div className="mt-1 text-xs text-gray-500">
-                                  {formatDateTime(session.started_at)} to {formatDateTime(session.ended_at)}
+                                  {t("POSMonitor.labels.session_period", {
+                                    start: formatDateTime(session.started_at),
+                                    end: formatDateTime(session.ended_at),
+                                  })}
                                 </div>
                               </div>
 
-                              <div className="text-right">
-                                <div className="text-sm font-semibold text-gray-900">
-                                  {formatCurrency(session.total_sales_amount)}
+                              <div className="flex flex-col items-end gap-3">
+                                <div className="text-right">
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    {formatCurrency(session.total_sales_amount)}
+                                  </div>
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    {t("POSMonitor.labels.invoice_count", {
+                                      count: session.invoice_count || 0,
+                                    })}
+                                  </div>
                                 </div>
-                                <div className="mt-1 text-xs text-gray-500">
-                                  {session.invoice_count || 0} invoices
+
+                                <div className="flex flex-wrap justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm"
+                                    onClick={() => setSelectedSessionId(session.id)}
+                                  >
+                                    {t("POSMonitor.actions.view_details")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline btn-sm"
+                                    onClick={() => handlePrintSessionSummary(session.id)}
+                                    disabled={printingSessionId === session.id}
+                                  >
+                                    {printingSessionId === session.id
+                                      ? t("POSMonitor.actions.preparing")
+                                      : t("POSMonitor.actions.print_session_summary")}
+                                  </button>
                                 </div>
                               </div>
-                            </button>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -724,6 +829,10 @@ export default function POSManagementScreen() {
         sessionId={selectedSessionId}
         onClose={() => setSelectedSessionId(null)}
       />
+
+      <div className="hidden">
+        <SessionSummaryPrint ref={printRef} session={sessionPrintData} company={company} />
+      </div>
     </div>
   );
 }

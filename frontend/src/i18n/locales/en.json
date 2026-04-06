@@ -3,8 +3,10 @@
     "dashboard": "Dashboard",
     "sales": "Sales",
     "invoices": "Invoices",
+    "events": "Events",
     "refunds": "Refunds",
     "unshared": "Unshared",
+    "pos_monitor": "POS Monitor",
     "receipts": "Receipts",
     "inventory": "Inventory",
     "items": "Items",
@@ -1291,7 +1293,8 @@
 
     "report_types": {
       "shared": "Shared / Unshared",
-      "tax": "Tax Declaration"
+      "tax": "Tax Declaration",
+      "invoice_tax_summary": "Invoice Tax Summary"
     },
 
     "status_types": {
@@ -1305,6 +1308,8 @@
 
     "table": {
       "invoice": "Invoice #",
+      "invoice_total": "Invoice Total",
+      "total_tax": "Total Tax",
       "date": "Date",
       "client": "Client",
       "total": "Total",
@@ -1917,8 +1922,261 @@
     "unpaid": "unpaid",
     "outstanding": "Outstanding"
   },
-  
-    "POS": {
+  "EventsScreen": {
+    "title": "Events",
+    "subtitle": "Create, review, print, and track event balances and payments from one place.",
+    "empty": {
+      "title": "No events found",
+      "description": "Create your first event to start tracking bookings, balances, and related payments.",
+      "action": "Create Event"
+    },
+    "form": {
+      "create_title": "Create Event",
+      "create_subtitle": "Capture the event details and the initial financial information.",
+      "sections": {
+        "event_details": "Event Details",
+        "event_details_hint": "Basic operational information for the event.",
+        "financial_details": "Financial Details",
+        "financial_details_hint": "Define the event value and any initial payment received."
+      }
+    },
+    "payment_modal": {
+      "subtitle": "Record a payment for {{eventName}}."
+    },
+    "fields": {
+      "name": "Name",
+      "event_name": "Event Name",
+      "type": "Type",
+      "location": "Location",
+      "client": "Client",
+      "event_date": "Event Date",
+      "event_time": "Event Time",
+      "details": "Details",
+      "notes": "Notes",
+      "total_amount": "Total Amount",
+      "initial_payment_amount": "Initial Payment Amount",
+      "initial_payment_date": "Initial Payment Date",
+      "amount": "Amount",
+      "payment_date": "Payment Date",
+      "created": "Created",
+      "payment_count": "Payment Count",
+      "invoice_pattern": "Invoice Pattern"
+    },
+    "placeholders": {
+      "choose_client": "Choose a client"
+    },
+    "suggestions": {
+      "birthday": "Birthday",
+      "event": "Event"
+    },
+    "payment_types": {
+      "cash": "Cash",
+      "card": "Card",
+      "bank": "Bank Transfer"
+    },
+    "actions": {
+      "close": "Close",
+      "select": "Select",
+      "cancel": "Cancel",
+      "save_event": "Save Event",
+      "add_payment": "Add Payment",
+      "event_details": "Event Details",
+      "print_details": "Print Details",
+      "open": "Open",
+      "refresh": "Refresh",
+      "create_event": "Create Event"
+    },
+    "summary": {
+      "total": "Total",
+      "paid": "Paid",
+      "remaining": "Remaining",
+      "total_amount": "Total Amount",
+      "total_paid": "Total Paid",
+      "remaining_balance": "Remaining Balance",
+      "events_count": "Events Count",
+      "total_event_value": "Total Event Value",
+      "remaining_across_events": "Remaining Across Events",
+      "open_balance": "Open Balance",
+      "financial_rule": "Financial Rule",
+      "financial_rule_value": "Each payment creates a linked event invoice for proper tracking."
+    },
+    "sections": {
+      "operational_details": "Operational Details",
+      "financial_snapshot": "Financial Snapshot",
+      "payment_history": "Payment History"
+    },
+    "details": {
+      "subtitle": "Review operational details, balances, and payment activity.",
+      "invoice_pattern_value": "Payments are linked to event invoices automatically.",
+      "payment_history_hint": "All saved event payments are listed below."
+    },
+    "table": {
+      "date": "Date",
+      "type": "Type",
+      "amount": "Amount",
+      "invoice": "Invoice",
+      "invoice_id": "Invoice ID #{{id}}",
+      "notes": "Notes",
+      "event": "Event",
+      "client": "Client",
+      "location": "Location",
+      "total": "Total",
+      "paid": "Paid",
+      "remaining": "Remaining",
+      "action": "Action"
+    },
+    "states": {
+      "saving": "Saving...",
+      "loading": "Loading events...",
+      "loading_details": "Loading event details...",
+      "no_phone": "No phone number",
+      "no_payments": "No payments recorded yet"
+    },
+    "messages": {
+      "create_failed": "Failed to create event",
+      "add_payment_failed": "Failed to save event payment",
+      "load_details_failed": "Failed to load event details",
+      "load_failed": "Failed to load events",
+      "print_failed": "Failed to prepare event print",
+      "create_success": "Event created successfully.",
+      "payment_saved_success": "Event payment saved and invoice created successfully."
+    },
+    "print": {
+      "company": "Company",
+      "company_logo": "Company logo",
+      "tax_number": "Tax Number",
+      "financial_summary": "Financial Summary",
+      "remaining_amount": "Remaining Amount",
+      "payment_tracking": "Payment Tracking",
+      "no_payments": "No payments recorded for this event.",
+      "page_of": "Page {{page}} of {{total}}",
+      "powered_by": "Powered by"
+    },
+    "no_access": {
+      "title": "Access Denied",
+      "message": "You do not have permission to view events."
+    }
+  },
+  "POSMonitor": {
+    "title": "POS Monitor",
+    "subtitle": "Review POS stations, active users, and session history from one screen.",
+    "no_access": {
+      "title": "Access Denied",
+      "message": "You do not have permission to view POS monitoring."
+    },
+    "modal": {
+      "subtitle": "Configure the POS station details and availability.",
+      "station_status_hint": "Disable the station if it should be hidden from POS users."
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "station_status": "Station Status"
+    },
+    "placeholders": {
+      "pos_name": "POS station name",
+      "description": "Short station description"
+    },
+    "actions": {
+      "edit_pos": "Edit POS",
+      "create_pos": "Create POS",
+      "cancel": "Cancel",
+      "save_changes": "Save Changes",
+      "close": "Close",
+      "hide": "Hide",
+      "show": "Show",
+      "refresh": "Refresh",
+      "view_sessions": "View Sessions",
+      "hide_sessions": "Hide Sessions",
+      "edit": "Edit",
+      "view_details": "View Details",
+      "print_session_summary": "Print Session Summary",
+      "preparing": "Preparing..."
+    },
+    "messages": {
+      "pos_name_required": "POS station name is required",
+      "load_session_details_failed": "Failed to load session details",
+      "load_monitoring_failed": "Failed to load POS monitoring",
+      "save_failed": "Failed to save POS station",
+      "load_history_failed": "Failed to load session history",
+      "load_print_summary_failed": "Failed to load session summary for printing"
+    },
+    "labels": {
+      "pos_station": "POS Station",
+      "session_number": "Session #{{id}}",
+      "session_number_prefix": "Session #",
+      "session_id": "Session ID",
+      "employee_name": "Employee Name",
+      "duration": "Duration",
+      "opened_by": "Opened By",
+      "started": "Started",
+      "ended": "Ended",
+      "current_occupancy": "Current Occupancy",
+      "session_history": "Session History",
+      "session_period": "{{start}} to {{end}}",
+      "invoice_count": "{{count}} invoices"
+    },
+    "badges": {
+      "active_session": "Active Session",
+      "ended_session": "Ended Session",
+      "active": "Active",
+      "ended": "Ended",
+      "inactive": "Inactive"
+    },
+    "summary": {
+      "invoices": "Invoices",
+      "total_sales": "Total Sales",
+      "total_tokens": "Total Tokens",
+      "cash": "Cash",
+      "card": "Card",
+      "transfer": "Bank Transfer",
+      "cash_received": "Cash Received",
+      "change_given": "Change Given"
+    },
+    "table": {
+      "item": "Item",
+      "qty_sold": "Qty",
+      "total_sales": "Total Amount",
+      "tokens_per_item": "Tokens/Item",
+      "total_tokens": "Total Tokens",
+      "invoice": "Invoice",
+      "client": "Client",
+      "date": "Date",
+      "total": "Total"
+    },
+    "session": {
+      "details_title": "Session Details",
+      "details_subtitle": "Review the sales, payments, and activity captured in this session.",
+      "sold_items_breakdown": "Sold Items Breakdown",
+      "sold_items_hint": "A compact summary of item sales and token usage for this session.",
+      "invoices_in_session": "Invoices in Session"
+    },
+    "states": {
+      "saving": "Saving...",
+      "loading_session_details": "Loading session details...",
+      "no_sold_items": "No sold items found for this session",
+      "no_invoices": "No invoices found for this session",
+      "loading_pos_stations": "Loading POS stations...",
+      "active_user": "Active user",
+      "no_active_session": "No active session",
+      "total_sessions_recorded": "Total sessions recorded",
+      "loading": "Loading...",
+      "loading_sessions": "Loading sessions...",
+      "no_sessions": "No sessions found",
+      "unknown_user": "Unknown user"
+    },
+    "print": {
+      "title": "POS Session Summary Report",
+      "company_logo": "Company logo",
+      "tax_number": "Tax Number",
+      "session_info": "Session Information",
+      "financial_summary": "Financial Summary",
+      "no_sold_items": "No sold items were recorded in this session.",
+      "item_fallback": "Item #{{id}}",
+      "powered_by": "Powered by"
+    }
+  },
+  "POS": {
     "recent_invoices": {
       "title": "Recent Invoices",
       "new_invoice": "Create new invoice",
@@ -1981,13 +2239,60 @@
       "back": "Back"
     },
 
+    "aria": {
+      "remove_item": "Remove item",
+      "decrease_quantity": "Decrease quantity",
+      "increase_quantity": "Increase quantity"
+    },
+
     "states": {
       "locked": "Invoice is locked",
       "no_items": "Invoice must have items",
       "save_success": "Invoice updated successfully",
       "save_failed": "Failed to save invoice",
       "load_failed": "Failed to load invoice",
-      "item_not_found": "Item not found for barcode"
+      "item_not_found": "Item not found for barcode {{barcode}}",
+      "unknown_user": "Unknown user",
+      "complete_payment_failed": "Failed to complete payment"
+    },
+
+    "session": {
+      "load_status_failed": "Failed to load POS session status",
+      "load_stations_failed": "Failed to load POS stations",
+      "choose_station_required": "Please choose a POS station first",
+      "start_failed": "Failed to start POS session",
+      "end_failed": "Failed to end POS session",
+      "user": "User",
+      "station": "POS Station",
+      "started": "Started",
+      "ended": "Ended",
+      "end_session": "End Session",
+      "ending": "Ending...",
+      "required_badge": "Session Required",
+      "required_title": "Start a POS session to continue",
+      "current_user": "Current user",
+      "checking": "Checking current session status...",
+      "choose_station": "Choose a POS station",
+      "choose_station_hint": "Select the station you will use for this POS session.",
+      "loading_stations": "Loading stations...",
+      "no_stations": "No active POS stations are available.",
+      "station_ready": "Ready to use",
+      "starting_on": "Starting session on",
+      "starting": "Starting...",
+      "start_session": "Start Session",
+      "refresh_status": "Refresh Status",
+      "open_monitor": "Open POS Monitor",
+      "end_confirm_message": "You are about to end session #{{id}}.",
+      "confirm_end": "Confirm End Session",
+      "summary_title": "Session Closed",
+      "summary_subtitle": "Session #{{id}} has been closed successfully.",
+      "number_of_invoices": "Number of Invoices",
+      "session_number": "Session #{{id}}"
+    },
+
+    "no_access": {
+      "title": "Access Denied",
+      "message": "You do not have permission to use POS."
     }
   },
     "BarcodeModal": {
@@ -2009,6 +2314,10 @@
   },
   "PayModal": {
     "title": "Complete Payment",
+    "modes": {
+      "single": "Single Payment",
+      "split": "Split Payment"
+    },
 
     "payment_types": {
       "cash": "Cash",
@@ -2026,9 +2335,36 @@
       "amount_paid": "Enter paid amount"
     },
 
+    "cash": {
+      "cash_due": "Cash Due",
+      "single": "Cash Payment",
+      "first": "First Cash Payment",
+      "second": "Second Cash Payment"
+    },
+
+    "payment_labels": {
+      "first": "First Payment Method",
+      "second": "Second Payment Method"
+    },
+
+    "fields": {
+      "amount": "Amount"
+    },
+
+    "validation": {
+      "different_methods": "Split payment requires two different payment methods.",
+      "positive_split_amounts": "Both split amounts must be greater than zero.",
+      "split_total_match": "Split payment amounts must match the grand total.",
+      "first_cash_insufficient": "The first cash payment amount paid is too low.",
+      "second_cash_insufficient": "The second cash payment amount paid is too low.",
+      "single_cash_insufficient": "The cash amount paid must cover the grand total."
+    },
+
     "actions": {
       "cancel": "Cancel",
-      "confirm": "Confirm Payment"
+      "confirm": "Confirm Payment",
+      "clear": "Clear",
+      "processing": "Processing..."
     }
   },
     "ReceiptPreviewModal": {
@@ -2036,10 +2372,13 @@
 
     "invoice": {
       "number": "Invoice #",
-      "date": "Date"
+      "date": "Date",
+      "point_of_sale": "Point of Sale",
+      "employee": "Employee"
     },
 
     "company": {
+      "logo": "Company logo",
       "tax_number": "Tax No"
     },
 
@@ -2055,7 +2394,31 @@
     },
 
     "states": {
-      "loading": "Loading receipt…"
+      "loading": "Loading receipt…",
+      "preparing_logo": "Preparing company logo for printing..."
+    },
+
+    "printer": {
+      "label": "Receipt printer",
+      "loading": "Loading...",
+      "refresh": "Refresh printers",
+      "default": "System default printer",
+      "default_with_name": "System default ({{printer}})",
+      "is_default": " (Default)",
+      "saved_unavailable": "Saved receipt printer \"{{printer}}\" is unavailable. The system default printer will be used.",
+      "selected_unavailable": "Printer \"{{printer}}\" is no longer available. The system default printer will be used.",
+      "load_failed": "Could not load the installed printers. Printing will still try the system default printer.",
+      "refresh_failed": "Could not refresh the printer list.",
+      "desktop_only": "Direct receipt printing works in the Electron desktop app and skips the browser print preview dialog."
+    },
+
+    "messages": {
+      "load_failed": "Failed to load the receipt preview.",
+      "logo_prepare_failed": "Failed to prepare the company logo for printing.",
+      "submit_failed": "Failed to submit the receipt print job.",
+      "submit_success": "Receipt submitted successfully to {{printer}}.",
+      "printer_target": "\"{{printer}}\"",
+      "printer_target_default": "the system default printer"
     },
 
     "footer": {
@@ -2064,6 +2427,7 @@
 
     "actions": {
       "print": "Print",
+      "printing": "Sending...",
       "close": "Close"
     }
   }

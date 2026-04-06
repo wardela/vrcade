@@ -132,6 +132,7 @@ router.get("/reports/sales/by-client-detailed", invoiceController.getSalesByClie
 router.get("/reports/sales/items-by-client-totals", invoiceController.getItemsSoldForClientTotals);
 router.get("/reports/einvoicing", invoiceController.getEinvoicingReport);
 router.get("/reports/einvoicing/tax-declaration", invoiceController.getTaxDeclarationReport);
+router.get("/reports/einvoicing/invoice-tax-summary", invoiceController.getInvoiceTaxSummaryReport);
 router.get("/reports/refunds/general", invoiceController.getRefundsReport);
 router.get("/reports/refunds/by-client", invoiceController.getRefundsByClientReport);
 router.get("/reports/items/sales", invoiceController.getItemsSalesReport);

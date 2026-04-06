@@ -270,26 +270,36 @@ const getInvoiceDetails = async (db, invoice_number) => {
 const getFullInvoice = async (db, invoice_number) => {
   const headerQuery = `
   SELECT 
-    invoice_number,
-    uuid,
-    pos,
-    session_id,
-    user_id,
-    total,
-    client,
-    notes,
-    type,
-    qr,
-    type2,
-    currency,
-    client_contact,
-    client_detail,
-    client_det_code,
-    client_id,
-    reference,
-    TO_CHAR(date, 'YYYY-MM-DD') AS date
-  FROM invoice_header
-  WHERE invoice_number = $1
+    ih.invoice_number,
+    ih.uuid,
+    ih.pos,
+    ih.session_id,
+    ih.user_id,
+    ih.total,
+    ih.client,
+    ih.notes,
+    ih.type,
+    ih.qr,
+    ih.type2,
+    ih.currency,
+    ih.client_contact,
+    ih.client_detail,
+    ih.client_det_code,
+    ih.client_id,
+    ih.reference,
+    u.username,
+    COALESCE(u.full_name, u.username) AS employee_full_name,
+    ps.pos_point_id,
+    COALESCE(pp.name, NULLIF(ih.pos, '')) AS pos_point_name,
+    TO_CHAR(ih.date, 'YYYY-MM-DD') AS date
+  FROM invoice_header ih
+  LEFT JOIN users u
+    ON u.id = ih.user_id
+  LEFT JOIN pos_sessions ps
+    ON ps.id = ih.session_id
+  LEFT JOIN pos_points pp
+    ON pp.id = ps.pos_point_id
+  WHERE ih.invoice_number = $1
 `;
   const linesQuery = `
   SELECT
@@ -2886,6 +2896,75 @@ const getTaxDeclarationReport = async (db, { from, to }) => {
   };
 };
 
+const getInvoiceTaxSummaryReport = async (db, { from, to }) => {
+  const query = `
+    WITH invoice_tax_report AS (
+      SELECT
+        ih.invoice_number,
+        ih.date,
+        COALESCE(ih.total, 0) AS invoice_total,
+        COALESCE(
+          SUM(
+            CASE
+              WHEN COALESCE(il.exempt, false) THEN 0
+              WHEN COALESCE(il.tax, 0) = 0 THEN 0
+              ELSE
+                COALESCE(il.total, 0) -
+                (
+                  COALESCE(il.total, 0) /
+                  (
+                    1 +
+                    CASE
+                      WHEN ABS(COALESCE(il.tax, 0)) > 1
+                        THEN COALESCE(il.tax, 0) / 100.0
+                      ELSE COALESCE(il.tax, 0)
+                    END
+                  )
+                )
+            END
+          ),
+          0
+        ) AS total_tax
+      FROM invoice_header ih
+      LEFT JOIN invoice_lines il
+        ON il.invoice_number = ih.invoice_number
+      WHERE ih.type2 IN ('local', 'export', 'development')
+        AND ih.date >= $1
+        AND ih.date < $2
+      GROUP BY ih.invoice_number, ih.date, ih.total
+    )
+    SELECT
+      invoice_number,
+      invoice_total,
+      total_tax
+    FROM invoice_tax_report
+    ORDER BY date ASC, invoice_number ASC
+  `;
+
+  const result = await db.query(query, [from, to]);
+
+  const rows = result.rows.map((row) => ({
+    invoice_number: row.invoice_number,
+    invoice_total: Number(row.invoice_total || 0),
+    total_tax: Number(row.total_tax || 0),
+  }));
+
+  const totals = rows.reduce(
+    (acc, row) => {
+      acc.invoice_total += row.invoice_total;
+      acc.total_tax += row.total_tax;
+      return acc;
+    },
+    { invoice_total: 0, total_tax: 0 },
+  );
+
+  return {
+    rows,
+    totals,
+    total_count: rows.length,
+  };
+};
+
 
 
 const getRefundsReport = async (db, { from, to, limit, offset }) => {
@@ -4761,6 +4840,7 @@ module.exports = {
   getSalesByClientDetailedReport,
   getEinvoicingReport,
   getTaxDeclarationReport,
+  getInvoiceTaxSummaryReport,
   getRefundsReport,
   getRefundsByClientReport,
   getItemsSalesReport,

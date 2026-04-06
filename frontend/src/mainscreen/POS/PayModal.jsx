@@ -1,12 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-const PAYMENT_METHODS = [
-  { value: "cash", label: "Cash" },
-  { value: "card", label: "Card" },
-  { value: "transfer", label: "Transfer" },
-];
-
 const QUICK_CASH_VALUES = [50, 20, 10];
 const MILL_FACTOR = 1000;
 
@@ -20,6 +14,7 @@ function CashSection({
   setAmountPaid,
   disabled,
 }) {
+  const { t } = useTranslation();
   const change = Math.max(Number(amountPaid || 0) - Number(amountDue || 0), 0);
 
   return (
@@ -28,7 +23,7 @@ function CashSection({
         <div>
           <div className="text-sm font-semibold text-gray-800">{label}</div>
           <div className="text-xs text-gray-500">
-            Cash due: {formatAmount(amountDue)} JOD
+            {t("PayModal.cash.cash_due")}: {formatAmount(amountDue)} JOD
           </div>
         </div>
         <button
@@ -37,13 +32,13 @@ function CashSection({
           disabled={disabled}
           onClick={() => setAmountPaid("")}
         >
-          Clear
+          {t("PayModal.actions.clear")}
         </button>
       </div>
 
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-600">
-          Amount Paid
+          {t("PayModal.totals.amount_paid")}
         </label>
         <input
           type="number"
@@ -74,7 +69,7 @@ function CashSection({
       </div>
 
       <div className="flex justify-between text-sm font-semibold text-gray-700">
-        <span>Change</span>
+        <span>{t("PayModal.totals.change")}</span>
         <span className={change > 0 ? "text-green-600" : ""}>
           {formatAmount(change)} JOD
         </span>
@@ -90,6 +85,7 @@ function PaymentMethodPicker({
   disabled,
   title,
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
       {title && (
@@ -124,6 +120,11 @@ export default function PayModal({
   submitting = false,
 }) {
   const { t } = useTranslation();
+  const PAYMENT_METHODS = [
+    { value: "cash", label: t("PayModal.payment_types.cash") },
+    { value: "card", label: t("PayModal.payment_types.card") },
+    { value: "transfer", label: t("PayModal.payment_types.bank") },
+  ];
   const [paymentMode, setPaymentMode] = useState("single");
   const [singleMethod, setSingleMethod] = useState("cash");
   const [singleCashPaid, setSingleCashPaid] = useState("");
@@ -160,29 +161,29 @@ export default function PayModal({
     const amountTwo = Number(splitAmountTwo || 0);
 
     if (splitMethodOne === splitMethodTwo) {
-      return { valid: false, message: "Split payment must use two different methods." };
+      return { valid: false, message: t("PayModal.validation.different_methods") };
     }
 
     if (amountOne <= 0 || amountTwo <= 0) {
-      return { valid: false, message: "Both split payment amounts must be greater than zero." };
+      return { valid: false, message: t("PayModal.validation.positive_split_amounts") };
     }
 
     if (toMills(amountOne + amountTwo) !== toMills(grandTotal)) {
-      return { valid: false, message: "Split payment amounts must equal the invoice total exactly." };
+      return { valid: false, message: t("PayModal.validation.split_total_match") };
     }
 
     if (
       splitMethodOne === "cash" &&
       Number(splitCashPaidOne || 0) < amountOne
     ) {
-      return { valid: false, message: "Cash paid for the first method is not enough." };
+      return { valid: false, message: t("PayModal.validation.first_cash_insufficient") };
     }
 
     if (
       splitMethodTwo === "cash" &&
       Number(splitCashPaidTwo || 0) < amountTwo
     ) {
-      return { valid: false, message: "Cash paid for the second method is not enough." };
+      return { valid: false, message: t("PayModal.validation.second_cash_insufficient") };
     }
 
     return { valid: true, message: "" };
@@ -195,17 +196,18 @@ export default function PayModal({
     splitMethodOne,
     splitMethodTwo,
     grandTotal,
+    t,
   ]);
 
   const singleValidation = useMemo(() => {
     if (paymentMode !== "single") return { valid: true, message: "" };
 
     if (singleMethod === "cash" && Number(singleCashPaid || 0) < Number(grandTotal || 0)) {
-      return { valid: false, message: "Cash paid must be at least the invoice total." };
+      return { valid: false, message: t("PayModal.validation.single_cash_insufficient") };
     }
 
     return { valid: true, message: "" };
-  }, [paymentMode, singleMethod, singleCashPaid, grandTotal]);
+  }, [paymentMode, singleMethod, singleCashPaid, grandTotal, t]);
 
   const validationMessage =
     paymentMode === "single" ? singleValidation.message : splitValidation.message;
@@ -267,8 +269,8 @@ export default function PayModal({
         <div className="space-y-5 p-5">
           <div className="grid grid-cols-2 gap-2">
             {[
-              { value: "single", label: "Single Payment" },
-              { value: "split", label: "Split Payment" },
+              { value: "single", label: t("PayModal.modes.single") },
+              { value: "split", label: t("PayModal.modes.split") },
             ].map((option) => (
               <button
                 key={option.value}
@@ -302,7 +304,7 @@ export default function PayModal({
 
               {singleMethod === "cash" && (
                 <CashSection
-                  label="Cash Payment"
+                  label={t("PayModal.cash.single")}
                   amountDue={grandTotal}
                   amountPaid={singleCashPaid}
                   setAmountPaid={setSingleCashPaid}
@@ -314,7 +316,7 @@ export default function PayModal({
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-4 rounded-xl border border-gray-200 p-4">
                 <PaymentMethodPicker
-                  title="Payment 1"
+                  title={t("PayModal.payment_labels.first")}
                   methods={PAYMENT_METHODS.filter(
                     (method) => method.value !== splitMethodTwo,
                   )}
@@ -325,7 +327,7 @@ export default function PayModal({
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-600">
-                    Amount
+                    {t("PayModal.fields.amount")}
                   </label>
                   <input
                     type="number"
@@ -340,7 +342,7 @@ export default function PayModal({
 
                 {splitMethodOne === "cash" && (
                   <CashSection
-                    label="Cash for Payment 1"
+                    label={t("PayModal.cash.first")}
                     amountDue={Number(splitAmountOne || 0)}
                     amountPaid={splitCashPaidOne}
                     setAmountPaid={setSplitCashPaidOne}
@@ -351,7 +353,7 @@ export default function PayModal({
 
               <div className="space-y-4 rounded-xl border border-gray-200 p-4">
                 <PaymentMethodPicker
-                  title="Payment 2"
+                  title={t("PayModal.payment_labels.second")}
                   methods={PAYMENT_METHODS.filter(
                     (method) => method.value !== splitMethodOne,
                   )}
@@ -362,7 +364,7 @@ export default function PayModal({
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-600">
-                    Amount
+                    {t("PayModal.fields.amount")}
                   </label>
                   <input
                     type="number"
@@ -377,7 +379,7 @@ export default function PayModal({
 
                 {splitMethodTwo === "cash" && (
                   <CashSection
-                    label="Cash for Payment 2"
+                    label={t("PayModal.cash.second")}
                     amountDue={Number(splitAmountTwo || 0)}
                     amountPaid={splitCashPaidTwo}
                     setAmountPaid={setSplitCashPaidTwo}
@@ -413,7 +415,7 @@ export default function PayModal({
                 : "cursor-not-allowed bg-gray-300 text-gray-500"
             }`}
           >
-            {submitting ? "Processing..." : t("PayModal.actions.confirm")}
+            {submitting ? t("PayModal.actions.processing") : t("PayModal.actions.confirm")}
           </button>
         </div>
       </div>
