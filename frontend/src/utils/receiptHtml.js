@@ -1,7 +1,15 @@
 export function buildReceiptHtml({ invoice, company, totals, qrValue, paperWidthMm = 80 }) {
   const w = `${paperWidthMm}mm`;
 
-  const safe = (v) => (v == null ? "" : String(v));
+  const safe = (v) =>
+    v == null
+      ? ""
+      : String(v)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
 
   // IMPORTANT: inline CSS so it doesn’t depend on Tailwind/DaisyUI
   return `<!doctype html>

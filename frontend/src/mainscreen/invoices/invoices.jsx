@@ -9,6 +9,7 @@ import ShareConfirmationPopup from "./shareconfirmationpopup";
 import InvoiceFilterPopup from "./InvoiceFilterPopup";
 import Popup from "../../components/Popup"
 import { useTranslation } from "react-i18next";
+import { combineDateWithCurrentLocalTime } from "../../utils/localDateTime";
 const Invoices = () => {
   const [isNewInvoice, setIsNewInvoice] = useState(false);
   const [fetchedInvoices, setFetchedInvoices] = useState([]);
@@ -756,7 +757,7 @@ if (hasMissingStorage) {
 
 const payload = {
   invoice_number: invoiceNumber,
-  date: invoiceDate,
+  date: combineDateWithCurrentLocalTime(invoiceDate),
   pos: "POS-1",
   type: paymentType,
   type2,
@@ -823,7 +824,7 @@ await api.put(`/api/invoices/${invoiceNumber}`, {
     client_det_code: clientDetailType,
     client_id: selectedInvoice?.client_id || null,
     type: paymentType,
-    date: invoiceDate,
+    date: combineDateWithCurrentLocalTime(invoiceDate),
   },
   lines,
 });

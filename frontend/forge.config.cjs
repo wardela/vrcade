@@ -1,12 +1,12 @@
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const path = require("path");
+const { FusesPlugin } = require("@electron-forge/plugin-fuses");
+const { FuseV1Options, FuseVersion } = require("@electron/fuses");
 
 module.exports = {
   packagerConfig: {
     asar: true,
     prune: true,
-    icon: 'assets/fawtartak',
-    // Exclude dev-only sources and build artifacts from the packaged app.
+    icon: path.join(__dirname, "assets", "fawtartak"),
     ignore: [
       /^\/src($|\/)/,
       /^\/public($|\/)/,
@@ -15,36 +15,49 @@ module.exports = {
       /^\/node_modules\/\.cache($|\/)/,
       /^\/\.git($|\/)/,
       /^\/\.github($|\/)/,
+      /^\/README\.md$/,
+      /^\/workflow\.txt$/,
+      /^\/index\.html$/,
+      /^\/eslint\.config\.js$/,
+      /^\/postcss\.config\.js$/,
+      /^\/tailwind\.config\.js$/,
+      /^\/vite\.config\.js$/,
+      /^\/main_prod\.cjs$/,
+      /^\/preload\.cjs$/,
+      /^\/preload\.js$/,
+      /^\/package-lock\.json$/,
       /^\/.*\.log$/,
-      /^\/.*\.md$/,
     ],
   },
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
+      name: "@electron-forge/maker-squirrel",
+      config: {
+        name: "FawtartakPOS",
+        exe: "FawtartakPOS.exe",
+        setupExe: "FawtartakPOSSetup.exe",
+        setupIcon: path.join(__dirname, "assets", "fawtartak.ico"),
+      },
+    },
+    {
+      name: "@electron-forge/maker-zip",
+      platforms: ["darwin"],
+    },
+    {
+      name: "@electron-forge/maker-deb",
       config: {},
     },
     {
-      name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
+      name: "@electron-forge/maker-rpm",
       config: {},
     },
   ],
   plugins: [
     {
-      name: '@electron-forge/plugin-auto-unpack-natives',
+      name: "@electron-forge/plugin-auto-unpack-natives",
       config: {},
     },
-    // Fuses are used to enable/disable various Electron functionality
-    // at package time, before code signing the application
     new FusesPlugin({
       version: FuseVersion.V1,
       [FuseV1Options.RunAsNode]: false,

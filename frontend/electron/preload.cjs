@@ -1,6 +1,10 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("api", {
+  receipt: {
+    getPrinters: () => ipcRenderer.invoke("receipt:get-printers"),
+    print: (payload) => ipcRenderer.invoke("receipt:print", payload),
+  },
   zoom: {
     get: () => ipcRenderer.invoke("zoom:get"),
     setPercent: (percent) => ipcRenderer.invoke("zoom:set-percent", percent),

@@ -43,6 +43,15 @@ const isReadOnly =
   const [usualQty, setUsualQty] = useState(1);
   const [usualDiscountPct, setUsualDiscountPct] = useState(0);
   const [notes, setNotes] = useState("");
+  const [hasTokens, setHasTokens] = useState(false);
+  const [tokenCount, setTokenCount] = useState(0);
+  const [isOfferItem, setIsOfferItem] = useState(false);
+  const [offerIsActive, setOfferIsActive] = useState(false);
+  const [offerIs247, setOfferIs247] = useState(true);
+  const [offerStartTime, setOfferStartTime] = useState("");
+  const [offerEndTime, setOfferEndTime] = useState("");
+  const [offerStartDate, setOfferStartDate] = useState("");
+  const [offerEndDate, setOfferEndDate] = useState("");
 
   // Pricing
   const [priceIncl, setPriceIncl] = useState(0);
@@ -106,6 +115,15 @@ useEffect(() => {
     setUsualQty(1);
     setUsualDiscountPct(0);
     setNotes("");
+    setHasTokens(false);
+    setTokenCount(0);
+    setIsOfferItem(false);
+    setOfferIsActive(false);
+    setOfferIs247(true);
+    setOfferStartTime("");
+    setOfferEndTime("");
+    setOfferStartDate("");
+    setOfferEndDate("");
 
     setPriceIncl(0);
     setPriceExcl(0);
@@ -146,6 +164,15 @@ useEffect(() => {
         setUsualQty(d.usual_sales_qty);
         setUsualDiscountPct(d.usual_discount_percentage);
         setNotes(d.notes || "");
+        setHasTokens(Boolean(d.has_tokens));
+        setTokenCount(Number(d.token_count || 0));
+        setIsOfferItem(Boolean(d.is_offer_item));
+        setOfferIsActive(Boolean(d.offer_is_active));
+        setOfferIs247(d.offer_is_24_7 ?? true);
+        setOfferStartTime(d.offer_start_time ? String(d.offer_start_time).slice(0, 5) : "");
+        setOfferEndTime(d.offer_end_time ? String(d.offer_end_time).slice(0, 5) : "");
+        setOfferStartDate(d.offer_start_date ? String(d.offer_start_date).slice(0, 10) : "");
+        setOfferEndDate(d.offer_end_date ? String(d.offer_end_date).slice(0, 10) : "");
         setIsStocked(d.is_stocked ?? true);
         setDefaultStorage(d.default_storage_id || "");
       })
@@ -167,6 +194,15 @@ useEffect(() => {
     setUsualQty(1);
     setUsualDiscountPct(0);
     setNotes("");
+    setHasTokens(false);
+    setTokenCount(0);
+    setIsOfferItem(false);
+    setOfferIsActive(false);
+    setOfferIs247(true);
+    setOfferStartTime("");
+    setOfferEndTime("");
+    setOfferStartDate("");
+    setOfferEndDate("");
     setDefaultStorage("");
   }
 }, [isOpen, isEdit, itemId]);
@@ -193,14 +229,47 @@ useEffect(() => {
   const validateFields = () => {
   const errors = {};
 
-  if (!name.trim()) errors.name = "Item name is required";
-  if (!category) errors.category = "Category is required";
-  if (!unit) errors.unit = "Unit is required";
+  if (!name.trim()) errors.name = t("ItemCard.errors.name_required");
+  if (!category) errors.category = t("ItemCard.errors.category_required");
+  if (!unit) errors.unit = t("ItemCard.errors.unit_required");
   if (!priceIncl || Number(priceIncl) <= 0)
-    errors.priceIncl = "Price must be greater than zero";
+    errors.priceIncl = t("ItemCard.errors.price_required");
+  if (hasTokens) {
+    if (tokenCount === "" || tokenCount == null) {
+      errors.tokenCount = t("ItemCard.errors.token_count_required");
+    } else if (!Number.isFinite(Number(tokenCount))) {
+      errors.tokenCount = t("ItemCard.errors.token_count_invalid");
+    } else if (!Number.isInteger(Number(tokenCount))) {
+      errors.tokenCount = t("ItemCard.errors.token_count_integer");
+    } else if (Number(tokenCount) <= 0) {
+      errors.tokenCount = t("ItemCard.errors.token_count_positive");
+    }
+  } else if (Number(tokenCount || 0) < 0) {
+    errors.tokenCount = t("ItemCard.errors.token_count_non_negative");
+  }
+
+  if (isOfferItem) {
+    if (offerIsActive && !offerIs247) {
+      if (!offerStartTime) {
+        errors.offerStartTime = t("ItemCard.errors.offer_start_time_required");
+      }
+
+      if (!offerEndTime) {
+        errors.offerEndTime = t("ItemCard.errors.offer_end_time_required");
+      }
+
+      if (offerStartTime && offerEndTime && offerEndTime <= offerStartTime) {
+        errors.offerEndTime = t("ItemCard.errors.offer_time_order");
+      }
+    }
+
+    if (offerStartDate && offerEndDate && offerEndDate < offerStartDate) {
+      errors.offerEndDate = t("ItemCard.errors.offer_date_order");
+    }
+  }
 
   if (isStocked && !defaultStorage)
-    errors.defaultStorage = "Default storage is required for stocked items";
+    errors.defaultStorage = t("ItemCard.errors.default_storage_required");
 
   setFieldErrors(errors);
   return Object.keys(errors).length === 0;
@@ -228,6 +297,15 @@ const saveItem = async () => {
       notes,
       is_stocked: isStocked,
       default_storage_id: defaultStorage || null,
+      has_tokens: hasTokens,
+      token_count: hasTokens ? Number(tokenCount || 0) : 0,
+      is_offer_item: isOfferItem,
+      offer_is_active: isOfferItem ? offerIsActive : false,
+      offer_is_24_7: isOfferItem ? offerIs247 : true,
+      offer_start_time: isOfferItem && !offerIs247 && offerStartTime ? offerStartTime : null,
+      offer_end_time: isOfferItem && !offerIs247 && offerEndTime ? offerEndTime : null,
+      offer_start_date: isOfferItem && offerStartDate ? offerStartDate : null,
+      offer_end_date: isOfferItem && offerEndDate ? offerEndDate : null,
       initial_stock_date: initialStockDate, // ✅ NEW
     };
 
@@ -435,6 +513,280 @@ useEffect(() => {
           </div>
         </div>
 
+        <div className="mb-4 border-b pb-4">
+          <h3 className="text-md font-semibold text-gray-600 mb-2">
+            {t("ItemCard.sections.tokens")}
+          </h3>
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700">
+                  {t("ItemCard.fields.has_tokens")}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {t("ItemCard.fields.has_tokens_hint")}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (isReadOnly) return;
+
+                  setHasTokens((prev) => {
+                    const next = !prev;
+                    if (!next) {
+                      setTokenCount(0);
+                      setFieldErrors((current) => ({ ...current, tokenCount: null }));
+                    }
+                    return next;
+                  });
+                }}
+                disabled={isReadOnly}
+                dir="ltr"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                  hasTokens ? "bg-[#2f788a]" : "bg-gray-300"
+                } ${isReadOnly ? "cursor-not-allowed opacity-70" : ""}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                    hasTokens ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {hasTokens && (
+              <div className="mt-4 max-w-xs">
+                <label className="text-sm text-gray-600">
+                  {t("ItemCard.fields.token_count")}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  className={`mt-2 w-full border rounded px-3 py-2 ${
+                    fieldErrors.tokenCount ? "border-red-500 ring-2 ring-red-200" : ""
+                  }`}
+                  value={tokenCount}
+                  disabled={isReadOnly}
+                  onChange={(e) => {
+                    setTokenCount(e.target.value === "" ? "" : Number(e.target.value));
+                    setFieldErrors((prev) => ({ ...prev, tokenCount: null }));
+                  }}
+                />
+                {fieldErrors.tokenCount && (
+                  <p className="text-xs text-red-600 mt-1">{fieldErrors.tokenCount}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mb-4 border-b pb-4">
+          <h3 className="text-md font-semibold text-gray-600 mb-2">
+            {t("ItemCard.sections.offer")}
+          </h3>
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700">
+                  {t("ItemCard.fields.is_offer_item")}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {t("ItemCard.fields.is_offer_item_hint")}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (isReadOnly) return;
+
+                  setIsOfferItem((prev) => {
+                    const next = !prev;
+
+                    if (!next) {
+                      setOfferIsActive(false);
+                      setOfferIs247(true);
+                      setOfferStartTime("");
+                      setOfferEndTime("");
+                      setOfferStartDate("");
+                      setOfferEndDate("");
+                      setFieldErrors((current) => ({
+                        ...current,
+                        offerStartTime: null,
+                        offerEndTime: null,
+                        offerEndDate: null,
+                      }));
+                    }
+
+                    return next;
+                  });
+                }}
+                disabled={isReadOnly}
+                dir="ltr"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                  isOfferItem ? "bg-[#2f788a]" : "bg-gray-300"
+                } ${isReadOnly ? "cursor-not-allowed opacity-70" : ""}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                    isOfferItem ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {isOfferItem && (
+              <>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">
+                        {t("ItemCard.fields.offer_is_active")}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {t("ItemCard.fields.offer_is_active_hint")}
+                      </div>
+                    </div>
+
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-info"
+                      checked={offerIsActive}
+                      onChange={(e) => {
+                        setOfferIsActive(e.target.checked);
+                        setFieldErrors((current) => ({
+                          ...current,
+                          offerStartTime: null,
+                          offerEndTime: null,
+                        }));
+                      }}
+                      disabled={isReadOnly}
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">
+                        {t("ItemCard.fields.offer_is_24_7")}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {t("ItemCard.fields.offer_is_24_7_hint")}
+                      </div>
+                    </div>
+
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-info"
+                      checked={offerIs247}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setOfferIs247(checked);
+                        if (checked) {
+                          setOfferStartTime("");
+                          setOfferEndTime("");
+                          setFieldErrors((current) => ({
+                            ...current,
+                            offerStartTime: null,
+                            offerEndTime: null,
+                          }));
+                        }
+                      }}
+                      disabled={isReadOnly}
+                    />
+                  </label>
+                </div>
+
+                {!offerIs247 && (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        {t("ItemCard.fields.offer_start_time")}
+                      </label>
+                      <input
+                        type="time"
+                        className={`mt-2 w-full border rounded px-3 py-2 ${
+                          fieldErrors.offerStartTime ? "border-red-500 ring-2 ring-red-200" : ""
+                        }`}
+                        value={offerStartTime}
+                        disabled={isReadOnly}
+                        onChange={(e) => {
+                          setOfferStartTime(e.target.value);
+                          setFieldErrors((prev) => ({ ...prev, offerStartTime: null }));
+                        }}
+                      />
+                      {fieldErrors.offerStartTime && (
+                        <p className="text-xs text-red-600 mt-1">{fieldErrors.offerStartTime}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        {t("ItemCard.fields.offer_end_time")}
+                      </label>
+                      <input
+                        type="time"
+                        className={`mt-2 w-full border rounded px-3 py-2 ${
+                          fieldErrors.offerEndTime ? "border-red-500 ring-2 ring-red-200" : ""
+                        }`}
+                        value={offerEndTime}
+                        disabled={isReadOnly}
+                        onChange={(e) => {
+                          setOfferEndTime(e.target.value);
+                          setFieldErrors((prev) => ({ ...prev, offerEndTime: null }));
+                        }}
+                      />
+                      {fieldErrors.offerEndTime && (
+                        <p className="text-xs text-red-600 mt-1">{fieldErrors.offerEndTime}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("ItemCard.fields.offer_start_date")}
+                    </label>
+                    <input
+                      type="date"
+                      className="mt-2 w-full border rounded px-3 py-2"
+                      value={offerStartDate}
+                      disabled={isReadOnly}
+                      onChange={(e) => setOfferStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-gray-600">
+                      {t("ItemCard.fields.offer_end_date")}
+                    </label>
+                    <input
+                      type="date"
+                      className={`mt-2 w-full border rounded px-3 py-2 ${
+                        fieldErrors.offerEndDate ? "border-red-500 ring-2 ring-red-200" : ""
+                      }`}
+                      value={offerEndDate}
+                      disabled={isReadOnly}
+                      onChange={(e) => {
+                        setOfferEndDate(e.target.value);
+                        setFieldErrors((prev) => ({ ...prev, offerEndDate: null }));
+                      }}
+                    />
+                    {fieldErrors.offerEndDate && (
+                      <p className="text-xs text-red-600 mt-1">{fieldErrors.offerEndDate}</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between border rounded-lg p-4 bg-white mb-2">
           <div>
             <p className="text-sm font-medium text-gray-700">
@@ -606,7 +958,7 @@ useEffect(() => {
             value={defaultStorage}
             onChange={(e) => {
               setDefaultStorage(e.target.value);
-              setStorageError(false);
+              setFieldErrors((prev) => ({ ...prev, defaultStorage: null }));
             }}
             disabled={isReadOnly}
             className={`

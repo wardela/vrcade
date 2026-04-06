@@ -669,6 +669,8 @@
       "basics": "Basics",
       "classification": "Classification",
       "financials": "Financials",
+      "tokens": "Tokens",
+      "offer": "Offer Settings",
       "initial_stock": "Initial Stock per Storage",
       "stock_controls": "Stock Controls",
       "standard_settings": "Standard Settings",
@@ -688,6 +690,19 @@
       "price_incl": "Price (Incl. Tax)",
       "price_excl": "Price (Excl. Tax)",
       "tax_pct": "Tax %",
+      "has_tokens": "Has Tokens",
+      "has_tokens_hint": "Enable for cards or packages that add arcade tokens",
+      "token_count": "Token Count",
+      "is_offer_item": "Is Offer Item",
+      "is_offer_item_hint": "Enable timed or date-based availability for this item",
+      "offer_is_active": "Offer Active",
+      "offer_is_active_hint": "Only active offers appear in the POS",
+      "offer_is_24_7": "Available 24/7",
+      "offer_is_24_7_hint": "Disable to restrict the offer to daily hours",
+      "offer_start_time": "Start Hour",
+      "offer_end_time": "End Hour",
+      "offer_start_date": "Start Date",
+      "offer_end_date": "End Date",
 
       "stock_managed": "Stock Managed Item",
       "stock_hint": "Disable for services or unlimited items",
@@ -717,6 +732,15 @@
       "category_required": "Category is required",
       "unit_required": "Unit is required",
       "price_required": "Price must be greater than zero",
+      "token_count_required": "Token count is required when tokens are enabled",
+      "token_count_invalid": "Token count must be a valid number",
+      "token_count_integer": "Token count must be a whole number",
+      "token_count_positive": "Token count must be greater than zero",
+      "token_count_non_negative": "Token count cannot be negative",
+      "offer_start_time_required": "Start hour is required for active scheduled offers",
+      "offer_end_time_required": "End hour is required for active scheduled offers",
+      "offer_time_order": "End hour must be later than start hour",
+      "offer_date_order": "End date cannot be before the start date",
       "default_storage_required": "Default storage is required for stocked items"
     },
 
@@ -1916,7 +1940,10 @@
       "price": "Price",
       "stock": "Stock",
       "not_stocked": "Not stocked",
-      "usual_discount": "Usual discount"
+      "usual_discount": "Usual discount",
+      "tokens": "Tokens",
+      "tokens_total": "total tokens",
+      "offer": "Offer"
     },
 
     "cart": {
@@ -1928,6 +1955,7 @@
       "unit_price": "Unit Price",
       "quantity": "Quantity",
       "total": "Total",
+      "per_item": "item",
 
       "add_discount": "Add discount",
       "discount_applied": "discount applied",
@@ -1939,6 +1967,7 @@
     "totals": {
       "subtotal": "Subtotal",
       "discount": "Discount",
+      "tokens": "Tokens",
       "total": "Total"
     },
 

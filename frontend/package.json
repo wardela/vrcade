@@ -7,15 +7,19 @@
   "description": "fawtartak financing app",
   "author": "Innovation Elements Programming Solutions",
   "scripts": {
-    "start": "electron-forge start",
+    "start": "npm run build:frontend && electron-forge start",
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:frontend",
+    "build:frontend": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "package": "electron-forge package",
-    "electron": "cross-env NODE_ENV=development electron ./electron/main.cjs",
-    "electron:build": "npm run build && cross-env NODE_ENV=production electron-builder",
-    "make": "electron-forge make"
+    "package": "npm run build:frontend && electron-forge package",
+    "package:desktop": "npm run build:frontend && electron-forge package",
+    "package:win": "npm run build:frontend && electron-forge package --platform=win32 --arch=x64",
+    "electron": "electron ./electron/main.cjs",
+    "make": "npm run build:frontend && electron-forge make",
+    "make:desktop": "npm run build:frontend && electron-forge make",
+    "make:win": "npm run build:frontend && electron-forge make --platform=win32 --arch=x64"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",

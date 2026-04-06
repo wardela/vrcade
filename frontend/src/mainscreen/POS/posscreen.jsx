@@ -1,11 +1,66 @@
 import { useEffect, useState, useRef } from "react";
 import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
+import { formatLocalDateTime } from "../../utils/localDateTime";
 import ClientList from "../invoices/clientlist";
 import PayModal from "./PayModal";
 import BarcodeModal from "./barcodemodal";
 import ReceiptPreviewModal from "./ReceiptPreviewModal";
 import HeldInvoicesModal from "./HeldInvoicesModal";
+
+const decodeTokenPayload = () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return {};
+
+    const payload = token.split(".")[1];
+    if (!payload) return {};
+
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload =
+      normalizedPayload + "=".repeat((4 - (normalizedPayload.length % 4 || 4)) % 4);
+
+    return JSON.parse(window.atob(paddedPayload));
+  } catch {
+    return {};
+  }
+};
+
+const getCurrentPosUser = () => {
+  const tokenPayload = decodeTokenPayload();
+  const fullName = localStorage.getItem("full_name") || "";
+
+  return {
+    userId: tokenPayload.user_id || null,
+    username: tokenPayload.username || fullName || "Unknown user",
+    fullName,
+  };
+};
+
+const formatSessionDateTime = (value) => {
+  if (!value) return "—";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+};
+
+const getApiMessage = (error, fallbackMessage) =>
+  error?.response?.data?.message || fallbackMessage;
+
+const formatNumber = (value) =>
+  Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: Number(value || 0) % 1 === 0 ? 0 : 3,
+    maximumFractionDigits: 3,
+  });
+
 export default function POSScreen() {
     const { t } = useTranslation();
     const [posMode, setPosMode] = useState("new"); 
@@ -36,7 +91,20 @@ export default function POSScreen() {
     const [heldInvoices, setHeldInvoices] = useState([]);
     const [showHeldModal, setShowHeldModal] = useState(false);
     const [company, setCompany] = useState(null);
+    const [activeSession, setActiveSession] = useState(null);
+    const [posPoints, setPosPoints] = useState([]);
+    const [isPosPointsLoading, setIsPosPointsLoading] = useState(true);
+    const [selectedPosPointId, setSelectedPosPointId] = useState("");
+    const [isSessionLoading, setIsSessionLoading] = useState(true);
+    const [sessionActionLoading, setSessionActionLoading] = useState(false);
+    const [sessionError, setSessionError] = useState("");
+    const [endedSessionSummary, setEndedSessionSummary] = useState(null);
+    const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [paymentRequestKey, setPaymentRequestKey] = useState("");
 const companyFetchedRef = useRef(false);
+const currentUser = getCurrentPosUser();
+const paymentSubmitLockRef = useRef(false);
 
 useEffect(() => {
   if (companyFetchedRef.current) return;
@@ -61,8 +129,158 @@ useEffect(() => {
     if (!posPerm.view) {
     return <NoAccess />;
     }
+
+    const resetPosWorkspace = () => {
+    setCartItems([]);
+    setSelectedClient(null);
+    setSelectedInvoice(null);
+    setPosMode("new");
+    setOpenDiscountIndex(null);
+    setShowPayModal(false);
+    setShowClientPopup(false);
+    setShowBarcodeModal(false);
+    setShowHeldModal(false);
+    setShowReceiptPreview(false);
+    setLastInvoiceNumber(null);
+    setHeldInvoices([]);
+    };
+
+    const loadActiveSession = async () => {
+    setIsSessionLoading(true);
+
+    try {
+        const res = await api.get("/api/pos-sessions/active");
+        const session = res.data?.session || null;
+        setActiveSession(session);
+        if (session?.pos_point_id) {
+          setSelectedPosPointId(String(session.pos_point_id));
+        }
+        setSessionError("");
+    } catch (err) {
+        console.error("Failed to load active POS session", err);
+        setSessionError(getApiMessage(err, "Failed to load POS session status"));
+    } finally {
+        setIsSessionLoading(false);
+    }
+    };
+
+    const loadPosPoints = async () => {
+    setIsPosPointsLoading(true);
+
+    try {
+        const res = await api.get("/api/pos-points?active_only=true");
+        const points = res.data?.pos_points || [];
+        setPosPoints(points);
+        setSelectedPosPointId((current) => {
+          if (activeSession?.pos_point_id) {
+            return String(activeSession.pos_point_id);
+          }
+
+          if (current && points.some((point) => String(point.id) === String(current))) {
+            return current;
+          }
+
+          return points[0] ? String(points[0].id) : "";
+        });
+    } catch (err) {
+        console.error("Failed to load POS stations", err);
+        setPosPoints([]);
+        setSessionError((current) =>
+          current || getApiMessage(err, "Failed to load available POS stations"),
+        );
+    } finally {
+        setIsPosPointsLoading(false);
+    }
+    };
+
+    const handleStartSession = async () => {
+    if (!selectedPosPointId) {
+        setSessionError("Choose a POS station before starting the session.");
+        return;
+    }
+
+    setSessionActionLoading(true);
+    setSessionError("");
+
+    try {
+        const res = await api.post("/api/pos-sessions/start", {
+        pos_point_id: Number(selectedPosPointId),
+        started_at: formatLocalDateTime(),
+        });
+
+        const session = res.data?.session || null;
+        setActiveSession(session);
+        if (session?.pos_point_id) {
+          setSelectedPosPointId(String(session.pos_point_id));
+        }
+    } catch (err) {
+        console.error("Failed to start POS session", err);
+        setSessionError(getApiMessage(err, "Failed to start POS session"));
+    } finally {
+        setSessionActionLoading(false);
+    }
+    };
+
+    const handleSessionProtectedError = async (error) => {
+    const code = error?.response?.data?.code;
+
+    if (
+        code === "POS_SESSION_REQUIRED" ||
+        code === "POS_SESSION_ENDED" ||
+        code === "POS_SESSION_NOT_FOUND" ||
+        code === "POS_SESSION_FORBIDDEN"
+    ) {
+        resetPosWorkspace();
+        await loadActiveSession();
+    }
+    };
+
+    const handleEndSession = async () => {
+    if (!activeSession) return;
+
+    setShowEndSessionConfirm(true);
+    };
+
+    const confirmEndSession = async () => {
+    if (!activeSession) return;
+
+    setSessionActionLoading(true);
+    setSessionError("");
+
+    try {
+        const res = await api.post(`/api/pos-sessions/${activeSession.id}/end`, {
+        ended_at: formatLocalDateTime(),
+        });
+        setShowEndSessionConfirm(false);
+        setEndedSessionSummary(res.data);
+        setSelectedPosPointId(activeSession?.pos_point_id ? String(activeSession.pos_point_id) : "");
+        setActiveSession(null);
+        resetPosWorkspace();
+    } catch (err) {
+        console.error("Failed to end POS session", err);
+        setSessionError(getApiMessage(err, "Failed to end POS session"));
+    } finally {
+        setSessionActionLoading(false);
+    }
+    };
+
+useEffect(() => {
+  loadActiveSession();
+  loadPosPoints();
+}, []);
+
+useEffect(() => {
+  if (showPayModal) {
+    setPaymentRequestKey(crypto.randomUUID());
+  } else {
+    setPaymentRequestKey("");
+    setIsProcessingPayment(false);
+    paymentSubmitLockRef.current = false;
+  }
+}, [showPayModal]);
+
     const holdCurrentInvoice = () => {
-    if (cartItems.length === 0) return;
+    if (isPosBlocked || cartItems.length === 0) return;
 
     const held = {
         id: crypto.randomUUID(),
@@ -100,7 +318,12 @@ const isEinvoiceLocked =
   selectedInvoice.qr &&
   selectedInvoice.qr !== "123456789";
 
+const selectedPosPoint =
+  posPoints.find((point) => String(point.id) === String(selectedPosPointId)) || null;
+
 const isLocked = isPermissionLocked || isEinvoiceLocked;
+const isPosBlocked =
+  isLocked || isSessionLoading || !activeSession || sessionActionLoading;
 
     
     const barcodeBufferRef = useRef("");
@@ -109,7 +332,7 @@ const isLocked = isPermissionLocked || isEinvoiceLocked;
     const BARCODE_TIMEOUT = 50; // ms (scanner speed threshold)
 
 const handleBarcodeScan = (barcode) => {
-    if (isLocked) return; // 🔒 BLOCK
+    if (isPosBlocked) return; // 🔒 BLOCK
   if (!barcode) return;
 
   const item = items.find(
@@ -169,7 +392,7 @@ const handleBarcodeScan = (barcode) => {
 
 
     useEffect(() => {
-    api.get("/api/invoices/items").then(res => {
+    api.get("/api/invoices/items?context=pos").then(res => {
         setItems(res.data);
     });
 
@@ -228,7 +451,7 @@ const handleInvoiceClick = async (inv) => {
       const qty = Number(line.qty || 1);
       const discountPct = Number(line.discount_percentage || 0) * 100;
 
-      return {
+        return {
         id: idx + 1,
         item_id: line.item_id,
         name: line.description,
@@ -243,6 +466,8 @@ const handleInvoiceClick = async (inv) => {
         storage_id: line.storage_id ?? null,
         exempt: Boolean(line.exempt),
         is_stocked: Boolean(line.is_stocked),
+        has_tokens: Boolean(line.has_tokens),
+        token_count: Number(line.token_count || 0),
         price_excl: price / (1 + (Number(line.tax || 0) / 100)),
       };
     });
@@ -258,7 +483,7 @@ const handleInvoiceClick = async (inv) => {
 
 
     const addItemToCart = (item) => {
-    if (isLocked) return; // 🔒 BLOCK
+    if (isPosBlocked) return; // 🔒 BLOCK
     const qty = Number(item.usual_sales_qty || 1);
     const price = Number(item.price_with_tax || 0);
     const tax = Number(item.tax_percentage || 0);
@@ -305,6 +530,8 @@ const handleInvoiceClick = async (inv) => {
             : null,
 
             is_stocked: Boolean(item.is_stocked),
+            has_tokens: Boolean(item.has_tokens),
+            token_count: Number(item.token_count || 0),
             exempt: false,
 
             // derived
@@ -315,7 +542,7 @@ const handleInvoiceClick = async (inv) => {
     };
 
     const updateCartItem = (index, field, value) => {
-          if (isLocked) return; // 🔒 BLOCK
+          if (isPosBlocked) return; // 🔒 BLOCK
     setCartItems((prev) => {
         const updated = [...prev];
         const item = { ...updated[index] };
@@ -355,7 +582,7 @@ const handleInvoiceClick = async (inv) => {
     };
 
     const removeCartItem = (index) => {
-          if (isLocked) return; // 🔒 BLOCK
+          if (isPosBlocked) return; // 🔒 BLOCK
     setCartItems((prev) =>
         prev
         .filter((_, i) => i !== index)
@@ -374,8 +601,18 @@ const totalDiscount = cartItems.reduce(
 );
 
 const grandTotal = subtotal - totalDiscount;
+const totalTokens = cartItems.reduce(
+  (sum, item) =>
+    sum +
+    (item.has_tokens ? Number(item.token_count || 0) * Number(item.qty || 0) : 0),
+  0,
+);
 
-const savePosInvoice = async ({ paymentType }) => {
+const savePosInvoice = async ({ payments }) => {
+  if (!activeSession) {
+    throw new Error("No active POS session");
+  }
+
   if (cartItems.length === 0) return;
 
   const lines = cartItems.map((it, idx) => ({
@@ -394,8 +631,12 @@ const savePosInvoice = async ({ paymentType }) => {
   }));
 
   const payload = {
-    pos: "POS-1",
+    pos: activeSession.pos_point_name || activeSession.pos || "POS-1",
     currency: "JOD",
+    session_id: activeSession.id,
+    user_id: currentUser.userId,
+    date: formatLocalDateTime(),
+    idempotency_key: paymentRequestKey,
 
     client_id: selectedClient?.id || null,
     client: selectedClient?.name || "",
@@ -403,6 +644,7 @@ const savePosInvoice = async ({ paymentType }) => {
     client_detail: selectedClient?.detail || null,
 
     lines,
+    payments,
   };
 
   const res = await api.post("/api/invoices/pos", payload);
@@ -443,7 +685,7 @@ const updatePosInvoice = async () => {
     type2: "local",
     currency: "JOD",
     notes: "POS Sales | مبيعات نقطة بيع",
-    date: new Date(),
+    date: formatLocalDateTime(),
   };
 
   await api.put(
@@ -475,7 +717,37 @@ const beep = (type = "success") => {
 };
 
   return (
-    <div className="w-full h-full bg-base-200 flex flex-col lg:flex-row gap-3 p-3">
+    <div className="relative w-full h-full bg-base-200 flex flex-col gap-3 p-3">
+
+      {activeSession && (
+      <div className="bg-base-100 rounded-xl shadow border border-base-300 px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 font-semibold text-emerald-700">
+            Session #{activeSession.id}
+          </span>
+          <span className="text-gray-600">
+            User: <span className="font-semibold text-gray-900">{activeSession.username || currentUser.username}</span>
+          </span>
+          <span className="text-gray-600">
+            Station: <span className="font-semibold text-gray-900">{activeSession.pos_point_name || activeSession.pos || "—"}</span>
+          </span>
+          <span className="text-gray-600">
+            Started: <span className="font-semibold text-gray-900">{formatSessionDateTime(activeSession.started_at)}</span>
+          </span>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-outline btn-error"
+          disabled={sessionActionLoading}
+          onClick={handleEndSession}
+        >
+          {sessionActionLoading ? "Ending..." : "End Session"}
+        </button>
+      </div>
+      )}
+
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3">
 
       {/* ================= LEFT: RECENT INVOICES ================= */}
       
@@ -663,46 +935,45 @@ const beep = (type = "success") => {
                 String(i.id).includes(q)
             );
             })
+            .sort((left, right) => {
+            const offerDiff = Number(Boolean(right.is_offer_item)) - Number(Boolean(left.is_offer_item));
+            if (offerDiff !== 0) return offerDiff;
+            return String(left.name || "").localeCompare(String(right.name || ""));
+            })
             .map(i => (
             <div
             key={i.id}
             onClick={() => addItemToCart(i)}
-            className="
-                border rounded-lg p-3
-                cursor-pointer
-                hover:bg-base-200
-                transition
-                flex flex-col gap-1
-            "
+            className={`rounded-xl border p-3 cursor-pointer transition flex flex-col gap-2 shadow-sm ${
+                i.is_offer_item
+                  ? "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 hover:border-amber-400 hover:shadow-amber-100"
+                  : "border-base-300 bg-white hover:bg-base-200"
+            }`}
             >
-                {/* Name */}
-                <div className="font-medium text-sm ">
-                {i.name}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="font-medium text-sm text-gray-900">
+                    {i.name}
+                  </div>
+
+                  {i.is_offer_item && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                      {t("POS.items.offer")}
+                    </span>
+                  )}
                 </div>
 
-                {/* Price */}
-                <div className="text-sm font-semibold">
+                <div className="text-sm font-semibold text-gray-900">
                 {Number(i.price_with_tax).toFixed(3)} JOD
                 </div>
 
-                {/* Stock */}
-                <div
-                className={`text-xs font-medium ${
-                    !i.is_stocked
-                    ? "text-blue-600"
-                    : i.stock_qty <= 0
-                        ? "text-red-600"
-                        : i.stock_qty <= i.minimum_qty_alert
-                        ? "text-orange-600"
-                        : "text-green-600"
-                }`}
-                >
-                {!i.is_stocked
-                    ?  t("POS.items.not_stocked")
-                    : `${t("POS.items.stock")} : ${Number(i.stock_qty).toFixed(3)}`}
-                </div>
+                {i.has_tokens && (
+                  <div className="flex items-center justify-start">
+                    <span className="rounded-full bg-[#2f788a] px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      {formatNumber(i.token_count)} {t("POS.items.tokens")}
+                    </span>
+                  </div>
+                )}
 
-                {/* Usual discount */}
                 {Number(i.usual_discount_percentage) > 0 && (
                 <div className="text-xs text-blue-600 font-semibold">
                     {t("POS.items.usual_discount")} : {Number(i.usual_discount_percentage)}%
@@ -881,6 +1152,17 @@ const beep = (type = "success") => {
           </div>
         </div>
 
+        {cart.has_tokens && Number(cart.token_count) > 0 && (
+          <div className="mb-2 flex items-center justify-start">
+            <span className="rounded-full bg-[#2f788a]/10 px-3 py-1 text-xs font-semibold text-[#2f788a]">
+              {formatNumber(cart.token_count)} {t("POS.items.tokens")} / {t("POS.cart.per_item")}
+              {Number(cart.qty) > 1
+                ? ` • ${formatNumber(Number(cart.token_count) * Number(cart.qty))} ${t("POS.items.tokens_total")}`
+                : ""}
+            </span>
+          </div>
+        )}
+
         {/* ================= Line Total ================= */}
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-semibold text-gray-900">
@@ -1003,6 +1285,13 @@ const beep = (type = "success") => {
       </div>
     )}
 
+    <div className="flex justify-between items-center">
+      <span className="text-gray-600">{t("POS.totals.tokens")}</span>
+      <span className="font-medium text-[#2f788a]">
+        {formatNumber(totalTokens)} {t("POS.items.tokens")}
+      </span>
+    </div>
+
   </div>
 
   {/* Divider */}
@@ -1025,7 +1314,7 @@ const beep = (type = "success") => {
     <>
 <button
   className="btn btn-outline flex-1"
-  disabled={cartItems.length === 0}
+  disabled={isPosBlocked || cartItems.length === 0}
   onClick={holdCurrentInvoice}
 >
   {t("POS.actions.hold")}
@@ -1033,14 +1322,18 @@ const beep = (type = "success") => {
 
       <button
         className="btn btn-primary flex-1"
-        disabled={cartItems.length === 0}
-        onClick={() => setShowPayModal(true)}
+        disabled={isPosBlocked || cartItems.length === 0}
+        onClick={() => {
+          setPaymentRequestKey(crypto.randomUUID());
+          setShowPayModal(true);
+        }}
       >
         {t("POS.actions.pay")}
       </button>
 
       <button
         className="btn btn-ghost flex-1"
+        disabled={isPosBlocked}
         onClick={() => {
           setCartItems([]);
           setSelectedClient(null);
@@ -1067,11 +1360,11 @@ const beep = (type = "success") => {
 
         <button
         className={`btn flex-1 ${
-            isLocked
+            isPosBlocked
             ? "btn-disabled"
             : "btn-primary"
         }`}
-        disabled={isLocked}
+        disabled={isPosBlocked}
         onClick={async () => {
             try {
             await updatePosInvoice();
@@ -1119,9 +1412,15 @@ const beep = (type = "success") => {
   open={showPayModal}
   onClose={() => setShowPayModal(false)}
   grandTotal={grandTotal}
-onConfirm={async ({ paymentType, cashPaid, change }) => {
+  submitting={isProcessingPayment}
+onConfirm={async ({ payments }) => {
+  if (paymentSubmitLockRef.current || isProcessingPayment) return;
+
+  paymentSubmitLockRef.current = true;
+  setIsProcessingPayment(true);
+
   try {
-    const saved = await savePosInvoice({ paymentType });
+    const saved = await savePosInvoice({ payments });
 
     if (!saved?.header?.invoice_number) {
       throw new Error("Invoice number missing");
@@ -1143,7 +1442,11 @@ onConfirm={async ({ paymentType, cashPaid, change }) => {
     fetchInvoices();
   } catch (err) {
     console.error("POS save failed:", err);
-    alert("Failed to complete payment");
+    await handleSessionProtectedError(err);
+    alert(getApiMessage(err, "Failed to complete payment"));
+  } finally {
+    paymentSubmitLockRef.current = false;
+    setIsProcessingPayment(false);
   }
 }}
 
@@ -1168,6 +1471,266 @@ onConfirm={async ({ paymentType, cashPaid, change }) => {
   onSelect={restoreHeldInvoice}
   onClose={() => setShowHeldModal(false)}
 />
+<EndSessionConfirmModal
+  open={showEndSessionConfirm}
+  session={activeSession}
+  loading={sessionActionLoading}
+  onCancel={() => setShowEndSessionConfirm(false)}
+  onConfirm={confirmEndSession}
+/>
+      </div>
+
+      {(isSessionLoading || !activeSession) && (
+      <div className="absolute inset-0 z-30 flex items-center justify-center bg-base-200/80 backdrop-blur-sm p-4">
+        <div className="w-full max-w-lg rounded-2xl border border-base-300 bg-white shadow-2xl p-6">
+          <div className="mb-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2f788a]">
+              POS Session Required
+            </div>
+            <h2 className="mt-2 text-2xl font-bold text-gray-900">
+              You need to start a POS session before using the point of sale.
+            </h2>
+            <p className="mt-3 text-sm text-gray-600">
+              Current user: <span className="font-semibold text-gray-900">{currentUser.username}</span>
+            </p>
+            {currentUser.fullName && (
+              <p className="mt-1 text-sm text-gray-500">{currentUser.fullName}</p>
+            )}
+          </div>
+
+          {sessionError && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {sessionError}
+            </div>
+          )}
+
+          {isSessionLoading ? (
+            <div className="flex items-center gap-3 rounded-xl border border-base-300 bg-base-100 px-4 py-4 text-sm text-gray-600">
+              <span className="loading loading-spinner loading-md text-[#2f788a]"></span>
+              Checking for an active POS session...
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-base-300 bg-base-100 p-4">
+                <div className="text-sm font-semibold text-gray-800">Choose POS station</div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Sessions now open under a specific station so monitoring and history stay accurate.
+                </p>
+
+                {isPosPointsLoading ? (
+                  <div className="mt-4 flex items-center gap-3 text-sm text-gray-600">
+                    <span className="loading loading-spinner loading-sm text-[#2f788a]"></span>
+                    Loading available POS stations...
+                  </div>
+                ) : posPoints.length === 0 ? (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    No active POS stations are available. Create one in POS Monitor before starting a session.
+                  </div>
+                ) : (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {posPoints.map((point) => {
+                      const isSelected = String(point.id) === String(selectedPosPointId);
+
+                      return (
+                        <button
+                          key={point.id}
+                          type="button"
+                          onClick={() => setSelectedPosPointId(String(point.id))}
+                          className={`rounded-2xl border px-4 py-4 text-left transition ${
+                            isSelected
+                              ? "border-[#2f788a] bg-[#2f788a]/8 shadow-sm"
+                              : "border-base-300 bg-white hover:border-[#2f788a]/40"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="font-semibold text-gray-900">{point.name}</div>
+                            <span
+                              className={`h-4 w-4 rounded-full border ${
+                                isSelected
+                                  ? "border-[#2f788a] bg-[#2f788a]"
+                                  : "border-gray-300 bg-white"
+                              }`}
+                            />
+                          </div>
+                          <div className="mt-2 text-xs text-gray-500">
+                            {point.description || "Active and ready for a new session"}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {selectedPosPoint && (
+                <div className="rounded-xl border border-[#2f788a]/15 bg-[#2f788a]/5 px-4 py-3 text-sm text-gray-700">
+                  Starting on <span className="font-semibold text-gray-900">{selectedPosPoint.name}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={sessionActionLoading || isPosPointsLoading || !selectedPosPointId}
+                  onClick={handleStartSession}
+                >
+                  {sessionActionLoading ? "Starting..." : "Start Session"}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  disabled={sessionActionLoading}
+                  onClick={async () => {
+                    await loadPosPoints();
+                    await loadActiveSession();
+                  }}
+                >
+                  Refresh Status
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={sessionActionLoading}
+                  onClick={() => {
+                    window.location.hash = "#/pos-management";
+                  }}
+                >
+                  Open POS Monitor
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      )}
+
+      {endedSessionSummary && (
+      <EndSessionSummaryModal
+        summary={endedSessionSummary}
+        fallbackUsername={currentUser.username}
+        onClose={() => setEndedSessionSummary(null)}
+      />
+      )}
+    </div>
+  );
+}
+
+function NoAccess() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-base-200 p-6">
+      <div className="rounded-2xl border border-base-300 bg-white px-8 py-10 text-center shadow-xl">
+        <h2 className="text-xl font-bold text-gray-900">POS Access Required</h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Your account does not have permission to open the POS screen.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm }) {
+  if (!open || !session) return null;
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-xl font-bold text-gray-900">End Session</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Session #{session.id} will be closed and the POS will lock until a new session is started.
+          </p>
+        </div>
+
+        <div className="px-6 py-5 text-sm text-gray-700">
+          <div className="rounded-xl border border-base-300 bg-base-100 px-4 py-4">
+            <div>
+              User: <span className="font-semibold text-gray-900">{session.username || "—"}</span>
+            </div>
+            <div className="mt-2">
+              Started: <span className="font-semibold text-gray-900">{formatSessionDateTime(session.started_at)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 px-6 py-4">
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-error"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? "Ending..." : "Confirm End Session"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EndSessionSummaryModal({ summary, fallbackUsername, onClose }) {
+  if (!summary) return null;
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-xl font-bold text-gray-900">Session Summary</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Session #{summary.id} has been ended successfully.
+          </p>
+        </div>
+
+        <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+          <div className="rounded-xl bg-base-200 px-4 py-3">
+            <div className="text-xs uppercase tracking-wide text-gray-500">Number of Invoices</div>
+            <div className="mt-1 font-semibold text-gray-900">
+              {summary.invoice_count || 0}
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-base-200 px-4 py-3">
+            <div className="text-xs uppercase tracking-wide text-gray-500">User</div>
+            <div className="mt-1 font-semibold text-gray-900">
+              {summary.username || fallbackUsername}
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-base-200 px-4 py-3">
+            <div className="text-xs uppercase tracking-wide text-gray-500">Started</div>
+            <div className="mt-1 font-semibold text-gray-900">
+              {formatSessionDateTime(summary.started_at)}
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-base-200 px-4 py-3">
+            <div className="text-xs uppercase tracking-wide text-gray-500">Ended</div>
+            <div className="mt-1 font-semibold text-gray-900">
+              {formatSessionDateTime(summary.ended_at)}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end px-6 py-4">
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

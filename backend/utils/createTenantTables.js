@@ -1,3 +1,5 @@
+const { applyPosSessionSchema } = require("./ensurePosSessionSchema");
+
 module.exports = async function createTenantTables(client, newSchema) {
   const sourceSchema = "dev_sales";
 
@@ -190,6 +192,9 @@ module.exports = async function createTenantTables(client, newSchema) {
   `);
 
   console.log("✓ Triggers cloned");
+
+  await applyPosSessionSchema(client, newSchema);
+  console.log("✓ POS session schema applied");
 
   console.log(`🎉 Tenant schema "${newSchema}" created successfully.`);
 };

@@ -4,6 +4,198 @@ const s3 = require("../config/s3");
 
 const DEFAULT_QR = "123456789";
 
+const createItemValidationError = (message) => {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+};
+
+const createPosItemError = (message, code = "POS_ITEM_INVALID", statusCode = 400) => {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = statusCode;
+  return error;
+};
+
+const parseBooleanFlag = (value, defaultValue = false) => {
+  if (value == null || value === "") return defaultValue;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "off"].includes(normalized)) return false;
+  }
+
+  return Boolean(value);
+};
+
+const padDatePart = (value) => String(value).padStart(2, "0");
+
+const normalizeDateValue = (value) => {
+  if (value == null || value === "") return null;
+  if (value instanceof Date) {
+    return `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())}`;
+  }
+
+  const normalized = String(value).trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : null;
+};
+
+const normalizeTimeValue = (value) => {
+  if (value == null || value === "") return null;
+  const normalized = String(value).trim();
+
+  if (/^\d{2}:\d{2}$/.test(normalized)) {
+    return `${normalized}:00`;
+  }
+
+  if (/^\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+    return normalized;
+  }
+
+  return null;
+};
+
+const getCurrentLocalOfferParts = (now = new Date()) => ({
+  currentDate: `${now.getFullYear()}-${padDatePart(now.getMonth() + 1)}-${padDatePart(now.getDate())}`,
+  currentTime: `${padDatePart(now.getHours())}:${padDatePart(now.getMinutes())}:${padDatePart(now.getSeconds())}`,
+});
+
+const normalizeItemTokenConfig = (data = {}) => {
+  const hasTokens = parseBooleanFlag(data.has_tokens, false);
+
+  const rawTokenCount = data.token_count;
+  const parsedTokenCount =
+    rawTokenCount == null || rawTokenCount === ""
+      ? 0
+      : Number(rawTokenCount);
+
+  if (!Number.isFinite(parsedTokenCount)) {
+    throw createItemValidationError("Token count must be a valid number");
+  }
+
+  if (!Number.isInteger(parsedTokenCount)) {
+    throw createItemValidationError("Token count must be a whole number");
+  }
+
+  if (parsedTokenCount < 0) {
+    throw createItemValidationError("Token count cannot be negative");
+  }
+
+  if (hasTokens && parsedTokenCount <= 0) {
+    throw createItemValidationError("Token count must be greater than zero when tokens are enabled");
+  }
+
+  return {
+    has_tokens: hasTokens,
+    token_count: hasTokens ? parsedTokenCount : 0,
+  };
+};
+
+const normalizeItemOfferConfig = (data = {}) => {
+  const isOfferItem = parseBooleanFlag(data.is_offer_item, false);
+
+  if (!isOfferItem) {
+    return {
+      is_offer_item: false,
+      offer_is_active: false,
+      offer_is_24_7: true,
+      offer_start_time: null,
+      offer_end_time: null,
+      offer_start_date: null,
+      offer_end_date: null,
+    };
+  }
+
+  const offerIsActive = parseBooleanFlag(data.offer_is_active, false);
+  const offerIs247 = parseBooleanFlag(data.offer_is_24_7, true);
+  const offerStartTime = offerIs247 ? null : normalizeTimeValue(data.offer_start_time);
+  const offerEndTime = offerIs247 ? null : normalizeTimeValue(data.offer_end_time);
+  const offerStartDate = normalizeDateValue(data.offer_start_date);
+  const offerEndDate = normalizeDateValue(data.offer_end_date);
+
+  if (!offerIs247 && offerIsActive && (!offerStartTime || !offerEndTime)) {
+    throw createItemValidationError("Start and end time are required for active scheduled offers");
+  }
+
+  if (!offerIs247 && offerStartTime && offerEndTime && offerEndTime <= offerStartTime) {
+    throw createItemValidationError("Offer end time must be later than the start time");
+  }
+
+  if ((data.offer_start_date && !offerStartDate) || (data.offer_end_date && !offerEndDate)) {
+    throw createItemValidationError("Offer dates must be valid");
+  }
+
+  if (offerStartDate && offerEndDate && offerEndDate < offerStartDate) {
+    throw createItemValidationError("Offer end date cannot be before the start date");
+  }
+
+  return {
+    is_offer_item: true,
+    offer_is_active: offerIsActive,
+    offer_is_24_7: offerIs247,
+    offer_start_time: offerStartTime,
+    offer_end_time: offerEndTime,
+    offer_start_date: offerStartDate,
+    offer_end_date: offerEndDate,
+  };
+};
+
+const isOfferItemCurrentlyAvailable = (item, currentParts = getCurrentLocalOfferParts()) => {
+  if (!parseBooleanFlag(item?.is_offer_item, false)) {
+    return true;
+  }
+
+  if (!parseBooleanFlag(item?.offer_is_active, false)) {
+    return false;
+  }
+
+  const offerStartDate = normalizeDateValue(item?.offer_start_date);
+  const offerEndDate = normalizeDateValue(item?.offer_end_date);
+
+  if (offerStartDate && currentParts.currentDate < offerStartDate) {
+    return false;
+  }
+
+  if (offerEndDate && currentParts.currentDate > offerEndDate) {
+    return false;
+  }
+
+  if (parseBooleanFlag(item?.offer_is_24_7, true)) {
+    return true;
+  }
+
+  const offerStartTime = normalizeTimeValue(item?.offer_start_time);
+  const offerEndTime = normalizeTimeValue(item?.offer_end_time);
+
+  if (!offerStartTime || !offerEndTime) {
+    return false;
+  }
+
+  return currentParts.currentTime >= offerStartTime && currentParts.currentTime <= offerEndTime;
+};
+
+const sortItemsForPos = (items) =>
+  [...items].sort((left, right) => {
+    const leftCategory = Number(left.category || 0);
+    const rightCategory = Number(right.category || 0);
+
+    if (leftCategory !== rightCategory) {
+      return leftCategory - rightCategory;
+    }
+
+    const offerWeightDiff =
+      Number(parseBooleanFlag(right.is_offer_item, false)) -
+      Number(parseBooleanFlag(left.is_offer_item, false));
+
+    if (offerWeightDiff !== 0) {
+      return offerWeightDiff;
+    }
+
+    return String(left.name || "").localeCompare(String(right.name || ""));
+  });
+
 const assertInvoiceEditable = async (db, invoice_number, client) => {
   // 1️⃣ Check QR
   const qrRes = await db.query(
@@ -81,6 +273,8 @@ const getFullInvoice = async (db, invoice_number) => {
     invoice_number,
     uuid,
     pos,
+    session_id,
+    user_id,
     total,
     client,
     notes,
@@ -115,7 +309,10 @@ const getFullInvoice = async (db, invoice_number) => {
   il.item_id,
   il.unit_number,
   il.storage_id,
-  i.is_stocked,              
+  i.is_stocked,
+  COALESCE(i.has_tokens, false) AS has_tokens,
+  COALESCE(i.token_count, 0) AS token_count,
+  COALESCE(i.is_offer_item, false) AS is_offer_item,
   s.name AS storage_name,
   u.name AS unit_name
 FROM invoice_lines il
@@ -126,15 +323,46 @@ WHERE il.invoice_number = $1
 ORDER BY il.item_number;
 `;
 
-  const [headerResult, linesResult] = await Promise.all([
-    db.query(headerQuery, [invoice_number]),
-    db.query(linesQuery, [invoice_number]),
-  ]);
+  const headerResult = await db.query(headerQuery, [invoice_number]);
+  const linesResult = await db.query(linesQuery, [invoice_number]);
 
   return {
     header: headerResult.rows[0],
     lines: linesResult.rows,
   };
+};
+
+const getInvoiceHeaderById = async (db, id) => {
+  const result = await db.query(
+    `
+      SELECT
+        id,
+        invoice_number,
+        uuid,
+        date,
+        pos,
+        total,
+        client,
+        notes,
+        type,
+        qr,
+        type2,
+        currency,
+        client_contact,
+        client_detail,
+        client_det_code,
+        client_id,
+        reference,
+        user_id,
+        session_id
+      FROM invoice_header
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [id],
+  );
+
+  return result.rows[0] || null;
 };
 
 const updateInvoiceHeader = async (
@@ -237,12 +465,18 @@ const createInvoice = async (
     client_detail,
     client_det_code,
     client_id,
+    user_id,
+    session_id,
     create_due_balance,
   },
+  options = {},
 ) => {
+  const manageTransaction = options.manageTransaction !== false;
+
   try {
-    await db.query("BEGIN");
-    console.log("CREATE INVOICE REFERENCE =", reference);
+    if (manageTransaction) {
+      await db.query("BEGIN");
+    }
 
     const validLines = lines
       .filter((ln) => Number.isInteger(ln.item_id))
@@ -253,7 +487,9 @@ const createInvoice = async (
 
     // ❌ No real items → do NOT save invoice
     if (validLines.length === 0) {
-      await db.query("ROLLBACK");
+      if (manageTransaction) {
+        await db.query("ROLLBACK");
+      }
       return null; // or throw new Error("Invoice has no items")
     }
     // Compute total on server for safety
@@ -306,11 +542,17 @@ const createInvoice = async (
     client_contact,
     client_detail,
     client_det_code,
-    client_id
+    client_id,
+    user_id,
+    session_id
   )
-  VALUES ($1, COALESCE($2, NOW()), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+  VALUES (
+    $1, COALESCE($2, NOW()), $3, $4, $5, $6, $7, $8,
+    $9, $10, $11, $12, $13, $14, $15, $16
+  )
   RETURNING invoice_number, pos, total, client, notes, type, date,
-            type2, currency, client_contact, client_detail, client_det_code, client_id, reference
+            type2, currency, client_contact, client_detail, client_det_code,
+            client_id, reference, user_id, session_id, id
 `;
 
     const headerVals = [
@@ -328,6 +570,8 @@ const createInvoice = async (
       client_detail || null,
       client_det_code || null,
       client_id || null,
+      user_id || null,
+      session_id || null,
     ];
 
     const headerRes = await db.query(headerSql, headerVals);
@@ -441,10 +685,14 @@ const createInvoice = async (
       }
     }
 
-    await db.query("COMMIT");
+    if (manageTransaction) {
+      await db.query("COMMIT");
+    }
     return { header: headerRes.rows[0], lines: insertedLines };
   } catch (err) {
-    await db.query("ROLLBACK");
+    if (manageTransaction) {
+      await db.query("ROLLBACK");
+    }
     throw err;
   } finally {
   }
@@ -735,10 +983,8 @@ const getInvoiceForReturn = async (db, invoice_number) => {
     ORDER BY item_number ASC
   `;
 
-  const [headerResult, linesResult] = await Promise.all([
-    db.query(headerQuery, [invoice_number]),
-    db.query(linesQuery, [invoice_number]),
-  ]);
+  const headerResult = await db.query(headerQuery, [invoice_number]);
+  const linesResult = await db.query(linesQuery, [invoice_number]);
 
   return {
     header: headerResult.rows[0],
@@ -1069,12 +1315,22 @@ const getItemsByCategory = async (db, categoryId) => {
   const sql = `
     SELECT 
       i.id,
+      i.category,
       i.code,
       i.name,
       i.price_with_tax,
       i.tax_percentage,
       i.stock_qty,
       i.fav,
+      COALESCE(i.has_tokens, false) AS has_tokens,
+      COALESCE(i.token_count, 0) AS token_count,
+      COALESCE(i.is_offer_item, false) AS is_offer_item,
+      COALESCE(i.offer_is_active, false) AS offer_is_active,
+      COALESCE(i.offer_is_24_7, true) AS offer_is_24_7,
+      i.offer_start_time,
+      i.offer_end_time,
+      i.offer_start_date,
+      i.offer_end_date,
       c.name AS category_name,
       u.name AS unit_name
     FROM items i
@@ -1092,12 +1348,22 @@ const getFavoriteItems = async (db) => {
   const sql = `
     SELECT 
       i.id,
+      i.category,
       i.code,
       i.name,
       i.price_with_tax,
       i.tax_percentage,
       i.stock_qty,
       i.fav,
+      COALESCE(i.has_tokens, false) AS has_tokens,
+      COALESCE(i.token_count, 0) AS token_count,
+      COALESCE(i.is_offer_item, false) AS is_offer_item,
+      COALESCE(i.offer_is_active, false) AS offer_is_active,
+      COALESCE(i.offer_is_24_7, true) AS offer_is_24_7,
+      i.offer_start_time,
+      i.offer_end_time,
+      i.offer_start_date,
+      i.offer_end_date,
       c.name AS category_name,
       u.name AS unit_name
     FROM items i
@@ -1164,6 +1430,19 @@ const createCategory = async (db, { name }) => {
 };
 
 const updateCategory = async (db, id, { name }) => {
+  const lockedCategory = await db.query(
+    `
+      SELECT COALESCE(is_system_locked, false) AS is_system_locked
+      FROM categories
+      WHERE id = $1
+    `,
+    [id],
+  );
+
+  if (lockedCategory.rows[0]?.is_system_locked) {
+    throw createItemValidationError("This category is system-required and cannot be edited");
+  }
+
   const sql = `
     UPDATE categories
     SET name = $1
@@ -1178,6 +1457,9 @@ const createItem = async (db, data) => {
   try {
     await db.query("BEGIN");
 
+    const tokenConfig = normalizeItemTokenConfig(data);
+    const offerConfig = normalizeItemOfferConfig(data);
+
     if (!data.is_stocked) {
       data.minimum_qty_alert = 0;
     }
@@ -1188,9 +1470,18 @@ const createItem = async (db, data) => {
         category, fav, unit, minimum_qty_alert, stock_qty,
         usual_discount_percentage, usual_sales_qty, notes,
         is_stocked,
-        default_storage_id
+        default_storage_id,
+        has_tokens,
+        token_count,
+        is_offer_item,
+        offer_is_active,
+        offer_is_24_7,
+        offer_start_time,
+        offer_end_time,
+        offer_start_date,
+        offer_end_date
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0,$9,$10,$11,$12,$13)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
       RETURNING *;
     `;
 
@@ -1208,6 +1499,15 @@ const createItem = async (db, data) => {
       data.notes || null,
       data.is_stocked ?? true,
       data.default_storage_id || null,
+      tokenConfig.has_tokens,
+      tokenConfig.token_count,
+      offerConfig.is_offer_item,
+      offerConfig.offer_is_active,
+      offerConfig.offer_is_24_7,
+      offerConfig.offer_start_time,
+      offerConfig.offer_end_time,
+      offerConfig.offer_start_date,
+      offerConfig.offer_end_date,
     ]);
 
     const item = itemRes.rows[0];
@@ -1258,7 +1558,16 @@ SELECT
   i.usual_sales_qty,
   i.notes,
   i.is_stocked,
-  i.default_storage_id
+  i.default_storage_id,
+  COALESCE(i.has_tokens, false) AS has_tokens,
+  COALESCE(i.token_count, 0) AS token_count,
+  COALESCE(i.is_offer_item, false) AS is_offer_item,
+  COALESCE(i.offer_is_active, false) AS offer_is_active,
+  COALESCE(i.offer_is_24_7, true) AS offer_is_24_7,
+  i.offer_start_time,
+  i.offer_end_time,
+  i.offer_start_date,
+  i.offer_end_date
 FROM items i
 LEFT JOIN units u ON u.id = i.unit
 WHERE i.id = $1
@@ -1268,6 +1577,21 @@ WHERE i.id = $1
 };
 
 const updateItem = async (db, id, data) => {
+  const lockedItem = await db.query(
+    `
+      SELECT COALESCE(is_system_locked, false) AS is_system_locked
+      FROM items
+      WHERE id = $1
+    `,
+    [id],
+  );
+
+  if (lockedItem.rows[0]?.is_system_locked) {
+    throw createItemValidationError("This item is system-required and cannot be edited");
+  }
+
+  const tokenConfig = normalizeItemTokenConfig(data);
+  const offerConfig = normalizeItemOfferConfig(data);
   const sql = `
     UPDATE items
 SET code=$1,
@@ -1282,8 +1606,17 @@ SET code=$1,
     usual_sales_qty=$10,
     notes=$11,
     is_stocked=$12,
-    default_storage_id=$13
-WHERE id=$14
+    default_storage_id=$13,
+    has_tokens=$14,
+    token_count=$15,
+    is_offer_item=$16,
+    offer_is_active=$17,
+    offer_is_24_7=$18,
+    offer_start_time=$19,
+    offer_end_time=$20,
+    offer_start_date=$21,
+    offer_end_date=$22
+WHERE id=$23
 RETURNING *;
   `;
   const res = await db.query(sql, [
@@ -1300,6 +1633,15 @@ RETURNING *;
     data.notes,
     data.is_stocked ?? true,
     data.default_storage_id || null,
+    tokenConfig.has_tokens,
+    tokenConfig.token_count,
+    offerConfig.is_offer_item,
+    offerConfig.offer_is_active,
+    offerConfig.offer_is_24_7,
+    offerConfig.offer_start_time,
+    offerConfig.offer_end_time,
+    offerConfig.offer_start_date,
+    offerConfig.offer_end_date,
     id,
   ]);
   return res.rows[0];
@@ -1485,16 +1827,81 @@ const adjustStorageManually = async (
   }
 };
 
-const getAllItems = async (db) => {
+const getAllItems = async (db, { context = null } = {}) => {
   const { rows } = await db.query(`
     SELECT
       i.*,
+      COALESCE(i.has_tokens, false) AS has_tokens,
+      COALESCE(i.token_count, 0) AS token_count,
+      COALESCE(i.is_offer_item, false) AS is_offer_item,
+      COALESCE(i.offer_is_active, false) AS offer_is_active,
+      COALESCE(i.offer_is_24_7, true) AS offer_is_24_7,
       u.name AS unit_name
     FROM items i
     LEFT JOIN units u ON u.id = i.unit
     ORDER BY i.name
   `);
-  return rows;
+
+  if (context !== "pos") {
+    return rows;
+  }
+
+  const currentParts = getCurrentLocalOfferParts();
+
+  return sortItemsForPos(
+    rows.filter((item) => isOfferItemCurrentlyAvailable(item, currentParts)),
+  );
+};
+
+const assertPosItemsCurrentlySellable = async (db, lines = []) => {
+  const itemIds = [
+    ...new Set(
+      lines
+        .map((line) => Number.parseInt(line?.item_id, 10))
+        .filter((itemId) => Number.isInteger(itemId) && itemId > 0),
+    ),
+  ];
+
+  if (itemIds.length === 0) {
+    return;
+  }
+
+  const result = await db.query(
+    `
+      SELECT
+        id,
+        name,
+        COALESCE(is_offer_item, false) AS is_offer_item,
+        COALESCE(offer_is_active, false) AS offer_is_active,
+        COALESCE(offer_is_24_7, true) AS offer_is_24_7,
+        offer_start_time,
+        offer_end_time,
+        offer_start_date,
+        offer_end_date
+      FROM items
+      WHERE id = ANY($1::int[])
+    `,
+    [itemIds],
+  );
+
+  const itemsById = new Map(result.rows.map((item) => [Number(item.id), item]));
+  const currentParts = getCurrentLocalOfferParts();
+
+  for (const itemId of itemIds) {
+    const item = itemsById.get(itemId);
+
+    if (!item) {
+      throw createPosItemError(`Item ${itemId} was not found`, "POS_ITEM_NOT_FOUND", 404);
+    }
+
+    if (!isOfferItemCurrentlyAvailable(item, currentParts)) {
+      throw createPosItemError(
+        `${item.name || `Item ${itemId}`} is not available for sale right now`,
+        "POS_ITEM_UNAVAILABLE",
+        409,
+      );
+    }
+  }
 };
 
 // ================= CLIENTS =================
@@ -1661,6 +2068,15 @@ const searchItemsGlobal = async (db, q, limit = 20) => {
       i.name,
       i.price_with_tax,
       i.stock_qty,
+      COALESCE(i.has_tokens, false) AS has_tokens,
+      COALESCE(i.token_count, 0) AS token_count,
+      COALESCE(i.is_offer_item, false) AS is_offer_item,
+      COALESCE(i.offer_is_active, false) AS offer_is_active,
+      COALESCE(i.offer_is_24_7, true) AS offer_is_24_7,
+      i.offer_start_time,
+      i.offer_end_time,
+      i.offer_start_date,
+      i.offer_end_date,
       c.name AS category_name,
       u.name AS unit_name
     FROM items i
@@ -1771,10 +2187,8 @@ const getRefundFullInvoice = async (db, refund_invoice_number) => {
     ORDER BY ril.item_number;
   `;
 
-  const [headerRes, linesRes] = await Promise.all([
-    db.query(headerSql, [refund_invoice_number]),
-    db.query(linesSql, [refund_invoice_number]),
-  ]);
+  const headerRes = await db.query(headerSql, [refund_invoice_number]);
+  const linesRes = await db.query(linesSql, [refund_invoice_number]);
 
   return {
     header: headerRes.rows[0],
@@ -3829,10 +4243,8 @@ const getDueBalances = async (
 
   const dataValues = [...values, limit, offset];
 
-  const [dataRes, countRes] = await Promise.all([
-    db.query(dataQuery, dataValues),
-    db.query(countQuery, values),
-  ]);
+  const dataRes = await db.query(dataQuery, dataValues);
+  const countRes = await db.query(countQuery, values);
 
   return {
     data: dataRes.rows,
@@ -4155,17 +4567,10 @@ const getAgingBalances = async (db) => {
 };
 
 const getReceiptsDashboard = async (db, year) => {
-  const [
-    monthly_due_vs_paid,
-    top_clients_outstanding,
-    top_outstanding_balances,
-    aging_balances,
-  ] = await Promise.all([
-    getReceiptsMonthlyDueVsPaid(db, year),
-    getTopClientsByOutstanding(db, year),
-    getTopOutstandingBalances(db, year),
-    getAgingBalances(db),
-  ]);
+  const monthly_due_vs_paid = await getReceiptsMonthlyDueVsPaid(db, year);
+  const top_clients_outstanding = await getTopClientsByOutstanding(db, year);
+  const top_outstanding_balances = await getTopOutstandingBalances(db, year);
+  const aging_balances = await getAgingBalances(db);
 
   return {
     monthly_due_vs_paid,
@@ -4290,6 +4695,7 @@ module.exports = {
   getInvoices,
   getInvoiceDetails,
   getFullInvoice,
+  getInvoiceHeaderById,
   updateInvoiceHeader,
   createInvoice,
   getNextInvoiceNumber,
@@ -4330,6 +4736,7 @@ module.exports = {
   getStorageLogs,
   adjustStorageManually,
   getAllItems,
+  assertPosItemsCurrentlySellable,
   createClient,
   updateClient,
   deleteClient,

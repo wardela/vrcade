@@ -3,6 +3,7 @@
 
 # Build outputs (optional but recommended)
 frontend/dist/
+frontend/out/
 
 # Environment files
 .env

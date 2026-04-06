@@ -1,4 +1,7 @@
 const invoiceService = require("../services/invoiceService");
+const invoicePaymentService = require("../services/invoicePaymentService");
+const posSessionService = require("../services/posSessionService");
+const posInvoiceRequestService = require("../services/posInvoiceRequestService");
 const { buildReturnInvoiceXml, sendReturnToISTD, processReturnInvoice } = require("../einvoice_return");
 const { buildEinvoiceXml, sendEinvoice, extractQR } = require("../einvoice");
 
@@ -137,7 +140,11 @@ const getNextInvoiceNumber = async (req, res) => {
 
 const createInvoice = async (req, res) => {
   try {
-    const payload = req.body; // { invoice_number, date, pos, type, client, notes, lines: [...] }
+    const payload = {
+      ...req.body,
+      user_id: req.user?.user_id || null,
+    }; // { invoice_number, date, pos, type, client, notes, lines: [...] }
+
     if (!payload?.invoice_number || !Array.isArray(payload?.lines)) {
       return res.status(400).json({ message: "invoice_number and lines are required" });
     }
@@ -665,6 +672,9 @@ const addItem = async (req, res) => {
     res.status(201).json(newItem);
   } catch (err) {
     console.error("Error adding item:", err);
+    if (err?.statusCode) {
+      return res.status(err.statusCode).json({ message: err.message });
+    }
     res.status(500).json({ message: "Error adding item" });
   }
 };
@@ -691,6 +701,9 @@ const updateItem = async (req, res) => {
     res.status(200).json(edited);
   } catch (err) {
     console.error("Error updating item:", err);
+    if (err?.statusCode) {
+      return res.status(err.statusCode).json({ message: err.message });
+    }
     res.status(500).json({ message: "Error updating item" });
   }
 };
@@ -787,7 +800,9 @@ const adjustStorageManually = async (req, res) => {
 
 const getAllItems = async (req, res) => {
   try {
-    const rows = await invoiceService.getAllItems(req.db);
+    const rows = await invoiceService.getAllItems(req.db, {
+      context: req.query?.context || null,
+    });
     res.json(rows);
   } catch (err) {
     console.error("Error fetching all items:", err);
@@ -2367,44 +2382,160 @@ const silentlyShareInvoice = async (req, invoice_number) => {
 };
 
 const createPosInvoice = async (req, res) => {
+  const buildExistingPosResponse = async (db, invoiceId) => {
+    const header = await invoiceService.getInvoiceHeaderById(db, invoiceId);
+    if (!header) {
+      throw new Error("Existing invoice not found for idempotent POS request");
+    }
+
+    const payments = await invoicePaymentService.getInvoicePaymentsByInvoiceId(
+      db,
+      invoiceId,
+    );
+
+    return {
+      header,
+      payments,
+      duplicate_guard: true,
+    };
+  };
+
   try {
     const payload = req.body;
+    const requestedSessionId =
+      payload?.session_id == null
+        ? null
+        : Number.parseInt(payload.session_id, 10);
+    const idempotencyKey = payload?.idempotency_key;
 
     if (!Array.isArray(payload?.lines) || payload.lines.length === 0) {
       return res.status(400).json({ message: "POS invoice must have lines" });
     }
 
-    // ✅ SAME numbering logic as SALES (MAX + 1)
-const invRes = await req.db.query(`
-  SELECT
-    'INV-' ||
-    (COALESCE(MAX(SUBSTRING(invoice_number FROM 5)::INT), 0) + 1)::TEXT
-    AS invoice_number
-  FROM invoice_header
-`);
+    if (
+      payload?.session_id != null &&
+      (!Number.isInteger(requestedSessionId) || requestedSessionId <= 0)
+    ) {
+      return res.status(400).json({
+        code: "POS_SESSION_INVALID_ID",
+        message: "Invalid POS session id",
+      });
+    }
 
-const invoice_number = invRes.rows[0].invoice_number;
+    posInvoiceRequestService.validateIdempotencyKey(idempotencyKey);
 
+    const activeSession = await posSessionService.resolveActiveSessionForUser(
+      req.db,
+      {
+        userId: req.user.user_id,
+        sessionId: requestedSessionId,
+      },
+    );
 
-    const posPayload = {
-      ...payload,
+    await invoiceService.assertPosItemsCurrentlySellable(req.db, payload.lines);
 
-      invoice_number,          
-      type: "cash",
-      type2: "local",
-      notes: "POS Sales | مبيعات نقطة بيع",
-      date: new Date(),
+    await req.db.query("BEGIN");
 
-      client_id: payload.client_id || null,
-      client: payload.client || "",
-      client_contact: payload.client_contact || null,
-      client_det_code: payload.client_id ? "NIN" : null,
-      client_detail: payload.client_detail || null,
+    let created;
+    let payments;
+    let invoice_number;
 
-      create_due_balance: false,
-    };
+    try {
+      await posInvoiceRequestService.reservePosInvoiceRequest(req.db, {
+        idempotencyKey,
+        userId: req.user.user_id,
+        sessionId: activeSession.id,
+      });
+    } catch (requestError) {
+      if (requestError.code === "23505") {
+        await req.db.query("ROLLBACK");
 
-const created = await invoiceService.createInvoice(req.db, posPayload);
+        const existingRequest = await posInvoiceRequestService.getPosInvoiceRequestByKey(
+          req.db,
+          idempotencyKey,
+        );
+
+        if (existingRequest?.invoice_id) {
+          const existing = await buildExistingPosResponse(
+            req.db,
+            existingRequest.invoice_id,
+          );
+          return res.status(200).json(existing);
+        }
+
+        return res.status(409).json({
+          code: "POS_DUPLICATE_IN_PROGRESS",
+          message: "This payment is already being processed",
+        });
+      }
+
+      throw requestError;
+    }
+
+    try {
+      await req.db.query(`SELECT pg_advisory_xact_lock(2026040602)`);
+
+      const invRes = await req.db.query(`
+        SELECT
+          'INV-' ||
+          (COALESCE(MAX(SUBSTRING(invoice_number FROM 5)::INT), 0) + 1)::TEXT
+          AS invoice_number
+        FROM invoice_header
+      `);
+
+      invoice_number = invRes.rows[0].invoice_number;
+
+      const posPayload = {
+        ...payload,
+
+        invoice_number,
+        type: "cash",
+        type2: "local",
+        notes: "POS Sales | مبيعات نقطة بيع",
+        date: payload.date || null,
+        pos: activeSession.pos || payload.pos || "POS-1",
+        user_id: req.user.user_id,
+        session_id: activeSession.id,
+
+        client_id: payload.client_id || null,
+        client: payload.client || "",
+        client_contact: payload.client_contact || null,
+        client_det_code: payload.client_id ? "NIN" : null,
+        client_detail: payload.client_detail || null,
+
+        create_due_balance: false,
+      };
+
+      created = await invoiceService.createInvoice(req.db, posPayload, {
+        manageTransaction: false,
+      });
+
+      if (!created?.header?.id) {
+        throw new Error("POS invoice creation failed");
+      }
+
+      const preparedPayments = invoicePaymentService.validateAndPreparePayments({
+        payments: payload.payments,
+        invoiceTotal: created.header.total,
+        sessionId: activeSession.id,
+        userId: req.user.user_id,
+      });
+
+      payments = await invoicePaymentService.createInvoicePayments(req.db, {
+        invoiceId: created.header.id,
+        payments: preparedPayments,
+      });
+
+      await posInvoiceRequestService.markPosInvoiceRequestCompleted(req.db, {
+        idempotencyKey,
+        invoiceId: created.header.id,
+      });
+
+      await req.db.query("COMMIT");
+    } catch (txError) {
+      await req.db.query("ROLLBACK");
+      throw txError;
+    }
 
 // ===============================
 // 🔎 CHECK COMPANY CONFIG
@@ -2419,7 +2550,10 @@ const autoPosEinvoicing = company?.auto_pos_einvoicing ?? true;
 // ===============================
 if (!autoPosEinvoicing) {
   // behave as if e-invoicing does not exist
-  return res.status(201).json(created);
+  return res.status(201).json({
+    ...created,
+    payments,
+  });
 }
 
 // ===============================
@@ -2463,6 +2597,7 @@ if (einvoiceResult.pending) {
 // always return invoice, never block POS
 return res.status(201).json({
   ...created,
+  payments,
   einvoice: einvoiceResult.success
     ? { shared: true }
     : einvoiceResult.pending
@@ -2473,6 +2608,21 @@ return res.status(201).json({
 
   } catch (error) {
     console.error("Error creating POS invoice:", error);
+
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({
+        code: error.code,
+        message: error.message,
+      });
+    }
+
+    if (error?.code === "23505") {
+      return res.status(409).json({
+        code: "POS_DUPLICATE_REQUEST",
+        message: "This payment request has already been processed",
+      });
+    }
+
     res.status(500).json({ message: "Error creating POS invoice" });
   }
 };

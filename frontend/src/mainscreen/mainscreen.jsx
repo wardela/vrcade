@@ -14,6 +14,8 @@ import ReportsScreen from "./reports/reportsscreen";
 import Settings from "./settings/settings";
 import ReceiptsScreen from "./receipts/ReceiptsScreen";
 import POSScreen from "./POS/posscreen";
+import POSManagementScreen from "./POS/POSManagementScreen";
+import EventsScreen from "./events/EventsScreen";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../theme/ThemeProvider";
 
@@ -178,6 +180,21 @@ const raw = localStorage.getItem("permissions");
             </NavLink>
           )}
 
+          {canView("sales") && (
+            <NavLink
+              to="/events"
+              className={({ isActive }) =>
+                `flex items-center w-full transition-colors hover:bg-gray-500 relative gap-2 px-3 py-2 ps-12
+                 ${isActive ? "before:absolute before:start-0 before:top-0 before:h-full before:w-1 before:bg-[#2f788a] bg-gray-500" : ""}`
+              }
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 9.75h16.5M4.5 6.75h15A1.5 1.5 0 0 1 21 8.25v10.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.75V8.25a1.5 1.5 0 0 1 1.5-1.5ZM8.25 14.25h.008v.008H8.25v-.008Zm3.75 0h.008v.008H12v-.008Zm3.75 0h.008v.008h-.008v-.008Z" />
+              </svg>
+              <span className="whitespace-nowrap text-sm">Events</span>
+            </NavLink>
+          )}
+
           {canView("refunds") && (
             <NavLink
               to="/refund"
@@ -209,18 +226,34 @@ const raw = localStorage.getItem("permissions");
           )}
 
           {canView("pos") && (
-            <NavLink
-              to="/pos"
-              className={({ isActive }) =>
-                `flex items-center w-full transition-colors hover:bg-gray-500 relative gap-2 px-3 py-2 ps-12
-                 ${isActive ? "before:absolute before:start-0 before:top-0 before:h-full before:w-1 before:bg-[#2f788a] bg-gray-500" : ""}`
-              }
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m9 10 2 2 4-4"/><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M12 17v4"/><path d="M8 21h8"/>
-              </svg>
-              <span className="whitespace-nowrap text-sm">{t("UserModal.modules.pos")}</span>
-            </NavLink>
+            <>
+              <NavLink
+                to="/pos"
+                className={({ isActive }) =>
+                  `flex items-center w-full transition-colors hover:bg-gray-500 relative gap-2 px-3 py-2 ps-12
+                   ${isActive ? "before:absolute before:start-0 before:top-0 before:h-full before:w-1 before:bg-[#2f788a] bg-gray-500" : ""}`
+                }
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m9 10 2 2 4-4"/><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M12 17v4"/><path d="M8 21h8"/>
+                </svg>
+                <span className="whitespace-nowrap text-sm">{t("UserModal.modules.pos")}</span>
+              </NavLink>
+
+              <NavLink
+                to="/pos-management"
+                className={({ isActive }) =>
+                  `flex items-center w-full transition-colors hover:bg-gray-500 relative gap-2 px-3 py-2 ps-12
+                   ${isActive ? "before:absolute before:start-0 before:top-0 before:h-full before:w-1 before:bg-[#2f788a] bg-gray-500" : ""}`
+                }
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2" />
+                  <path d="M7 7h10M7 12h10M7 17h6" />
+                </svg>
+                <span className="whitespace-nowrap text-sm">POS Monitor</span>
+              </NavLink>
+            </>
           )}
         </div>
       </div>
@@ -539,6 +572,15 @@ const raw = localStorage.getItem("permissions");
           />
 
           <Route
+            path="/events"
+            element={
+              canView("sales")
+                ? <EventsScreen />
+                : <Navigate to={firstAllowedRoute} replace />
+            }
+          />
+
+          <Route
             path="/pos"
             element={
               <POSScreen />
@@ -594,6 +636,7 @@ const raw = localStorage.getItem("permissions");
             }
           />
           <Route path="/storage" element={<StorageMonitor />} />
+          <Route path="/pos-management" element={<POSManagementScreen />} />
         </Routes>
 
 
