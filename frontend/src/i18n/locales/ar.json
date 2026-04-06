@@ -3,8 +3,10 @@
     "dashboard": "لوحة التحكم",
     "sales": "المبيعات",
     "invoices": "الفواتير",
+    "events": "الفعاليات",
     "refunds": "المرتجعات",
     "unshared": "غير مشاركة",
+    "pos_monitor": "مراقبة نقاط البيع",
     "receipts": "الإيصالات",
     "inventory": "المخزون",
     "items": "الأصناف",
@@ -1293,7 +1295,8 @@
 
     "report_types": {
       "shared": "المشاركة / غير المشاركة",
-      "tax": "الإقرار الضريبي"
+      "tax": "الإقرار الضريبي",
+      "invoice_tax_summary": "ضريبة الفواتير"
     },
 
     "status_types": {
@@ -1307,6 +1310,8 @@
 
     "table": {
       "invoice": "رقم الفاتورة",
+      "invoice_total": "إجمالي الفاتورة",
+      "total_tax": "إجمالي الضريبة",
       "date": "التاريخ",
       "client": "العميل",
       "total": "الإجمالي",
@@ -1920,7 +1925,261 @@
     "unpaid": "غير مدفوع",
     "outstanding": "ذمم متبقية"
   },
-   "POS": {
+  "EventsScreen": {
+    "title": "الفعاليات",
+    "subtitle": "إنشاء الفعاليات ومراجعتها وطباعتها ومتابعة الأرصدة والدفعات من مكان واحد.",
+    "empty": {
+      "title": "لا توجد فعاليات",
+      "description": "أنشئ أول فعالية لبدء متابعة الحجوزات والأرصدة والدفعات المرتبطة بها.",
+      "action": "إنشاء فعالية"
+    },
+    "form": {
+      "create_title": "إنشاء فعالية",
+      "create_subtitle": "أدخل تفاصيل الفعالية والبيانات المالية الأولية.",
+      "sections": {
+        "event_details": "تفاصيل الفعالية",
+        "event_details_hint": "المعلومات التشغيلية الأساسية للفعالية.",
+        "financial_details": "التفاصيل المالية",
+        "financial_details_hint": "تحديد قيمة الفعالية وأي دفعة أولية تم استلامها."
+      }
+    },
+    "payment_modal": {
+      "subtitle": "تسجيل دفعة للفعالية {{eventName}}."
+    },
+    "fields": {
+      "name": "الاسم",
+      "event_name": "اسم الفعالية",
+      "type": "النوع",
+      "location": "الموقع",
+      "client": "العميل",
+      "event_date": "تاريخ الفعالية",
+      "event_time": "وقت الفعالية",
+      "details": "التفاصيل",
+      "notes": "الملاحظات",
+      "total_amount": "إجمالي المبلغ",
+      "initial_payment_amount": "قيمة الدفعة الأولية",
+      "initial_payment_date": "تاريخ الدفعة الأولية",
+      "amount": "المبلغ",
+      "payment_date": "تاريخ الدفعة",
+      "created": "تاريخ الإنشاء",
+      "payment_count": "عدد الدفعات",
+      "invoice_pattern": "نمط الفاتورة"
+    },
+    "placeholders": {
+      "choose_client": "اختر عميلاً"
+    },
+    "suggestions": {
+      "birthday": "عيد ميلاد",
+      "event": "فعالية"
+    },
+    "payment_types": {
+      "cash": "نقدًا",
+      "card": "بطاقة",
+      "bank": "تحويل بنكي"
+    },
+    "actions": {
+      "close": "إغلاق",
+      "select": "اختيار",
+      "cancel": "إلغاء",
+      "save_event": "حفظ الفعالية",
+      "add_payment": "إضافة دفعة",
+      "event_details": "تفاصيل الفعالية",
+      "print_details": "طباعة التفاصيل",
+      "open": "فتح",
+      "refresh": "تحديث",
+      "create_event": "إنشاء فعالية"
+    },
+    "summary": {
+      "total": "الإجمالي",
+      "paid": "المدفوع",
+      "remaining": "المتبقي",
+      "total_amount": "إجمالي المبلغ",
+      "total_paid": "إجمالي المدفوع",
+      "remaining_balance": "الرصيد المتبقي",
+      "events_count": "عدد الفعاليات",
+      "total_event_value": "إجمالي قيمة الفعاليات",
+      "remaining_across_events": "المتبقي على جميع الفعاليات",
+      "open_balance": "الرصيد المفتوح",
+      "financial_rule": "القاعدة المالية",
+      "financial_rule_value": "كل دفعة تنشئ فاتورة فعالية مرتبطة بها لضمان التتبع الصحيح."
+    },
+    "sections": {
+      "operational_details": "التفاصيل التشغيلية",
+      "financial_snapshot": "الملخص المالي",
+      "payment_history": "سجل الدفعات"
+    },
+    "details": {
+      "subtitle": "مراجعة التفاصيل التشغيلية والأرصدة وحركة الدفعات.",
+      "invoice_pattern_value": "يتم ربط الدفعات بفواتير الفعالية تلقائيًا.",
+      "payment_history_hint": "جميع دفعات الفعالية المحفوظة تظهر أدناه."
+    },
+    "table": {
+      "date": "التاريخ",
+      "type": "النوع",
+      "amount": "المبلغ",
+      "invoice": "الفاتورة",
+      "invoice_id": "معرّف الفاتورة #{{id}}",
+      "notes": "الملاحظات",
+      "event": "الفعالية",
+      "client": "العميل",
+      "location": "الموقع",
+      "total": "الإجمالي",
+      "paid": "المدفوع",
+      "remaining": "المتبقي",
+      "action": "الإجراء"
+    },
+    "states": {
+      "saving": "جاري الحفظ...",
+      "loading": "جاري تحميل الفعاليات...",
+      "loading_details": "جاري تحميل تفاصيل الفعالية...",
+      "no_phone": "لا يوجد رقم هاتف",
+      "no_payments": "لا توجد دفعات مسجلة بعد"
+    },
+    "messages": {
+      "create_failed": "فشل إنشاء الفعالية",
+      "add_payment_failed": "فشل حفظ دفعة الفعالية",
+      "load_details_failed": "فشل تحميل تفاصيل الفعالية",
+      "load_failed": "فشل تحميل الفعاليات",
+      "print_failed": "فشل تجهيز طباعة الفعالية",
+      "create_success": "تم إنشاء الفعالية بنجاح.",
+      "payment_saved_success": "تم حفظ دفعة الفعالية وإنشاء الفاتورة بنجاح."
+    },
+    "print": {
+      "company": "الشركة",
+      "company_logo": "شعار الشركة",
+      "tax_number": "الرقم الضريبي",
+      "financial_summary": "الملخص المالي",
+      "remaining_amount": "المبلغ المتبقي",
+      "payment_tracking": "متابعة الدفعات",
+      "no_payments": "لا توجد دفعات مسجلة لهذه الفعالية.",
+      "page_of": "صفحة {{page}} من {{total}}",
+      "powered_by": "مشغّل بواسطة"
+    },
+    "no_access": {
+      "title": "غير مسموح",
+      "message": "ليس لديك صلاحية لعرض الفعاليات."
+    }
+  },
+  "POSMonitor": {
+    "title": "مراقبة نقاط البيع",
+    "subtitle": "مراجعة نقاط البيع والمستخدمين النشطين وسجل الجلسات من شاشة واحدة.",
+    "no_access": {
+      "title": "غير مسموح",
+      "message": "ليس لديك صلاحية لعرض مراقبة نقاط البيع."
+    },
+    "modal": {
+      "subtitle": "إعداد تفاصيل نقطة البيع وحالة توفرها.",
+      "station_status_hint": "قم بتعطيل النقطة إذا أردت إخفاءها عن مستخدمي نقطة البيع."
+    },
+    "fields": {
+      "name": "الاسم",
+      "description": "الوصف",
+      "station_status": "حالة النقطة"
+    },
+    "placeholders": {
+      "pos_name": "اسم نقطة البيع",
+      "description": "وصف مختصر للنقطة"
+    },
+    "actions": {
+      "edit_pos": "تعديل نقطة البيع",
+      "create_pos": "إنشاء نقطة بيع",
+      "cancel": "إلغاء",
+      "save_changes": "حفظ التعديلات",
+      "close": "إغلاق",
+      "hide": "إخفاء",
+      "show": "إظهار",
+      "refresh": "تحديث",
+      "view_sessions": "عرض الجلسات",
+      "hide_sessions": "إخفاء الجلسات",
+      "edit": "تعديل",
+      "view_details": "عرض التفاصيل",
+      "print_session_summary": "طباعة ملخص الجلسة",
+      "preparing": "جاري التجهيز..."
+    },
+    "messages": {
+      "pos_name_required": "اسم نقطة البيع مطلوب",
+      "load_session_details_failed": "فشل تحميل تفاصيل الجلسة",
+      "load_monitoring_failed": "فشل تحميل مراقبة نقاط البيع",
+      "save_failed": "فشل حفظ نقطة البيع",
+      "load_history_failed": "فشل تحميل سجل الجلسات",
+      "load_print_summary_failed": "فشل تحميل ملخص الجلسة للطباعة"
+    },
+    "labels": {
+      "pos_station": "نقطة البيع",
+      "session_number": "الجلسة #{{id}}",
+      "session_number_prefix": "الجلسة رقم",
+      "session_id": "رقم الجلسة",
+      "employee_name": "اسم الموظف",
+      "duration": "المدة",
+      "opened_by": "تم الفتح بواسطة",
+      "started": "وقت البدء",
+      "ended": "وقت الإنهاء",
+      "current_occupancy": "الإشغال الحالي",
+      "session_history": "سجل الجلسات",
+      "session_period": "{{start}} إلى {{end}}",
+      "invoice_count": "{{count}} فاتورة"
+    },
+    "badges": {
+      "active_session": "جلسة نشطة",
+      "ended_session": "جلسة منتهية",
+      "active": "نشطة",
+      "ended": "منتهية",
+      "inactive": "غير نشطة"
+    },
+    "summary": {
+      "invoices": "الفواتير",
+      "total_sales": "إجمالي المبيعات",
+      "total_tokens": "إجمالي التوكنز",
+      "cash": "نقدي",
+      "card": "بطاقة",
+      "transfer": "تحويل بنكي",
+      "cash_received": "النقد المستلم",
+      "change_given": "الباقي المعاد"
+    },
+    "table": {
+      "item": "الصنف",
+      "qty_sold": "الكمية",
+      "total_sales": "الإجمالي",
+      "tokens_per_item": "توكن/صنف",
+      "total_tokens": "إجمالي التوكنز",
+      "invoice": "الفاتورة",
+      "client": "العميل",
+      "date": "التاريخ",
+      "total": "الإجمالي"
+    },
+    "session": {
+      "details_title": "تفاصيل الجلسة",
+      "details_subtitle": "مراجعة المبيعات والدفعات والنشاط المسجل ضمن هذه الجلسة.",
+      "sold_items_breakdown": "تفصيل الأصناف المباعة",
+      "sold_items_hint": "ملخص مختصر لمبيعات الأصناف والتوكنز ضمن هذه الجلسة.",
+      "invoices_in_session": "فواتير الجلسة"
+    },
+    "states": {
+      "saving": "جاري الحفظ...",
+      "loading_session_details": "جاري تحميل تفاصيل الجلسة...",
+      "no_sold_items": "لا توجد أصناف مباعة لهذه الجلسة",
+      "no_invoices": "لا توجد فواتير لهذه الجلسة",
+      "loading_pos_stations": "جاري تحميل نقاط البيع...",
+      "active_user": "مستخدم نشط",
+      "no_active_session": "لا توجد جلسة نشطة",
+      "total_sessions_recorded": "إجمالي الجلسات المسجلة",
+      "loading": "جاري التحميل...",
+      "loading_sessions": "جاري تحميل الجلسات...",
+      "no_sessions": "لا توجد جلسات",
+      "unknown_user": "مستخدم غير معروف"
+    },
+    "print": {
+      "title": "تقرير ملخص جلسة نقطة البيع",
+      "company_logo": "شعار الشركة",
+      "tax_number": "الرقم الضريبي",
+      "session_info": "معلومات الجلسة",
+      "financial_summary": "الملخص المالي",
+      "no_sold_items": "لا توجد أصناف مباعة ضمن هذه الجلسة.",
+      "item_fallback": "الصنف #{{id}}",
+      "powered_by": "مشغّل بواسطة"
+    }
+  },
+  "POS": {
     "recent_invoices": {
       "title": "الفواتير الأخيرة",
       "new_invoice": "إنشاء فاتورة جديدة",
@@ -1983,13 +2242,60 @@
       "back": "رجوع"
     },
 
+    "aria": {
+      "remove_item": "إزالة الصنف",
+      "decrease_quantity": "تقليل الكمية",
+      "increase_quantity": "زيادة الكمية"
+    },
+
     "states": {
       "locked": "الفاتورة مقفلة",
       "no_items": "يجب إضافة عناصر إلى الفاتورة",
       "save_success": "تم تحديث الفاتورة بنجاح",
       "save_failed": "فشل حفظ الفاتورة",
       "load_failed": "فشل تحميل الفاتورة",
-      "item_not_found": "العنصر غير موجود لهذا الباركود"
+      "item_not_found": "العنصر غير موجود للباركود {{barcode}}",
+      "unknown_user": "مستخدم غير معروف",
+      "complete_payment_failed": "فشل إتمام الدفع"
+    },
+
+    "session": {
+      "load_status_failed": "فشل تحميل حالة جلسة نقطة البيع",
+      "load_stations_failed": "فشل تحميل نقاط البيع",
+      "choose_station_required": "يرجى اختيار نقطة بيع أولاً",
+      "start_failed": "فشل بدء جلسة نقطة البيع",
+      "end_failed": "فشل إنهاء جلسة نقطة البيع",
+      "user": "المستخدم",
+      "station": "نقطة البيع",
+      "started": "وقت البدء",
+      "ended": "وقت الإنهاء",
+      "end_session": "إنهاء الجلسة",
+      "ending": "جاري الإنهاء...",
+      "required_badge": "جلسة مطلوبة",
+      "required_title": "ابدأ جلسة نقطة بيع للمتابعة",
+      "current_user": "المستخدم الحالي",
+      "checking": "جاري التحقق من حالة الجلسة الحالية...",
+      "choose_station": "اختر نقطة بيع",
+      "choose_station_hint": "حدد النقطة التي ستستخدمها في هذه الجلسة.",
+      "loading_stations": "جاري تحميل النقاط...",
+      "no_stations": "لا توجد نقاط بيع نشطة متاحة.",
+      "station_ready": "جاهزة للاستخدام",
+      "starting_on": "سيتم بدء الجلسة على",
+      "starting": "جاري البدء...",
+      "start_session": "بدء الجلسة",
+      "refresh_status": "تحديث الحالة",
+      "open_monitor": "فتح مراقبة نقاط البيع",
+      "end_confirm_message": "أنت على وشك إنهاء الجلسة #{{id}}.",
+      "confirm_end": "تأكيد إنهاء الجلسة",
+      "summary_title": "تم إغلاق الجلسة",
+      "summary_subtitle": "تم إغلاق الجلسة #{{id}} بنجاح.",
+      "number_of_invoices": "عدد الفواتير",
+      "session_number": "الجلسة #{{id}}"
+    },
+
+    "no_access": {
+      "title": "غير مسموح",
+      "message": "ليس لديك صلاحية لاستخدام نقطة البيع."
     }
   },
     "BarcodeModal": {
@@ -2011,6 +2317,10 @@
   },
     "PayModal": {
     "title": "إتمام الدفع",
+    "modes": {
+      "single": "دفعة واحدة",
+      "split": "دفع مقسم"
+    },
 
     "payment_types": {
       "cash": "نقدًا",
@@ -2028,9 +2338,36 @@
       "amount_paid": "أدخل المبلغ المدفوع"
     },
 
+    "cash": {
+      "cash_due": "المبلغ النقدي المستحق",
+      "single": "دفعة نقدية",
+      "first": "الدفعة النقدية الأولى",
+      "second": "الدفعة النقدية الثانية"
+    },
+
+    "payment_labels": {
+      "first": "طريقة الدفع الأولى",
+      "second": "طريقة الدفع الثانية"
+    },
+
+    "fields": {
+      "amount": "المبلغ"
+    },
+
+    "validation": {
+      "different_methods": "يتطلب الدفع المقسم اختيار طريقتي دفع مختلفتين.",
+      "positive_split_amounts": "يجب أن يكون كل جزء من الدفع المقسم أكبر من صفر.",
+      "split_total_match": "يجب أن يساوي مجموع الدفع المقسم إجمالي الفاتورة.",
+      "first_cash_insufficient": "المبلغ المدفوع نقدًا في الدفعة الأولى غير كافٍ.",
+      "second_cash_insufficient": "المبلغ المدفوع نقدًا في الدفعة الثانية غير كافٍ.",
+      "single_cash_insufficient": "المبلغ النقدي المدفوع يجب أن يغطي الإجمالي."
+    },
+
     "actions": {
       "cancel": "إلغاء",
-      "confirm": "تأكيد الدفع"
+      "confirm": "تأكيد الدفع",
+      "clear": "مسح",
+      "processing": "جاري المعالجة..."
     }
   },
    "ReceiptPreviewModal": {
@@ -2038,10 +2375,13 @@
 
     "invoice": {
       "number": "رقم الفاتورة",
-      "date": "التاريخ"
+      "date": "التاريخ",
+      "point_of_sale": "نقطة البيع",
+      "employee": "الموظف"
     },
 
     "company": {
+      "logo": "شعار الشركة",
       "tax_number": "الرقم الضريبي"
     },
 
@@ -2057,7 +2397,31 @@
     },
 
     "states": {
-      "loading": "جاري تحميل الإيصال..."
+      "loading": "جاري تحميل الإيصال...",
+      "preparing_logo": "جاري تجهيز شعار الشركة للطباعة..."
+    },
+
+    "printer": {
+      "label": "طابعة الإيصال",
+      "loading": "جاري التحميل...",
+      "refresh": "تحديث الطابعات",
+      "default": "طابعة النظام الافتراضية",
+      "default_with_name": "الطابعة الافتراضية ({{printer}})",
+      "is_default": " (افتراضية)",
+      "saved_unavailable": "طابعة الإيصال المحفوظة \"{{printer}}\" غير متاحة. سيتم استخدام طابعة النظام الافتراضية.",
+      "selected_unavailable": "الطابعة \"{{printer}}\" لم تعد متاحة. سيتم استخدام طابعة النظام الافتراضية.",
+      "load_failed": "تعذر تحميل الطابعات المثبتة. ستتم محاولة الطباعة باستخدام طابعة النظام الافتراضية.",
+      "refresh_failed": "تعذر تحديث قائمة الطابعات.",
+      "desktop_only": "الطباعة المباشرة للإيصال تعمل في تطبيق سطح المكتب Electron وتتجاوز نافذة معاينة طباعة المتصفح."
+    },
+
+    "messages": {
+      "load_failed": "فشل تحميل معاينة الإيصال.",
+      "logo_prepare_failed": "فشل تجهيز شعار الشركة للطباعة.",
+      "submit_failed": "فشل إرسال مهمة طباعة الإيصال.",
+      "submit_success": "تم إرسال الإيصال بنجاح إلى {{printer}}.",
+      "printer_target": "\"{{printer}}\"",
+      "printer_target_default": "طابعة النظام الافتراضية"
     },
 
     "footer": {
@@ -2066,6 +2430,7 @@
 
     "actions": {
       "print": "طباعة",
+      "printing": "جاري الإرسال...",
       "close": "إغلاق"
     }
   }

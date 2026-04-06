@@ -1,5 +1,22 @@
-export function buildReceiptHtml({ invoice, company, totals, qrValue, paperWidthMm = 80 }) {
+export function buildReceiptHtml({
+  invoice,
+  company,
+  totals,
+  qrValue,
+  paperWidthMm = 80,
+  labels = {},
+}) {
   const w = `${paperWidthMm}mm`;
+  const text = {
+    invoiceNumber: labels.invoiceNumber || "Invoice #",
+    date: labels.date || "Date",
+    pointOfSale: labels.pointOfSale || "Point of Sale",
+    employee: labels.employee || "Employee",
+    totalDiscount: labels.totalDiscount || "Total discount",
+    totalBeforeTax: labels.totalBeforeTax || "Total before tax",
+    tax: labels.tax || "Tax",
+    grandTotal: labels.grandTotal || "Grand total",
+  };
 
   const safe = (v) =>
     v == null
@@ -10,6 +27,8 @@ export function buildReceiptHtml({ invoice, company, totals, qrValue, paperWidth
           .replaceAll(">", "&gt;")
           .replaceAll('"', "&quot;")
           .replaceAll("'", "&#39;");
+
+  const logoSrc = company?.logo_data_url || company?.logo_src || company?.logo_url || "";
 
   // IMPORTANT: inline CSS so it doesn’t depend on Tailwind/DaisyUI
   return `<!doctype html>
@@ -56,7 +75,7 @@ export function buildReceiptHtml({ invoice, company, totals, qrValue, paperWidth
 <body>
   <div class="receipt">
     <div class="center no-break">
-      ${company?.logo_url ? `<img src="${safe(company.logo_url)}" style="max-height:18mm; max-width:100%; object-fit:contain;" />` : ""}
+      ${logoSrc ? `<img src="${safe(logoSrc)}" style="max-height:18mm; max-width:100%; object-fit:contain;" />` : ""}
       <div class="title">${safe(company?.company_name || invoice?.header?.company_name)}</div>
       ${company?.tax_number ? `<div class="muted">Tax No: ${safe(company.tax_number)}</div>` : ""}
     </div>
@@ -64,8 +83,18 @@ export function buildReceiptHtml({ invoice, company, totals, qrValue, paperWidth
     <div class="hr"></div>
 
     <div class="no-break">
-      <div>Invoice #: ${safe(invoice?.header?.invoice_number)}</div>
-      <div>Date: ${safe(invoice?.header?.date_formatted || invoice?.header?.date)}</div>
+      <div>${safe(text.invoiceNumber)}: ${safe(invoice?.header?.invoice_number)}</div>
+      <div>${safe(text.date)}: ${safe(invoice?.header?.date_formatted || invoice?.header?.date)}</div>
+      ${
+        invoice?.header?.pos_point_name
+          ? `<div>${safe(text.pointOfSale)}: ${safe(invoice.header.pos_point_name)}</div>`
+          : ""
+      }
+      ${
+        invoice?.header?.employee_full_name
+          ? `<div>${safe(text.employee)}: ${safe(invoice.header.employee_full_name)}</div>`
+          : ""
+      }
     </div>
 
     <div class="hr"></div>
@@ -88,13 +117,13 @@ export function buildReceiptHtml({ invoice, company, totals, qrValue, paperWidth
     <div class="hr"></div>
 
     <div class="totals no-break">
-      <div class="row"><div>Total discount</div><div class="nums">${Number(totals.totalDiscountIncl || 0).toFixed(3)}</div></div>
-      <div class="row"><div>Total before tax</div><div class="nums">${Number(totals.totalBeforeTax || 0).toFixed(3)}</div></div>
-      <div class="row"><div>Tax</div><div class="nums">${Number(totals.totalTax || 0).toFixed(3)}</div></div>
+      <div class="row"><div>${safe(text.totalDiscount)}</div><div class="nums">${Number(totals.totalDiscountIncl || 0).toFixed(3)}</div></div>
+      <div class="row"><div>${safe(text.totalBeforeTax)}</div><div class="nums">${Number(totals.totalBeforeTax || 0).toFixed(3)}</div></div>
+      <div class="row"><div>${safe(text.tax)}</div><div class="nums">${Number(totals.totalTax || 0).toFixed(3)}</div></div>
 
       <div class="hr"></div>
 
-      <div class="row grand"><div>Grand total</div><div class="nums">${Number(totals.grandTotal || 0).toFixed(3)}</div></div>
+      <div class="row grand"><div>${safe(text.grandTotal)}</div><div class="nums">${Number(totals.grandTotal || 0).toFixed(3)}</div></div>
     </div>
 
     <div class="qr no-break">

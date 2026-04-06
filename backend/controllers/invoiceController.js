@@ -1575,6 +1575,21 @@ const getTaxDeclarationReport = async (req, res) => {
   }
 };
 
+const getInvoiceTaxSummaryReport = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ message: "from and to required" });
+    }
+
+    const data = await invoiceService.getInvoiceTaxSummaryReport(req.db, { from, to });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to load invoice tax summary report" });
+  }
+};
+
 const getRefundsReport = async (req, res) => {
   const { from, to, limit = 100, offset = 0 } = req.query;
   if (!from || !to) {
@@ -2735,6 +2750,7 @@ module.exports = {
   getSalesByClientReport,
   getEinvoicingReport,
   getTaxDeclarationReport,
+  getInvoiceTaxSummaryReport,
   getRefundsReport,
   getRefundsByClientReport,
   getItemsSalesReport,

@@ -4,6 +4,7 @@ import api from "../../utils/axiosInstance";
 import ClientList from "../invoices/clientlist";
 import Popup from "../../components/Popup";
 import EventDetailsPrint from "./EventDetailsPrint";
+import { useTranslation } from "react-i18next";
 
 const formatCurrency = (value) => `${Number(value || 0).toFixed(3)} JOD`;
 
@@ -27,6 +28,23 @@ const formatTime = (value) => {
   return String(value).slice(0, 5);
 };
 
+const translateEventType = (value, t) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "birthday") return t("EventsScreen.suggestions.birthday");
+  if (normalized === "event") return t("EventsScreen.suggestions.event");
+  return value || "—";
+};
+
+const translatePaymentType = (value, t) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "cash") return t("EventsScreen.payment_types.cash");
+  if (normalized === "card") return t("EventsScreen.payment_types.card");
+  if (normalized === "transfer" || normalized === "bank transfer") {
+    return t("EventsScreen.payment_types.bank");
+  }
+  return value || "—";
+};
+
 const getToday = () => new Date().toISOString().slice(0, 10);
 
 const readPermissions = () => {
@@ -47,16 +65,17 @@ function SummaryCard({ label, value, accentClass = "text-[#2f788a]" }) {
 }
 
 function EventsEmptyState({ canCreate, onCreate }) {
+  const { t } = useTranslation();
+
   return (
     <div className="rounded-3xl border border-dashed border-base-300 bg-white px-8 py-14 text-center shadow-sm">
-      <h2 className="text-2xl font-semibold text-gray-900">No events yet</h2>
+      <h2 className="text-2xl font-semibold text-gray-900">{t("EventsScreen.empty.title")}</h2>
       <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-gray-500">
-        Create birthdays, private events, and other bookings here. Payments will stay linked to the
-        event and each recorded payment will generate a real invoice automatically.
+        {t("EventsScreen.empty.description")}
       </p>
       {canCreate && (
         <button type="button" className="btn btn-primary mt-6" onClick={onCreate}>
-          Create First Event
+          {t("EventsScreen.empty.action")}
         </button>
       )}
     </div>
@@ -64,6 +83,7 @@ function EventsEmptyState({ canCreate, onCreate }) {
 }
 
 function EventFormModal({ open, onClose, onSaved, canCreate }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     name: "",
     type: "",
@@ -125,7 +145,7 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
       const response = await api.post("/api/events", payload);
       onSaved(response.data);
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to create event");
+      setError(err?.response?.data?.message || t("EventsScreen.messages.create_failed"));
     } finally {
       setSaving(false);
     }
@@ -136,14 +156,15 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
       <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-base-300 bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-base-300 px-6 py-5">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">Create Event</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              {t("EventsScreen.form.create_title")}
+            </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Keep operational details and payment setup together so the booking is ready from the
-              start.
+              {t("EventsScreen.form.create_subtitle")}
             </p>
           </div>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-            Close
+            {t("EventsScreen.actions.close")}
           </button>
         </div>
 
@@ -156,15 +177,19 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
 
           <section className="rounded-3xl border border-base-300 bg-base-100 p-5">
             <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Event Details</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {t("EventsScreen.form.sections.event_details")}
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
-                Core scheduling and client information for the event booking.
+                {t("EventsScreen.form.sections.event_details_hint")}
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-gray-700">Event Name</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.event_name")}
+                </label>
                 <input
                   type="text"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -175,7 +200,9 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Type</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.type")}
+                </label>
                 <input
                   type="text"
                   list="event-type-suggestions"
@@ -185,13 +212,15 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
                   disabled={saving || !canCreate}
                 />
                 <datalist id="event-type-suggestions">
-                  <option value="birthday" />
-                  <option value="event" />
+                  <option value={t("EventsScreen.suggestions.birthday")} />
+                  <option value={t("EventsScreen.suggestions.event")} />
                 </datalist>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Location</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.location")}
+                </label>
                 <input
                   type="text"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -202,7 +231,9 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Client</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.client")}
+                </label>
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
@@ -210,20 +241,22 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
                     onClick={() => setShowClientPicker(true)}
                     disabled={saving || !canCreate}
                   >
-                    Select
+                    {t("EventsScreen.actions.select")}
                   </button>
                   <input
                     type="text"
                     readOnly
                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-700"
                     value={form.client_name}
-                    placeholder="Choose a client"
+                    placeholder={t("EventsScreen.placeholders.choose_client")}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Event Date</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.event_date")}
+                </label>
                 <input
                   type="date"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -234,7 +267,9 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Event Time</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.event_time")}
+                </label>
                 <input
                   type="time"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -245,7 +280,9 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700">Details</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.details")}
+                </label>
                 <textarea
                   rows={4}
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -256,7 +293,9 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700">Notes</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.notes")}
+                </label>
                 <textarea
                   rows={3}
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -270,15 +309,19 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
 
           <section className="rounded-3xl border border-base-300 bg-base-100 p-5">
             <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Financial Details</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {t("EventsScreen.form.sections.financial_details")}
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
-                Define the event total and optionally record the initial payment now.
+                {t("EventsScreen.form.sections.financial_details_hint")}
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">Total Amount</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.total_amount")}
+                </label>
                 <input
                   type="number"
                   min="0"
@@ -291,7 +334,9 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Initial Payment Amount</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.initial_payment_amount")}
+                </label>
                 <input
                   type="number"
                   min="0"
@@ -304,7 +349,9 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Initial Payment Date</label>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("EventsScreen.fields.initial_payment_date")}
+                </label>
                 <input
                   type="date"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -318,10 +365,10 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
 
           <div className="flex justify-end gap-3">
             <button type="button" className="btn btn-outline" onClick={onClose} disabled={saving}>
-              Cancel
+              {t("EventsScreen.actions.cancel")}
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving || !canCreate}>
-              {saving ? "Saving..." : "Save Event"}
+              {saving ? t("EventsScreen.states.saving") : t("EventsScreen.actions.save_event")}
             </button>
           </div>
         </form>
@@ -345,6 +392,7 @@ function EventFormModal({ open, onClose, onSaved, canCreate }) {
 }
 
 function AddPaymentModal({ open, eventSummary, onClose, onSaved, canSave }) {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(getToday());
   const [notes, setNotes] = useState("");
@@ -375,7 +423,7 @@ function AddPaymentModal({ open, eventSummary, onClose, onSaved, canSave }) {
       });
       onSaved(response.data);
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to add payment");
+      setError(err?.response?.data?.message || t("EventsScreen.messages.add_payment_failed"));
     } finally {
       setSaving(false);
     }
@@ -385,10 +433,11 @@ function AddPaymentModal({ open, eventSummary, onClose, onSaved, canSave }) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4">
       <div className="w-full max-w-xl rounded-3xl border border-base-300 bg-white shadow-2xl">
         <div className="border-b border-base-300 px-6 py-5">
-          <h2 className="text-xl font-semibold text-gray-900">Add Payment</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {t("EventsScreen.actions.add_payment")}
+          </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Record another payment for {eventSummary.name}. A matching credit/local invoice will be
-            created automatically.
+            {t("EventsScreen.payment_modal.subtitle", { eventName: eventSummary.name })}
           </p>
         </div>
 
@@ -401,19 +450,25 @@ function AddPaymentModal({ open, eventSummary, onClose, onSaved, canSave }) {
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-gray-500">Total</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500">
+                {t("EventsScreen.summary.total")}
+              </div>
               <div className="mt-2 text-lg font-semibold text-gray-900">
                 {formatCurrency(eventSummary.total_amount)}
               </div>
             </div>
             <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-gray-500">Paid</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500">
+                {t("EventsScreen.summary.paid")}
+              </div>
               <div className="mt-2 text-lg font-semibold text-emerald-600">
                 {formatCurrency(eventSummary.total_paid)}
               </div>
             </div>
             <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-gray-500">Remaining</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500">
+                {t("EventsScreen.summary.remaining")}
+              </div>
               <div className="mt-2 text-lg font-semibold text-amber-600">
                 {formatCurrency(eventSummary.remaining_balance)}
               </div>
@@ -422,7 +477,9 @@ function AddPaymentModal({ open, eventSummary, onClose, onSaved, canSave }) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-gray-700">Amount</label>
+              <label className="text-sm font-medium text-gray-700">
+                {t("EventsScreen.fields.amount")}
+              </label>
               <input
                 type="number"
                 min="0"
@@ -434,7 +491,9 @@ function AddPaymentModal({ open, eventSummary, onClose, onSaved, canSave }) {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Payment Date</label>
+              <label className="text-sm font-medium text-gray-700">
+                {t("EventsScreen.fields.payment_date")}
+              </label>
               <input
                 type="date"
                 className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -446,7 +505,9 @@ function AddPaymentModal({ open, eventSummary, onClose, onSaved, canSave }) {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">Notes</label>
+            <label className="text-sm font-medium text-gray-700">
+              {t("EventsScreen.fields.notes")}
+            </label>
             <textarea
               rows={3}
               className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
@@ -458,10 +519,10 @@ function AddPaymentModal({ open, eventSummary, onClose, onSaved, canSave }) {
 
           <div className="flex justify-end gap-3">
             <button type="button" className="btn btn-outline" onClick={onClose} disabled={saving}>
-              Cancel
+              {t("EventsScreen.actions.cancel")}
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving || !canSave}>
-              {saving ? "Saving..." : "Add Payment"}
+              {saving ? t("EventsScreen.states.saving") : t("EventsScreen.actions.add_payment")}
             </button>
           </div>
         </form>
@@ -478,6 +539,7 @@ function EventDetailsModal({
   canAddPayment,
   onPrintDetails,
 }) {
+  const { t } = useTranslation();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -493,7 +555,7 @@ function EventDetailsModal({
       const response = await api.get(`/api/events/${eventId}`);
       setEvent(response.data);
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to load event details");
+      setError(err?.response?.data?.message || t("EventsScreen.messages.load_details_failed"));
     } finally {
       setLoading(false);
     }
@@ -511,9 +573,11 @@ function EventDetailsModal({
       <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-3xl border border-base-300 bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-base-300 px-6 py-5">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">Event Details</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              {t("EventsScreen.actions.event_details")}
+            </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Review the operational setup, payment history, and remaining balance in one place.
+              {t("EventsScreen.details.subtitle")}
             </p>
           </div>
           <div className="flex gap-2">
@@ -523,7 +587,7 @@ function EventDetailsModal({
                 className="btn btn-outline btn-sm"
                 onClick={() => onPrintDetails?.(event)}
               >
-                Print Details
+                {t("EventsScreen.actions.print_details")}
               </button>
             )}
             {event && (
@@ -533,11 +597,11 @@ function EventDetailsModal({
                 onClick={() => setShowPaymentModal(true)}
                 disabled={!canAddPayment}
               >
-                Add Payment
+                {t("EventsScreen.actions.add_payment")}
               </button>
             )}
             <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-              Close
+              {t("EventsScreen.actions.close")}
             </button>
           </div>
         </div>
@@ -546,7 +610,7 @@ function EventDetailsModal({
           {loading ? (
             <div className="flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-4 text-sm text-gray-600">
               <span className="loading loading-spinner loading-md text-[#2f788a]"></span>
-              Loading event details...
+              {t("EventsScreen.states.loading_details")}
             </div>
           ) : error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -555,14 +619,17 @@ function EventDetailsModal({
           ) : event ? (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-3">
-                <SummaryCard label="Total Amount" value={formatCurrency(event.total_amount)} />
                 <SummaryCard
-                  label="Total Paid"
+                  label={t("EventsScreen.summary.total_amount")}
+                  value={formatCurrency(event.total_amount)}
+                />
+                <SummaryCard
+                  label={t("EventsScreen.summary.total_paid")}
                   value={formatCurrency(event.total_paid)}
                   accentClass="text-emerald-600"
                 />
                 <SummaryCard
-                  label="Remaining Balance"
+                  label={t("EventsScreen.summary.remaining_balance")}
                   value={formatCurrency(event.remaining_balance)}
                   accentClass="text-amber-600"
                 />
@@ -570,52 +637,72 @@ function EventDetailsModal({
 
               <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
                 <section className="rounded-3xl border border-base-300 bg-base-100 p-5">
-                  <h3 className="text-lg font-semibold text-gray-900">Operational Details</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {t("EventsScreen.sections.operational_details")}
+                  </h3>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Name</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.name")}
+                      </div>
                       <div className="mt-1 text-sm font-medium text-gray-900">{event.name}</div>
                     </div>
                     <div>
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Type</div>
-                      <div className="mt-1 text-sm font-medium text-gray-900">{event.type}</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.type")}
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-gray-900">
+                        {translateEventType(event.type, t)}
+                      </div>
                     </div>
                     <div>
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Location</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.location")}
+                      </div>
                       <div className="mt-1 text-sm font-medium text-gray-900">
                         {event.location || "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Client</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.client")}
+                      </div>
                       <div className="mt-1 text-sm font-medium text-gray-900">
                         {event.client_name}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {event.client_phone || "No phone"}{" "}
+                        {event.client_phone || t("EventsScreen.states.no_phone")}{" "}
                         {event.client_detail_value ? `• ${event.client_detail_value}` : ""}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Event Date</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.event_date")}
+                      </div>
                       <div className="mt-1 text-sm font-medium text-gray-900">
                         {formatDate(event.event_date)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Event Time</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.event_time")}
+                      </div>
                       <div className="mt-1 text-sm font-medium text-gray-900">
                         {formatTime(event.event_time)}
                       </div>
                     </div>
                     <div className="md:col-span-2">
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Details</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.details")}
+                      </div>
                       <div className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
                         {event.details || "—"}
                       </div>
                     </div>
                     <div className="md:col-span-2">
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Notes</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.notes")}
+                      </div>
                       <div className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
                         {event.notes || "—"}
                       </div>
@@ -624,17 +711,21 @@ function EventDetailsModal({
                 </section>
 
                 <section className="rounded-3xl border border-base-300 bg-base-100 p-5">
-                  <h3 className="text-lg font-semibold text-gray-900">Financial Snapshot</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {t("EventsScreen.sections.financial_snapshot")}
+                  </h3>
                   <div className="mt-4 space-y-4">
                     <div className="rounded-2xl border border-base-300 bg-white px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Created</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">
+                        {t("EventsScreen.fields.created")}
+                      </div>
                       <div className="mt-1 text-sm font-medium text-gray-900">
                         {formatDate(event.created_at)}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-base-300 bg-white px-4 py-3">
                       <div className="text-xs uppercase tracking-wide text-gray-500">
-                        Payment Count
+                        {t("EventsScreen.fields.payment_count")}
                       </div>
                       <div className="mt-1 text-sm font-medium text-gray-900">
                         {event.payments.length}
@@ -642,9 +733,11 @@ function EventDetailsModal({
                     </div>
                     <div className="rounded-2xl border border-base-300 bg-white px-4 py-3">
                       <div className="text-xs uppercase tracking-wide text-gray-500">
-                        Invoice Pattern
+                        {t("EventsScreen.fields.invoice_pattern")}
                       </div>
-                      <div className="mt-1 text-sm font-medium text-gray-900">Credit / Local</div>
+                      <div className="mt-1 text-sm font-medium text-gray-900">
+                        {t("EventsScreen.details.invoice_pattern_value")}
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -653,9 +746,11 @@ function EventDetailsModal({
               <section className="rounded-3xl border border-base-300 bg-base-100 p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Payment History</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {t("EventsScreen.sections.payment_history")}
+                    </h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Each payment is linked to a real invoice generated through the invoice flow.
+                      {t("EventsScreen.details.payment_history_hint")}
                     </p>
                   </div>
                 </div>
@@ -665,25 +760,25 @@ function EventDetailsModal({
                     <table className="table">
                       <thead>
                         <tr>
-                          <th>Date</th>
-                          <th>Type</th>
-                          <th>Amount</th>
-                          <th>Invoice</th>
-                          <th>Notes</th>
+                          <th>{t("EventsScreen.table.date")}</th>
+                          <th>{t("EventsScreen.table.type")}</th>
+                          <th>{t("EventsScreen.table.amount")}</th>
+                          <th>{t("EventsScreen.table.invoice")}</th>
+                          <th>{t("EventsScreen.table.notes")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {event.payments.length === 0 ? (
                           <tr>
                             <td colSpan={5} className="py-8 text-center text-sm text-gray-500">
-                              No payments recorded yet.
+                              {t("EventsScreen.states.no_payments")}
                             </td>
                           </tr>
                         ) : (
                           event.payments.map((payment) => (
                             <tr key={payment.id}>
                               <td>{formatDate(payment.payment_date)}</td>
-                              <td className="capitalize">{payment.payment_type}</td>
+                              <td>{translatePaymentType(payment.payment_type, t)}</td>
                               <td className="font-semibold text-gray-900">
                                 {formatCurrency(payment.amount)}
                               </td>
@@ -694,7 +789,7 @@ function EventDetailsModal({
                                       {payment.invoice_number}
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      Invoice ID #{payment.invoice_id}
+                                      {t("EventsScreen.table.invoice_id", { id: payment.invoice_id })}
                                     </div>
                                   </div>
                                 ) : (
@@ -731,12 +826,14 @@ function EventDetailsModal({
 }
 
 function NoAccess() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex h-full w-full items-center justify-center bg-base-200 p-6">
       <div className="rounded-2xl border border-base-300 bg-white px-8 py-10 text-center shadow-xl">
-        <h2 className="text-xl font-bold text-gray-900">Events Access Required</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t("EventsScreen.no_access.title")}</h2>
         <p className="mt-2 text-sm text-gray-600">
-          Your account does not have permission to open the Events module.
+          {t("EventsScreen.no_access.message")}
         </p>
       </div>
     </div>
@@ -744,6 +841,7 @@ function NoAccess() {
 }
 
 export default function EventsScreen() {
+  const { t } = useTranslation();
   const permissions = readPermissions();
   const salesPerm = permissions?.sales || {};
   const canView = salesPerm.view === true;
@@ -770,7 +868,7 @@ export default function EventsScreen() {
       const response = await api.get("/api/events");
       setEvents(response.data || []);
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to load events");
+      setError(err?.response?.data?.message || t("EventsScreen.messages.load_failed"));
     } finally {
       setLoading(false);
     }
@@ -793,7 +891,9 @@ export default function EventsScreen() {
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
-    documentTitle: printEvent?.name ? `${printEvent.name} Event Details` : "Event Details",
+    documentTitle: printEvent?.name
+      ? `${printEvent.name} ${t("EventsScreen.actions.event_details")}`
+      : t("EventsScreen.actions.event_details"),
     pageStyle: `
       @page {
         size: A4;
@@ -831,7 +931,9 @@ export default function EventsScreen() {
       setPrintEvent(detailedEvent);
       setPendingPrint(true);
     } catch (err) {
-      setPopupMessage(err?.response?.data?.message || "Failed to prepare event print view.");
+      setPopupMessage(
+        err?.response?.data?.message || t("EventsScreen.messages.print_failed"),
+      );
     }
   };
 
@@ -851,34 +953,33 @@ export default function EventsScreen() {
       <div className="mx-auto max-w-[1500px] space-y-6">
         <div className="flex flex-col gap-4 rounded-3xl border border-base-300 bg-white px-6 py-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900">Events</h1>
+            <h1 className="text-3xl font-semibold text-gray-900">{t("EventsScreen.title")}</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-              Manage birthdays and special events, track installment payments, and generate the
-              required invoice for every payment recorded.
+              {t("EventsScreen.subtitle")}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <button type="button" className="btn btn-outline" onClick={loadEvents} disabled={loading}>
-              Refresh
+              {t("EventsScreen.actions.refresh")}
             </button>
             {canCreate && (
               <button type="button" className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-                Create Event
+                {t("EventsScreen.actions.create_event")}
               </button>
             )}
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <SummaryCard label="Events Count" value={String(events.length)} />
+          <SummaryCard label={t("EventsScreen.summary.events_count")} value={String(events.length)} />
           <SummaryCard
-            label="Total Event Value"
+            label={t("EventsScreen.summary.total_event_value")}
             value={formatCurrency(totalEventValue)}
             accentClass="text-[#1f5f6e]"
           />
           <SummaryCard
-            label="Remaining Across Events"
+            label={t("EventsScreen.summary.remaining_across_events")}
             value={formatCurrency(totalRemainingValue)}
             accentClass="text-amber-600"
           />
@@ -886,22 +987,27 @@ export default function EventsScreen() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-base-300 bg-white px-5 py-4 shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Total Paid</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">
+              {t("EventsScreen.summary.total_paid")}
+            </div>
             <div className="mt-2 text-2xl font-semibold text-emerald-600">
               {formatCurrency(totalPaidValue)}
             </div>
           </div>
           <div className="rounded-2xl border border-base-300 bg-white px-5 py-4 shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Open Balance</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">
+              {t("EventsScreen.summary.open_balance")}
+            </div>
             <div className="mt-2 text-2xl font-semibold text-amber-600">
               {formatCurrency(totalRemainingValue)}
             </div>
           </div>
           <div className="rounded-2xl border border-base-300 bg-white px-5 py-4 shadow-sm xl:col-span-2">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Financial Rule</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">
+              {t("EventsScreen.summary.financial_rule")}
+            </div>
             <div className="mt-2 text-sm font-medium text-gray-900">
-              Every event payment creates a credit / local invoice using the system item
-              &quot;Payment for Event&quot;.
+              {t("EventsScreen.summary.financial_rule_value")}
             </div>
           </div>
         </div>
@@ -915,7 +1021,7 @@ export default function EventsScreen() {
         {loading ? (
           <div className="flex items-center gap-3 rounded-2xl border border-base-300 bg-white px-5 py-5 text-sm text-gray-600 shadow-sm">
             <span className="loading loading-spinner loading-md text-[#2f788a]"></span>
-            Loading events...
+            {t("EventsScreen.states.loading")}
           </div>
         ) : events.length === 0 ? (
           <EventsEmptyState canCreate={canCreate} onCreate={() => setShowCreateModal(true)} />
@@ -925,15 +1031,15 @@ export default function EventsScreen() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Event</th>
-                    <th>Type</th>
-                    <th>Client</th>
-                    <th>Date</th>
-                    <th>Location</th>
-                    <th>Total</th>
-                    <th>Paid</th>
-                    <th>Remaining</th>
-                    <th className="text-right">Action</th>
+                    <th>{t("EventsScreen.table.event")}</th>
+                    <th>{t("EventsScreen.table.type")}</th>
+                    <th>{t("EventsScreen.table.client")}</th>
+                    <th>{t("EventsScreen.table.date")}</th>
+                    <th>{t("EventsScreen.table.location")}</th>
+                    <th>{t("EventsScreen.table.total")}</th>
+                    <th>{t("EventsScreen.table.paid")}</th>
+                    <th>{t("EventsScreen.table.remaining")}</th>
+                    <th className="text-right">{t("EventsScreen.table.action")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -943,7 +1049,7 @@ export default function EventsScreen() {
                         <div className="font-semibold text-gray-900">{event.name}</div>
                         <div className="text-xs text-gray-500">{formatTime(event.event_time)}</div>
                       </td>
-                      <td className="capitalize">{event.type}</td>
+                      <td>{translateEventType(event.type, t)}</td>
                       <td>{event.client_name}</td>
                       <td>{formatDate(event.event_date)}</td>
                       <td>{event.location || "—"}</td>
@@ -963,7 +1069,7 @@ export default function EventsScreen() {
                             className="btn btn-outline btn-sm"
                             onClick={() => printEventDetails(event.id)}
                           >
-                            Print Details
+                            {t("EventsScreen.actions.print_details")}
                           </button>
                           <button
                             type="button"
@@ -973,7 +1079,7 @@ export default function EventsScreen() {
                               setShowDetailsModal(true);
                             }}
                           >
-                            Open
+                            {t("EventsScreen.actions.open")}
                           </button>
                         </div>
                       </td>
@@ -992,7 +1098,7 @@ export default function EventsScreen() {
         canCreate={canCreate}
         onSaved={(createdEvent) => {
           setShowCreateModal(false);
-          setPopupMessage("Event created successfully.");
+          setPopupMessage(t("EventsScreen.messages.create_success"));
           loadEvents();
           if (createdEvent?.id) {
             setSelectedEventId(createdEvent.id);
@@ -1011,7 +1117,7 @@ export default function EventsScreen() {
           setSelectedEventId(null);
         }}
         onEventUpdated={() => {
-          setPopupMessage("Event payment saved and invoice created successfully.");
+          setPopupMessage(t("EventsScreen.messages.payment_saved_success"));
           loadEvents();
         }}
       />

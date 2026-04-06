@@ -7,6 +7,7 @@ import PayModal from "./PayModal";
 import BarcodeModal from "./barcodemodal";
 import ReceiptPreviewModal from "./ReceiptPreviewModal";
 import HeldInvoicesModal from "./HeldInvoicesModal";
+import { fetchCompanyWithLogo } from "../../utils/companyLogo";
 
 const decodeTokenPayload = () => {
   try {
@@ -32,7 +33,7 @@ const getCurrentPosUser = () => {
 
   return {
     userId: tokenPayload.user_id || null,
-    username: tokenPayload.username || fullName || "Unknown user",
+    username: tokenPayload.username || fullName || "",
     fullName,
   };
 };
@@ -106,16 +107,38 @@ const companyFetchedRef = useRef(false);
 const currentUser = getCurrentPosUser();
 const paymentSubmitLockRef = useRef(false);
 
+const loadCompany = async ({ force = false } = {}) => {
+  try {
+    const companyConfig = await fetchCompanyWithLogo(api, { force });
+    setCompany(companyConfig);
+    return companyConfig;
+  } catch (err) {
+    console.error("Failed to fetch company", err);
+    return null;
+  }
+};
+
 useEffect(() => {
   if (companyFetchedRef.current) return;
   companyFetchedRef.current = true;
 
-  api
-    .get("/api/invoices/company")
-    .then(res => setCompany(res.data))
-    .catch(err => {
-      console.error("Failed to fetch company", err);
-    });
+  loadCompany();
+}, []);
+
+useEffect(() => {
+  const refreshCompanyOnReturn = () => {
+    if (document.visibilityState === "visible") {
+      loadCompany();
+    }
+  };
+
+  window.addEventListener("focus", refreshCompanyOnReturn);
+  document.addEventListener("visibilitychange", refreshCompanyOnReturn);
+
+  return () => {
+    window.removeEventListener("focus", refreshCompanyOnReturn);
+    document.removeEventListener("visibilitychange", refreshCompanyOnReturn);
+  };
 }, []);
 
 
@@ -158,7 +181,7 @@ useEffect(() => {
         setSessionError("");
     } catch (err) {
         console.error("Failed to load active POS session", err);
-        setSessionError(getApiMessage(err, "Failed to load POS session status"));
+        setSessionError(getApiMessage(err, t("POS.session.load_status_failed")));
     } finally {
         setIsSessionLoading(false);
     }
@@ -186,7 +209,7 @@ useEffect(() => {
         console.error("Failed to load POS stations", err);
         setPosPoints([]);
         setSessionError((current) =>
-          current || getApiMessage(err, "Failed to load available POS stations"),
+          current || getApiMessage(err, t("POS.session.load_stations_failed")),
         );
     } finally {
         setIsPosPointsLoading(false);
@@ -195,7 +218,7 @@ useEffect(() => {
 
     const handleStartSession = async () => {
     if (!selectedPosPointId) {
-        setSessionError("Choose a POS station before starting the session.");
+        setSessionError(t("POS.session.choose_station_required"));
         return;
     }
 
@@ -215,7 +238,7 @@ useEffect(() => {
         }
     } catch (err) {
         console.error("Failed to start POS session", err);
-        setSessionError(getApiMessage(err, "Failed to start POS session"));
+        setSessionError(getApiMessage(err, t("POS.session.start_failed")));
     } finally {
         setSessionActionLoading(false);
     }
@@ -258,7 +281,7 @@ useEffect(() => {
         resetPosWorkspace();
     } catch (err) {
         console.error("Failed to end POS session", err);
-        setSessionError(getApiMessage(err, "Failed to end POS session"));
+        setSessionError(getApiMessage(err, t("POS.session.end_failed")));
     } finally {
         setSessionActionLoading(false);
     }
@@ -343,7 +366,7 @@ const handleBarcodeScan = (barcode) => {
 
   if (!item) {
     beep("error");
-    alert(`Item not found for barcode: ${barcode}`);
+    alert(t("POS.states.item_not_found", { barcode }));
     return;
   }
 
@@ -475,7 +498,7 @@ const handleInvoiceClick = async (inv) => {
     setCartItems(mappedCart);
   } catch (err) {
     console.error("Failed to load invoice into POS", err);
-    alert("Failed to load invoice");
+    alert(t("POS.states.load_failed"));
   } finally {
     setLoading(false);
   }
@@ -655,7 +678,7 @@ const updatePosInvoice = async () => {
   if (!selectedInvoice) return;
 
   if (cartItems.length === 0) {
-    alert("Invoice must have items");
+    alert(t("POS.states.no_items"));
     return;
   }
 
@@ -693,7 +716,7 @@ const updatePosInvoice = async () => {
     { header, lines }
   );
 
-  alert("Invoice updated successfully");
+  alert(t("POS.states.save_success"));
 };
 
 const beep = (type = "success") => {
@@ -723,16 +746,16 @@ const beep = (type = "success") => {
       <div className="bg-base-100 rounded-xl shadow border border-base-300 px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 font-semibold text-emerald-700">
-            Session #{activeSession.id}
+            {t("POS.session.session_number", { id: activeSession.id })}
           </span>
           <span className="text-gray-600">
-            User: <span className="font-semibold text-gray-900">{activeSession.username || currentUser.username}</span>
+            {t("POS.session.user")}: <span className="font-semibold text-gray-900">{activeSession.username || currentUser.username || t("POS.states.unknown_user")}</span>
           </span>
           <span className="text-gray-600">
-            Station: <span className="font-semibold text-gray-900">{activeSession.pos_point_name || activeSession.pos || "—"}</span>
+            {t("POS.session.station")}: <span className="font-semibold text-gray-900">{activeSession.pos_point_name || activeSession.pos || "—"}</span>
           </span>
           <span className="text-gray-600">
-            Started: <span className="font-semibold text-gray-900">{formatSessionDateTime(activeSession.started_at)}</span>
+            {t("POS.session.started")}: <span className="font-semibold text-gray-900">{formatSessionDateTime(activeSession.started_at)}</span>
           </span>
         </div>
 
@@ -742,7 +765,7 @@ const beep = (type = "success") => {
           disabled={sessionActionLoading}
           onClick={handleEndSession}
         >
-          {sessionActionLoading ? "Ending..." : "End Session"}
+          {sessionActionLoading ? t("POS.session.ending") : t("POS.session.end_session")}
         </button>
       </div>
       )}
@@ -832,7 +855,7 @@ const beep = (type = "success") => {
   <button
     onClick={() => setShowRecentInvoices(v => !v)}
     className={`btn btn-outline ${showRecentInvoices ? "btn-active" : ""}`}
-    title="Toggle recent invoices"
+    title={t("POS.search.toggle_recent")}
   >
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-icon lucide-clock"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
   </button>
@@ -849,7 +872,7 @@ const beep = (type = "success") => {
   <button
     onClick={() => setShowBarcodeModal(true)}
     className="btn btn-outline"
-    title="Enter barcode manually"
+    title={t("POS.search.manual_barcode")}
   >
     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
@@ -1108,7 +1131,7 @@ const beep = (type = "success") => {
           <button
             className="text-gray-400 hover:text-red-600 transition-colors p-1"
             onClick={() => removeCartItem(i)}
-            aria-label="Remove item"
+            aria-label={t("POS.aria.remove_item")}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1129,7 +1152,7 @@ const beep = (type = "success") => {
             <button
               className="w-7 h-7 flex items-center justify-center text-gray-600 hover:text-gray-900 transition-colors"
               onClick={() => updateCartItem(i, "qty", cart.qty - 1)}
-              aria-label="Decrease quantity"
+              aria-label={t("POS.aria.decrease_quantity")}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -1143,7 +1166,7 @@ const beep = (type = "success") => {
             <button
               className="w-7 h-7 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
               onClick={() => updateCartItem(i, "qty", cart.qty + 1)}
-              aria-label="Increase quantity"
+              aria-label={t("POS.aria.increase_quantity")}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1371,7 +1394,7 @@ const beep = (type = "success") => {
             fetchInvoices(); // refresh recent list
             } catch (err) {
             console.error(err);
-            alert("Failed to save invoice");
+            alert(t("POS.states.save_failed"));
             }
         }}
         >
@@ -1443,7 +1466,7 @@ onConfirm={async ({ payments }) => {
   } catch (err) {
     console.error("POS save failed:", err);
     await handleSessionProtectedError(err);
-    alert(getApiMessage(err, "Failed to complete payment"));
+    alert(getApiMessage(err, t("POS.states.complete_payment_failed")));
   } finally {
     paymentSubmitLockRef.current = false;
     setIsProcessingPayment(false);
@@ -1485,13 +1508,13 @@ onConfirm={async ({ payments }) => {
         <div className="w-full max-w-lg rounded-2xl border border-base-300 bg-white shadow-2xl p-6">
           <div className="mb-4">
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2f788a]">
-              POS Session Required
+              {t("POS.session.required_badge")}
             </div>
             <h2 className="mt-2 text-2xl font-bold text-gray-900">
-              You need to start a POS session before using the point of sale.
+              {t("POS.session.required_title")}
             </h2>
             <p className="mt-3 text-sm text-gray-600">
-              Current user: <span className="font-semibold text-gray-900">{currentUser.username}</span>
+              {t("POS.session.current_user")}: <span className="font-semibold text-gray-900">{currentUser.username || t("POS.states.unknown_user")}</span>
             </p>
             {currentUser.fullName && (
               <p className="mt-1 text-sm text-gray-500">{currentUser.fullName}</p>
@@ -1507,24 +1530,24 @@ onConfirm={async ({ payments }) => {
           {isSessionLoading ? (
             <div className="flex items-center gap-3 rounded-xl border border-base-300 bg-base-100 px-4 py-4 text-sm text-gray-600">
               <span className="loading loading-spinner loading-md text-[#2f788a]"></span>
-              Checking for an active POS session...
+              {t("POS.session.checking")}
             </div>
           ) : (
             <div className="space-y-4">
               <div className="rounded-2xl border border-base-300 bg-base-100 p-4">
-                <div className="text-sm font-semibold text-gray-800">Choose POS station</div>
+                <div className="text-sm font-semibold text-gray-800">{t("POS.session.choose_station")}</div>
                 <p className="mt-1 text-xs text-gray-500">
-                  Sessions now open under a specific station so monitoring and history stay accurate.
+                  {t("POS.session.choose_station_hint")}
                 </p>
 
                 {isPosPointsLoading ? (
                   <div className="mt-4 flex items-center gap-3 text-sm text-gray-600">
                     <span className="loading loading-spinner loading-sm text-[#2f788a]"></span>
-                    Loading available POS stations...
+                    {t("POS.session.loading_stations")}
                   </div>
                 ) : posPoints.length === 0 ? (
                   <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    No active POS stations are available. Create one in POS Monitor before starting a session.
+                    {t("POS.session.no_stations")}
                   </div>
                 ) : (
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1553,7 +1576,7 @@ onConfirm={async ({ payments }) => {
                             />
                           </div>
                           <div className="mt-2 text-xs text-gray-500">
-                            {point.description || "Active and ready for a new session"}
+                            {point.description || t("POS.session.station_ready")}
                           </div>
                         </button>
                       );
@@ -1564,7 +1587,7 @@ onConfirm={async ({ payments }) => {
 
               {selectedPosPoint && (
                 <div className="rounded-xl border border-[#2f788a]/15 bg-[#2f788a]/5 px-4 py-3 text-sm text-gray-700">
-                  Starting on <span className="font-semibold text-gray-900">{selectedPosPoint.name}</span>
+                  {t("POS.session.starting_on")} <span className="font-semibold text-gray-900">{selectedPosPoint.name}</span>
                 </div>
               )}
 
@@ -1575,7 +1598,7 @@ onConfirm={async ({ payments }) => {
                   disabled={sessionActionLoading || isPosPointsLoading || !selectedPosPointId}
                   onClick={handleStartSession}
                 >
-                  {sessionActionLoading ? "Starting..." : "Start Session"}
+                  {sessionActionLoading ? t("POS.session.starting") : t("POS.session.start_session")}
                 </button>
 
                 <button
@@ -1587,19 +1610,10 @@ onConfirm={async ({ payments }) => {
                     await loadActiveSession();
                   }}
                 >
-                  Refresh Status
+                  {t("POS.session.refresh_status")}
                 </button>
 
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={sessionActionLoading}
-                  onClick={() => {
-                    window.location.hash = "#/pos-management";
-                  }}
-                >
-                  Open POS Monitor
-                </button>
+ 
               </div>
             </div>
           )}
@@ -1619,12 +1633,13 @@ onConfirm={async ({ payments }) => {
 }
 
 function NoAccess() {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full w-full items-center justify-center bg-base-200 p-6">
       <div className="rounded-2xl border border-base-300 bg-white px-8 py-10 text-center shadow-xl">
-        <h2 className="text-xl font-bold text-gray-900">POS Access Required</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t("POS.no_access.title")}</h2>
         <p className="mt-2 text-sm text-gray-600">
-          Your account does not have permission to open the POS screen.
+          {t("POS.no_access.message")}
         </p>
       </div>
     </div>
@@ -1632,25 +1647,26 @@ function NoAccess() {
 }
 
 function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm }) {
+  const { t } = useTranslation();
   if (!open || !session) return null;
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
         <div className="border-b px-6 py-4">
-          <h2 className="text-xl font-bold text-gray-900">End Session</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t("POS.session.end_session")}</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Session #{session.id} will be closed and the POS will lock until a new session is started.
+            {t("POS.session.end_confirm_message", { id: session.id })}
           </p>
         </div>
 
         <div className="px-6 py-5 text-sm text-gray-700">
           <div className="rounded-xl border border-base-300 bg-base-100 px-4 py-4">
             <div>
-              User: <span className="font-semibold text-gray-900">{session.username || "—"}</span>
+              {t("POS.session.user")}: <span className="font-semibold text-gray-900">{session.username || "—"}</span>
             </div>
             <div className="mt-2">
-              Started: <span className="font-semibold text-gray-900">{formatSessionDateTime(session.started_at)}</span>
+              {t("POS.session.started")}: <span className="font-semibold text-gray-900">{formatSessionDateTime(session.started_at)}</span>
             </div>
           </div>
         </div>
@@ -1662,7 +1678,7 @@ function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm })
             onClick={onCancel}
             disabled={loading}
           >
-            Cancel
+            {t("PayModal.actions.cancel")}
           </button>
           <button
             type="button"
@@ -1670,7 +1686,7 @@ function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm })
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? "Ending..." : "Confirm End Session"}
+            {loading ? t("POS.session.ending") : t("POS.session.confirm_end")}
           </button>
         </div>
       </div>
@@ -1679,42 +1695,51 @@ function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm })
 }
 
 function EndSessionSummaryModal({ summary, fallbackUsername, onClose }) {
+  const { t } = useTranslation();
   if (!summary) return null;
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
         <div className="border-b px-6 py-4">
-          <h2 className="text-xl font-bold text-gray-900">Session Summary</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t("POS.session.summary_title")}</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Session #{summary.id} has been ended successfully.
+            {t("POS.session.summary_subtitle", { id: summary.id })}
           </p>
         </div>
 
         <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
           <div className="rounded-xl bg-base-200 px-4 py-3">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Number of Invoices</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">
+              {t("POS.session.number_of_invoices")}
+            </div>
             <div className="mt-1 font-semibold text-gray-900">
               {summary.invoice_count || 0}
             </div>
           </div>
 
           <div className="rounded-xl bg-base-200 px-4 py-3">
-            <div className="text-xs uppercase tracking-wide text-gray-500">User</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">
+              {t("POS.session.user")}
+            </div>
             <div className="mt-1 font-semibold text-gray-900">
               {summary.username || fallbackUsername}
             </div>
           </div>
 
           <div className="rounded-xl bg-base-200 px-4 py-3">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Started</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">
+              {t("POS.session.started")}
+            </div>
             <div className="mt-1 font-semibold text-gray-900">
               {formatSessionDateTime(summary.started_at)}
             </div>
           </div>
 
           <div className="rounded-xl bg-base-200 px-4 py-3">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Ended</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">
+              {t("POS.session.ended")}
+            </div>
             <div className="mt-1 font-semibold text-gray-900">
               {formatSessionDateTime(summary.ended_at)}
             </div>
@@ -1727,7 +1752,7 @@ function EndSessionSummaryModal({ summary, fallbackUsername, onClose }) {
             className="btn btn-primary"
             onClick={onClose}
           >
-            Close
+            {t("POS.actions.back")}
           </button>
         </div>
       </div>

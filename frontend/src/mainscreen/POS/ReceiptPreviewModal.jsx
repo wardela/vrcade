@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 import { QRCodeSVG } from "qrcode.react";
 import { buildReceiptHtml } from "../../utils/receiptHtml";
@@ -9,7 +9,52 @@ import {
   printReceipt,
   setStoredReceiptPrinterName,
 } from "../../utils/electronReceiptPrint";
-import { useTranslation } from "react-i18next";
+import {
+  fetchCompanyWithLogo,
+  getCompanyLogoSrc,
+  prepareCompanyWithLogo,
+} from "../../utils/companyLogo";
+
+const RECEIPT_TEXT = {
+  title: "Print Preview",
+  invoiceNumber: "Invoice #",
+  date: "Date",
+  pointOfSale: "Point of Sale",
+  employee: "Employee",
+  companyLogo: "Company Logo",
+  taxNumber: "Tax No",
+  totalDiscount: "Total discount",
+  totalBeforeTax: "Total before tax",
+  tax: "Tax",
+  grandTotal: "Grand total",
+  footerPoweredBy: "Powered by",
+  loadingReceipt: "Loading receipt…",
+  preparingLogo: "Preparing company logo for printing...",
+  printerLabel: "Receipt printer",
+  printerLoading: "Loading...",
+  printerRefresh: "Refresh printers",
+  printerDefault: "System default printer",
+  printerDefaultWithName: (printer) => `System default (${printer})`,
+  printerDefaultSuffix: " (Default)",
+  printerSavedUnavailable: (printer) =>
+    `Saved receipt printer "${printer}" is unavailable. The system default printer will be used.`,
+  printerSelectedUnavailable: (printer) =>
+    `Printer "${printer}" is no longer available. The system default printer will be used.`,
+  printerLoadFailed:
+    "Could not load the installed printers. Printing will still try the system default printer.",
+  printerRefreshFailed: "Could not refresh the printer list.",
+  printerDesktopOnly:
+    "Direct receipt printing works in the Electron desktop app and skips the browser print preview dialog.",
+  loadFailed: "Failed to load the receipt preview.",
+  logoPrepareFailed: "Failed to prepare the company logo for printing.",
+  submitFailed: "Failed to submit the receipt print job.",
+  submitSuccess: (printer) => `Receipt submitted successfully to ${printer}.`,
+  printerTarget: (printer) => `"${printer}"`,
+  printerTargetDefault: "the system default printer",
+  print: "Print",
+  printing: "Sending...",
+  close: "Close",
+};
 
 const formatInvoiceDate = (dateStr) => {
   if (!dateStr) return "";
@@ -70,9 +115,9 @@ export default function ReceiptPreviewModal({
   company,
   onClose,
 }) {
-  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState(null);
+  const [resolvedCompany, setResolvedCompany] = useState(company || null);
   const [printers, setPrinters] = useState([]);
   const [printersLoading, setPrintersLoading] = useState(false);
   const [selectedPrinterName, setSelectedPrinterName] = useState("");
@@ -80,6 +125,40 @@ export default function ReceiptPreviewModal({
   const [printError, setPrintError] = useState("");
   const [printSuccess, setPrintSuccess] = useState("");
   const [isSubmittingPrint, setIsSubmittingPrint] = useState(false);
+  const [isPreparingCompany, setIsPreparingCompany] = useState(false);
+
+  const ensureCompanyReady = useCallback(
+    async ({ force = false } = {}) => {
+      setIsPreparingCompany(true);
+
+      try {
+        let nextCompany = company || null;
+
+        if (force || (nextCompany?.logo_url && !nextCompany?.logo_data_url) || !getCompanyLogoSrc(nextCompany)) {
+          nextCompany = await fetchCompanyWithLogo(api, { force: true });
+        } else if (nextCompany && !nextCompany.logo_data_url) {
+          nextCompany = await prepareCompanyWithLogo(nextCompany);
+        }
+
+        setResolvedCompany(nextCompany || null);
+        return nextCompany;
+      } catch (error) {
+        console.error("Failed to prepare company receipt assets", error);
+        setPrintError(
+          error?.response?.data?.message ||
+            RECEIPT_TEXT.logoPrepareFailed,
+        );
+        return company || null;
+      } finally {
+        setIsPreparingCompany(false);
+      }
+    },
+    [company],
+  );
+
+  useEffect(() => {
+    setResolvedCompany(company || null);
+  }, [company]);
 
   useEffect(() => {
     if (!open || !invoiceNumber) return;
@@ -98,7 +177,7 @@ export default function ReceiptPreviewModal({
           console.error("Failed to fetch invoice for receipt preview", error);
           setPrintError(
             error?.response?.data?.message ||
-              "Failed to load the receipt preview.",
+              RECEIPT_TEXT.loadFailed,
           );
         }
       } finally {
@@ -110,6 +189,12 @@ export default function ReceiptPreviewModal({
 
     return () => controller.abort();
   }, [open, invoiceNumber]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    ensureCompanyReady();
+  }, [open, ensureCompanyReady]);
 
   useEffect(() => {
     if (!open) {
@@ -148,9 +233,7 @@ export default function ReceiptPreviewModal({
 
         if (storedPrinterName && !storedPrinterExists) {
           setStoredReceiptPrinterName("");
-          setPrinterWarning(
-            `Saved receipt printer "${storedPrinterName}" is unavailable. The system default printer will be used.`,
-          );
+          setPrinterWarning(RECEIPT_TEXT.printerSavedUnavailable(storedPrinterName));
         } else {
           setPrinterWarning("");
         }
@@ -162,7 +245,7 @@ export default function ReceiptPreviewModal({
         setPrinters([]);
         setPrinterWarning(
           error?.message ||
-            "Could not load the installed printers. Printing will still try the system default printer.",
+            RECEIPT_TEXT.printerLoadFailed,
         );
       } finally {
         if (!cancelled) {
@@ -198,14 +281,15 @@ export default function ReceiptPreviewModal({
     setPrintSuccess("");
 
     if (!desktopReceiptPrintingEnabled) {
-      setPrintError(
-        "Direct receipt printing is available only in the Electron desktop app.",
-      );
+      setPrintError(RECEIPT_TEXT.printerDesktopOnly);
       return;
     }
 
     try {
       setIsSubmittingPrint(true);
+      const companyForPrint = await ensureCompanyReady({
+        force: !getCompanyLogoSrc(resolvedCompany),
+      });
 
       const html = buildReceiptHtml({
         invoice: {
@@ -215,10 +299,20 @@ export default function ReceiptPreviewModal({
             date_formatted: dateFormatted,
           },
         },
-        company,
+        company: companyForPrint,
         totals,
         qrValue,
         paperWidthMm: 80,
+        labels: {
+          invoiceNumber: RECEIPT_TEXT.invoiceNumber,
+          date: RECEIPT_TEXT.date,
+          pointOfSale: RECEIPT_TEXT.pointOfSale,
+          employee: RECEIPT_TEXT.employee,
+          totalDiscount: RECEIPT_TEXT.totalDiscount,
+          totalBeforeTax: RECEIPT_TEXT.totalBeforeTax,
+          tax: RECEIPT_TEXT.tax,
+          grandTotal: RECEIPT_TEXT.grandTotal,
+        },
       });
 
       const result = await printReceipt({
@@ -229,21 +323,21 @@ export default function ReceiptPreviewModal({
 
       if (!result?.success) {
         throw new Error(
-          result?.error || "Failed to send the receipt to the printer.",
+          result?.error || RECEIPT_TEXT.submitFailed,
         );
       }
 
       setStoredReceiptPrinterName(selectedPrinterName);
 
       const printedTo = result.printerName
-        ? `"${result.printerName}"`
-        : "the system default printer";
+        ? RECEIPT_TEXT.printerTarget(result.printerName)
+        : RECEIPT_TEXT.printerTargetDefault;
 
-      setPrintSuccess(`Receipt submitted successfully to ${printedTo}.`);
+      setPrintSuccess(RECEIPT_TEXT.submitSuccess(printedTo));
     } catch (error) {
       console.error("Failed to print POS receipt", error);
       setPrintError(
-        error?.message || "Failed to submit the receipt print job.",
+        error?.message || RECEIPT_TEXT.submitFailed,
       );
     } finally {
       setIsSubmittingPrint(false);
@@ -255,7 +349,7 @@ export default function ReceiptPreviewModal({
       <div className="w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex w-full flex-row items-center justify-between border border-b bg-base-200 px-4 py-2">
           <h2 className="text-lg font-semibold">
-            {t("ReceiptPreviewModal.title")}
+            {RECEIPT_TEXT.title}
           </h2>
           <button
             onClick={onClose}
@@ -271,34 +365,45 @@ export default function ReceiptPreviewModal({
               className="flex flex-col items-center justify-center gap-1"
               dir="ltr"
             >
-              {company?.logo_url && (
+              {getCompanyLogoSrc(resolvedCompany) && (
                 <img
-                  src={company.logo_url}
-                  alt="Company Logo"
+                  src={getCompanyLogoSrc(resolvedCompany)}
+                  alt={RECEIPT_TEXT.companyLogo}
                   className="mb-1 h-14 object-contain"
                 />
               )}
 
               <div className="text-center text-sm font-bold">
-                {company?.company_name || invoice.header.company_name}
+                {resolvedCompany?.company_name || invoice.header.company_name}
               </div>
 
-              {company?.tax_number && (
+              {resolvedCompany?.tax_number && (
                 <div className="text-[10px] text-gray-600">
-                  Tax No: {company.tax_number}
+                  {RECEIPT_TEXT.taxNumber}: {resolvedCompany.tax_number}
                 </div>
               )}
             </div>
 
             <div className="mt-2 flex flex-col text-left leading-tight">
-              <div>Invoice # : {invoice.header.invoice_number}</div>
-              <div>Date : {formatInvoiceDate(invoice.header.date)}</div>
+              <div>{RECEIPT_TEXT.invoiceNumber} : {invoice.header.invoice_number}</div>
+              <div>{RECEIPT_TEXT.date} : {formatInvoiceDate(invoice.header.date)}</div>
+              {invoice.header.pos_point_name && (
+                <div>
+                  {RECEIPT_TEXT.pointOfSale} : {invoice.header.pos_point_name}
+                </div>
+              )}
+              {(invoice.header.employee_full_name || invoice.header.username) && (
+                <div>
+                  {RECEIPT_TEXT.employee} :{" "}
+                  {invoice.header.employee_full_name || invoice.header.username}
+                </div>
+              )}
             </div>
           </div>
         )}
 
         <div className="text-xs font-mono" dir="ltr">
-          {loading && <div className="px-4 py-3">Loading receipt…</div>}
+          {loading && <div className="px-4 py-3">{RECEIPT_TEXT.loadingReceipt}</div>}
 
           {!loading && invoice && (
             <div>
@@ -326,21 +431,21 @@ export default function ReceiptPreviewModal({
               <hr className="my-2" />
 
               <div className="flex justify-between px-4" dir="ltr">
-                <span>Total discount</span>
+                <span>{RECEIPT_TEXT.totalDiscount}</span>
                 <span className="tabular-nums">
                   {totals.totalDiscountIncl.toFixed(3)}
                 </span>
               </div>
 
               <div className="flex justify-between px-4" dir="ltr">
-                <span>Total before tax</span>
+                <span>{RECEIPT_TEXT.totalBeforeTax}</span>
                 <span className="tabular-nums">
                   {totals.totalBeforeTax.toFixed(3)}
                 </span>
               </div>
 
               <div className="flex justify-between px-4" dir="ltr">
-                <span>Tax @ 16.00%</span>
+                <span>{RECEIPT_TEXT.tax}</span>
                 <span className="tabular-nums">
                   {totals.totalTax.toFixed(3)}
                 </span>
@@ -352,7 +457,7 @@ export default function ReceiptPreviewModal({
                 className="flex justify-between px-4 text-sm font-bold"
                 dir="ltr"
               >
-                <span>Grand total</span>
+                <span>{RECEIPT_TEXT.grandTotal}</span>
                 <span className="tabular-nums">
                   {totals.grandTotal.toFixed(3)}
                 </span>
@@ -365,7 +470,7 @@ export default function ReceiptPreviewModal({
               </div>
 
               <div className="mb-1 mt-3 text-center text-xs text-gray-500">
-                Powered by{" "}
+                {RECEIPT_TEXT.footerPoweredBy}{" "}
                 <a
                   href="https://www.innovationelements.org"
                   target="_blank"
@@ -383,10 +488,7 @@ export default function ReceiptPreviewModal({
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                {t(
-                  "ReceiptPreviewModal.printer.label",
-                  "Receipt printer",
-                )}
+                {RECEIPT_TEXT.printerLabel}
               </label>
               {desktopReceiptPrintingEnabled && (
                 <button
@@ -406,16 +508,13 @@ export default function ReceiptPreviewModal({
                           )
                         ) {
                           setSelectedPrinterName("");
-                          setPrinterWarning(
-                            `Printer "${selectedPrinterName}" is no longer available. The system default printer will be used.`,
-                          );
+                          setPrinterWarning(RECEIPT_TEXT.printerSelectedUnavailable(selectedPrinterName));
                         }
                       })
                       .catch((error) => {
                         console.error("Failed to refresh printers", error);
                         setPrinterWarning(
-                          error?.message ||
-                            "Could not refresh the printer list.",
+                          error?.message || RECEIPT_TEXT.printerRefreshFailed,
                         );
                       })
                       .finally(() => {
@@ -426,14 +525,8 @@ export default function ReceiptPreviewModal({
                   disabled={printersLoading || isSubmittingPrint}
                 >
                   {printersLoading
-                    ? t(
-                        "ReceiptPreviewModal.printer.loading",
-                        "Loading...",
-                      )
-                    : t(
-                        "ReceiptPreviewModal.printer.refresh",
-                        "Refresh printers",
-                      )}
+                    ? RECEIPT_TEXT.printerLoading
+                    : RECEIPT_TEXT.printerRefresh}
                 </button>
               )}
             </div>
@@ -454,13 +547,13 @@ export default function ReceiptPreviewModal({
             >
               <option value="">
                 {defaultPrinter
-                  ? `System default (${defaultPrinter.displayName})`
-                  : "System default printer"}
+                  ? RECEIPT_TEXT.printerDefaultWithName(defaultPrinter.displayName)
+                  : RECEIPT_TEXT.printerDefault}
               </option>
               {printers.map((printer) => (
                 <option key={printer.name} value={printer.name}>
                   {printer.displayName}
-                  {printer.isDefault ? " (Default)" : ""}
+                  {printer.isDefault ? RECEIPT_TEXT.printerDefaultSuffix : ""}
                 </option>
               ))}
             </select>
@@ -468,8 +561,7 @@ export default function ReceiptPreviewModal({
 
           {!desktopReceiptPrintingEnabled && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Direct receipt printing works in the Electron desktop app and
-              skips the browser print preview dialog.
+              {RECEIPT_TEXT.printerDesktopOnly}
             </div>
           )}
 
@@ -485,6 +577,12 @@ export default function ReceiptPreviewModal({
             </div>
           )}
 
+          {isPreparingCompany && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+              {RECEIPT_TEXT.preparingLogo}
+            </div>
+          )}
+
           {printSuccess && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
               {printSuccess}
@@ -494,16 +592,16 @@ export default function ReceiptPreviewModal({
           <div className="flex gap-2">
             <button
               onClick={submitPrint}
-              disabled={!invoice || loading || isSubmittingPrint}
+              disabled={!invoice || loading || isSubmittingPrint || isPreparingCompany}
               className="btn btn-primary flex-1"
             >
               {isSubmittingPrint
-                ? t("ReceiptPreviewModal.actions.printing", "Sending...")
-                : t("ReceiptPreviewModal.actions.print")}
+                ? RECEIPT_TEXT.printing
+                : RECEIPT_TEXT.print}
             </button>
 
             <button onClick={onClose} className="btn btn-outline flex-1">
-              {t("ReceiptPreviewModal.actions.close")}
+              {RECEIPT_TEXT.close}
             </button>
           </div>
         </div>

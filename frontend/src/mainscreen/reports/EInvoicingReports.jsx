@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import EInvoicingTransferReportPrint from "./printables/EInvoicingTransferReportPrint";
 import TaxDeclarationReportPrint from "./printables/TaxDeclarationReportPrint";
+import InvoiceTaxSummaryReportPrint from "./printables/InvoiceTaxSummaryReportPrint";
 import { useTranslation } from "react-i18next";
 const PAGE_SIZE = 100;
 
@@ -33,7 +34,8 @@ export default function EInvoicingReports() {
   /* ===== Report Types ===== */
   const REPORTS = {
     SHARED: "shared",
-    TAX: "tax"
+    TAX: "tax",
+    INVOICE_TAX_SUMMARY: "invoice_tax_summary"
   };
 
   const [reportType, setReportType] = useState(REPORTS.SHARED);
@@ -98,6 +100,7 @@ const handlePrint = useReactToPrint({
   `
 });
   const [taxData, setTaxData] = useState(null);
+  const [invoiceTaxData, setInvoiceTaxData] = useState(null);
 useEffect(() => {
   if (!pendingPrint) return;
 
@@ -111,11 +114,16 @@ useEffect(() => {
     company &&
     !!taxData;
 
-  if (readyForShared || readyForTax) {
+  const readyForInvoiceTaxSummary =
+    reportType === REPORTS.INVOICE_TAX_SUMMARY &&
+    company &&
+    !!invoiceTaxData;
+
+  if (readyForShared || readyForTax || readyForInvoiceTaxSummary) {
     handlePrint();
     setPendingPrint(false);
   }
-}, [pendingPrint, reportType, printRows, taxData, company, handlePrint]);
+}, [pendingPrint, reportType, printRows, taxData, invoiceTaxData, company, handlePrint]);
   /* ===== Tax Declaration State ===== */
 
 
@@ -135,6 +143,7 @@ useEffect(() => {
     setTotalSum(0);
     setTotalCount(0);
     setTaxData(null);
+    setInvoiceTaxData(null);
   }, [reportType]);
 
   /* ===== Fetch Shared / Unshared ===== */
@@ -193,12 +202,38 @@ useEffect(() => {
     }
   };
 
+  const fetchInvoiceTaxSummary = async () => {
+    if (!dateFrom || !dateTo) return;
+
+    try {
+      setLoading(true);
+
+      const res = await api.get(
+        `/api/invoices/reports/einvoicing/invoice-tax-summary`,
+        {
+          params: {
+            from: dateFrom,
+            to: addOneDay(dateTo),
+          }
+        }
+      );
+
+      setInvoiceTaxData(res.data);
+    } catch (err) {
+      console.error("Failed to fetch invoice tax summary", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* ===== Apply Button ===== */
   const handleApply = () => {
     if (reportType === REPORTS.SHARED) {
       fetchSharedReport(0);
-    } else {
+    } else if (reportType === REPORTS.TAX) {
       fetchTaxDeclaration();
+    } else {
+      fetchInvoiceTaxSummary();
     }
   };
 const isNonZero = (n) => Math.abs(Number(n || 0)) > 0.0005; // tolerance for numeric(12,3)
@@ -386,6 +421,9 @@ function LocalBucketsSection({ title, rows }) {
       >
         <option value={REPORTS.SHARED}>{t("EInvoicingReports.report_types.shared")}</option>
         <option value={REPORTS.TAX}>{t("EInvoicingReports.report_types.tax")}</option>
+        <option value={REPORTS.INVOICE_TAX_SUMMARY}>
+          {t("EInvoicingReports.report_types.invoice_tax_summary")}
+        </option>
       </select>
     </div>
 
@@ -451,9 +489,16 @@ onClick={async () => {
     return;
   }
 
-  // TAX
-  if (!taxData) {
-    await fetchTaxDeclaration(); // ensures printable has data
+  if (reportType === REPORTS.TAX) {
+    if (!taxData) {
+      await fetchTaxDeclaration();
+    }
+    setPendingPrint(true);
+    return;
+  }
+
+  if (!invoiceTaxData) {
+    await fetchInvoiceTaxSummary();
   }
   setPendingPrint(true);
 }}
@@ -545,6 +590,48 @@ rows={[
     />
   </div>
 )}
+
+        {reportType === REPORTS.INVOICE_TAX_SUMMARY && invoiceTaxData && (
+          <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-4 py-2 text-start">
+                    {t("EInvoicingReports.table.invoice")}
+                  </th>
+                  <th className="px-4 py-2 text-end">
+                    {t("EInvoicingReports.table.invoice_total")}
+                  </th>
+                  <th className="px-4 py-2 text-end">
+                    {t("EInvoicingReports.table.total_tax")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {(invoiceTaxData.rows || []).map((row) => (
+                  <tr key={row.invoice_number} className="border-t">
+                    <td className="px-4 py-2">{row.invoice_number}</td>
+                    <td className="px-4 py-2 text-end">
+                      {Number(row.invoice_total || 0).toFixed(3)}
+                    </td>
+                    <td className="px-4 py-2 text-end font-semibold">
+                      {Number(row.total_tax || 0).toFixed(3)}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="border-t bg-gray-50 font-semibold">
+                  <td className="px-4 py-2">{t("EInvoicingReports.table.total_row")}</td>
+                  <td className="px-4 py-2 text-end">
+                    {Number(invoiceTaxData.totals?.invoice_total || 0).toFixed(3)}
+                  </td>
+                  <td className="px-4 py-2 text-end">
+                    {Number(invoiceTaxData.totals?.total_tax || 0).toFixed(3)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 <div className="hidden">
   {company && reportType === REPORTS.SHARED && (
@@ -567,6 +654,16 @@ rows={[
       dateFrom={dateFrom}
       dateTo={dateTo}
       taxData={taxData}
+    />
+  )}
+
+  {company && reportType === REPORTS.INVOICE_TAX_SUMMARY && invoiceTaxData && (
+    <InvoiceTaxSummaryReportPrint
+      ref={printRef}
+      company={company}
+      dateFrom={dateFrom}
+      dateTo={dateTo}
+      reportData={invoiceTaxData}
     />
   )}
 </div>
