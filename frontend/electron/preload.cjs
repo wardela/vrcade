@@ -1,6 +1,9 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("api", {
+  documentPrint: {
+    preview: (payload) => ipcRenderer.invoke("document-print:preview", payload),
+  },
   receipt: {
     getPrinters: () => ipcRenderer.invoke("receipt:get-printers"),
     print: (payload) => ipcRenderer.invoke("receipt:print", payload),

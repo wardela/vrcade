@@ -1,9 +1,16 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
+const fs = require("fs/promises");
+const os = require("os");
 const path = require("path");
+
+if (require("electron-squirrel-startup")) {
+  app.quit();
+}
 
 const DEFAULT_ZOOM_FACTOR = 0.9;
 const ZOOM_STEP_PERCENT = 5;
 const PRINT_WINDOW_READY_TIMEOUT_MS = 30000;
+const PRINT_TEMP_DIR_PREFIX = "fawtartak-print-";
 
 let mainWindow;
 
@@ -13,7 +20,9 @@ const isValidFactor = (value) => Number.isFinite(value) && value > 0;
 const isNonEmptyString = (value) =>
   typeof value === "string" && value.trim().length > 0;
 
+const getAppRoot = () => app.getAppPath();
 const getAppIconPath = () => path.join(__dirname, "..", "assets", "fawtartak.ico");
+const getDistIndexPath = () => path.join(getAppRoot(), "dist", "index.html");
 
 const getRendererEntry = () => {
   const devServerUrl =
@@ -25,7 +34,7 @@ const getRendererEntry = () => {
 
   return {
     type: "file",
-    value: path.join(__dirname, "..", "dist", "index.html"),
+    value: getDistIndexPath(),
   };
 };
 
@@ -137,6 +146,21 @@ const createHiddenPrintWindow = () =>
     },
   });
 
+const createPreviewPrintWindow = (parentWindow) =>
+  new BrowserWindow({
+    show: false,
+    autoHideMenuBar: true,
+    backgroundColor: "#ffffff",
+    parent: parentWindow || undefined,
+    modal: false,
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: true,
+    },
+  });
+
 const normalizePrinter = (printer) => ({
   name: printer.name,
   displayName: printer.displayName || printer.name,
@@ -186,6 +210,29 @@ const waitForReceiptContent = async (webContents) => {
     })`,
     true,
   );
+};
+
+const writePrintDocumentToTempFile = async (html) => {
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), PRINT_TEMP_DIR_PREFIX),
+  );
+  const filePath = path.join(tempDir, "document.html");
+  await fs.writeFile(filePath, html, "utf8");
+
+  return {
+    tempDir,
+    filePath,
+  };
+};
+
+const removeTempDirectory = async (tempDir) => {
+  if (!tempDir) return;
+
+  try {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  } catch (error) {
+    console.warn("Failed to remove temporary print directory", error);
+  }
 };
 
 const destroyWindowSafely = (window) => {
@@ -297,6 +344,72 @@ const printReceiptSilently = async ({
   }
 };
 
+const openDocumentPrintPreview = async ({
+  sender,
+  html,
+  jobTitle,
+}) => {
+  if (!isNonEmptyString(html)) {
+    return {
+      success: false,
+      error: "Printable document HTML is missing.",
+    };
+  }
+
+  const parentWindow = sender ? BrowserWindow.fromWebContents(sender) : null;
+  const printWindow = createPreviewPrintWindow(parentWindow);
+  let timeoutId;
+  let tempDir;
+
+  try {
+    const tempFile = await writePrintDocumentToTempFile(html);
+    tempDir = tempFile.tempDir;
+
+    await Promise.race([
+      (async () => {
+        await printWindow.loadFile(tempFile.filePath);
+        await waitForReceiptContent(printWindow.webContents);
+      })(),
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error("Timed out while preparing the document for printing."));
+        }, PRINT_WINDOW_READY_TIMEOUT_MS);
+      }),
+    ]);
+
+    const printResult = await new Promise((resolve) => {
+      printWindow.webContents.print(
+        {
+          silent: false,
+          printBackground: true,
+        },
+        (success, failureReason) => {
+          resolve({
+            success,
+            failureReason: failureReason || "",
+          });
+        },
+      );
+    });
+
+    return {
+      success: Boolean(printResult.success),
+      failureReason: printResult.failureReason,
+      jobTitle: isNonEmptyString(jobTitle) ? jobTitle.trim() : "Document",
+    };
+  } catch (error) {
+    console.error("Document print preview failed", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to prepare the document for printing.",
+    };
+  } finally {
+    clearTimeout(timeoutId);
+    destroyWindowSafely(printWindow);
+    await removeTempDirectory(tempDir);
+  }
+};
+
 ipcMain.on("reload-app", () => {
   if (mainWindow) {
     mainWindow.reload();
@@ -328,6 +441,13 @@ ipcMain.handle("receipt:get-printers", async (event) => {
 
 ipcMain.handle("receipt:print", async (_event, payload = {}) =>
   printReceiptSilently(payload)
+);
+
+ipcMain.handle("document-print:preview", async (event, payload = {}) =>
+  openDocumentPrintPreview({
+    sender: event.sender,
+    ...payload,
+  })
 );
 
 app.whenReady().then(() => {

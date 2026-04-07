@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import api from "../../utils/axiosInstance";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import PrintableRefundInvoice from "./printablerefundinvoice";
 import ShareConfirmationPopup from "./shareconfirmationpopup";
 import Popup from "../../components/Popup";

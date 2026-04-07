@@ -1,4 +1,16 @@
-export function printHtmlDocument(html) {
+import {
+  injectBaseHref,
+  isElectronDocumentPrintAvailable,
+} from "./electronDocumentPrint";
+
+export function printHtmlDocument(html, { jobTitle } = {}) {
+  if (isElectronDocumentPrintAvailable()) {
+    return window.api.documentPrint.preview({
+      html: injectBaseHref(html),
+      jobTitle: String(jobTitle || document.title || "Document").trim() || "Document",
+    });
+  }
+
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
   iframe.style.right = "0";

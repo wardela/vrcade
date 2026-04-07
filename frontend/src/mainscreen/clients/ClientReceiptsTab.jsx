@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import ReceiptVoucherPrint from "../receipts/ReceiptVoucherPrint";
 import api from "../../utils/axiosInstance";
 import BalanceModal from "../receipts/BalanceModal";

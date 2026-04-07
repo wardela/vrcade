@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import api from "../../utils/axiosInstance";
 import ClientList from "../invoices/clientlist";
 import Popup from "../../components/Popup";

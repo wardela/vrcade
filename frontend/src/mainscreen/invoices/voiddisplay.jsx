@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import api from "../../utils/axiosInstance";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import PrintableVoidInvoice from "./PrintableVoidInvoice";
 import Popup from "../../components/Popup";
 
