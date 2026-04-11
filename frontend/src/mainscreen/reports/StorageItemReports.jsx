@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 import SelectItemModal from "../invoices/SelectItemModal";
 import { useRef } from "react";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import ItemsSalesSummaryReportPrint from "./printables/ItemsSalesSummaryReportPrint";
 import ItemSalesDetailsReportPrint from "./printables/ItemSalesDetailsReportPrint";
 import StorageInventoryReportPrint from "./printables/StorageInventoryReportPrint";

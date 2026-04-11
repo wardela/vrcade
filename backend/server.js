@@ -4,6 +4,7 @@ require("dotenv").config();
 const { authMiddleware: auth } = require("./middleware/authMiddleware");
 const tenantDb = require("./middleware/tenantDb");
 const { ensureAllPosSessionSchemas } = require("./utils/ensurePosSessionSchema");
+const { startPosSessionAutoCloseScheduler } = require("./utils/posSessionAutoCloseScheduler");
 
 const app = express();
 
@@ -58,6 +59,7 @@ const PORT = process.env.PORT || 3002;
 const startServer = async () => {
   try {
     await ensureAllPosSessionSchemas();
+    await startPosSessionAutoCloseScheduler();
 
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);

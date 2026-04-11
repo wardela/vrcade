@@ -22,6 +22,7 @@ module.exports = {
       /^\/postcss\.config\.js$/,
       /^\/tailwind\.config\.js$/,
       /^\/vite\.config\.js$/,
+      /^\/scripts($|\/)/,
       /^\/main_prod\.cjs$/,
       /^\/preload\.cjs$/,
       /^\/preload\.js$/,
@@ -42,7 +43,7 @@ module.exports = {
     },
     {
       name: "@electron-forge/maker-zip",
-      platforms: ["darwin"],
+      platforms: ["darwin", "win32"],
     },
     {
       name: "@electron-forge/maker-deb",

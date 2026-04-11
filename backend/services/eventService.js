@@ -5,6 +5,8 @@ const EVENT_ITEM_NAME = "Payment for Event";
 const EVENT_ITEM_CODE = "SYS-EVENT-PAY";
 const EVENT_ITEM_TAX_PERCENTAGE = 16;
 const INVOICE_NUMBER_LOCK_KEY = 904119;
+const VALID_EVENT_PAYMENT_METHODS = new Set(["cash", "card", "transfer"]);
+const VALID_EVENT_STATUSES = new Set(["open", "ended"]);
 
 const createValidationError = (message) => {
   const error = new Error(message);
@@ -80,6 +82,30 @@ const normalizeOptionalMoneyValue = (value, fieldLabel, { defaultValue = 0 } = {
   return normalizeMoneyValue(value, fieldLabel, { allowZero: true });
 };
 
+const normalizePaymentMethod = (value, fieldLabel = "Payment method") => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (!VALID_EVENT_PAYMENT_METHODS.has(normalized)) {
+    throw createValidationError(`${fieldLabel} must be cash, card, or transfer`);
+  }
+
+  return normalized;
+};
+
+const normalizeEventStatus = (value, fieldLabel = "Event status") => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (!VALID_EVENT_STATUSES.has(normalized)) {
+    throw createValidationError(`${fieldLabel} must be open or ended`);
+  }
+
+  return normalized;
+};
+
 const padDatePart = (value) => String(value).padStart(2, "0");
 
 const combineDateWithCurrentLocalTime = (dateValue) => {
@@ -108,6 +134,10 @@ const normalizeCreatePayload = (payload = {}) => {
       : normalizeDateValue(payload.initial_payment_date, "Initial payment date", {
           required: false,
         });
+  const initialPaymentMethod =
+    initialPaymentAmount > 0
+      ? normalizePaymentMethod(payload.initial_payment_method, "Initial payment method")
+      : null;
 
   return {
     name: normalizeRequiredText(payload.name, "Event name"),
@@ -121,14 +151,25 @@ const normalizeCreatePayload = (payload = {}) => {
     total_amount: totalAmount,
     initial_payment_amount: initialPaymentAmount,
     initial_payment_date: initialPaymentDate,
+    initial_payment_method: initialPaymentMethod,
+    status: "open",
   };
 };
 
 const normalizePaymentPayload = (payload = {}, { paymentType = "regular" } = {}) => ({
   amount: normalizeMoneyValue(payload.amount, "Payment amount"),
   payment_date: normalizeDateValue(payload.payment_date, "Payment date"),
+  payment_method: normalizePaymentMethod(payload.payment_method),
   payment_type: normalizeOptionalText(payload.payment_type) || paymentType,
   notes: normalizeOptionalText(payload.notes),
+});
+
+const normalizeAmountUpdatePayload = (payload = {}) => ({
+  total_amount: normalizeMoneyValue(payload.total_amount, "Total amount"),
+});
+
+const normalizeStatusUpdatePayload = (payload = {}) => ({
+  status: normalizeEventStatus(payload.status),
 });
 
 const getClientOrThrow = async (db, clientId) => {
@@ -374,6 +415,7 @@ const getEventPayments = async (db, eventId) => {
         ep.event_id,
         ep.amount,
         TO_CHAR(ep.payment_date, 'YYYY-MM-DD') AS payment_date,
+        ep.payment_method,
         ep.payment_type,
         ep.notes,
         ep.created_at,
@@ -410,6 +452,7 @@ const getEventDetails = async (db, eventId) => {
         c.phone AS client_phone,
         c.detail_type AS client_detail_type,
         c.detail_value AS client_detail_value,
+        e.status,
         e.details,
         e.notes,
         e.total_amount,
@@ -456,6 +499,7 @@ const listEvents = async (db) => {
         TO_CHAR(e.event_time, 'HH24:MI:SS') AS event_time,
         e.client_id,
         c.name AS client_name,
+        e.status,
         e.total_amount,
         COALESCE(payments.total_paid, 0) AS total_paid,
         e.total_amount - COALESCE(payments.total_paid, 0) AS remaining_balance,
@@ -497,9 +541,10 @@ const createEvent = async (db, payload, { userId = null } = {}) => {
           client_id,
           details,
           notes,
-          total_amount
+          total_amount,
+          status
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING id
       `,
       [
@@ -512,6 +557,7 @@ const createEvent = async (db, payload, { userId = null } = {}) => {
         normalized.details,
         normalized.notes,
         normalized.total_amount,
+        normalized.status,
       ],
     );
 
@@ -535,16 +581,18 @@ const createEvent = async (db, payload, { userId = null } = {}) => {
             event_id,
             amount,
             payment_date,
+            payment_method,
             payment_type,
             invoice_id,
             notes
           )
-          VALUES ($1, $2, $3, $4, $5, $6)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
         `,
         [
           eventId,
           normalized.initial_payment_amount,
           normalized.initial_payment_date,
+          normalized.initial_payment_method,
           "initial",
           createdInvoice.header.id,
           normalized.notes,
@@ -617,17 +665,19 @@ const addEventPayment = async (db, eventId, payload, { userId = null } = {}) => 
           event_id,
           amount,
           payment_date,
+          payment_method,
           payment_type,
           invoice_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
       `,
       [
         normalizedEventId,
         payment.amount,
         payment.payment_date,
+        payment.payment_method,
         payment.payment_type,
         createdInvoice.header.id,
         payment.notes,
@@ -647,6 +697,86 @@ const addEventPayment = async (db, eventId, payload, { userId = null } = {}) => 
   }
 };
 
+const updateEventAmount = async (db, eventId, payload) => {
+  const normalizedEventId = Number(eventId);
+  if (!Number.isInteger(normalizedEventId) || normalizedEventId <= 0) {
+    throw createValidationError("Event id is invalid");
+  }
+
+  const { total_amount } = normalizeAmountUpdatePayload(payload);
+
+  try {
+    await db.query("BEGIN");
+
+    const eventResult = await db.query(
+      `
+        SELECT
+          e.id,
+          COALESCE((
+            SELECT SUM(amount)
+            FROM event_payments
+            WHERE event_id = e.id
+          ), 0) AS total_paid
+        FROM events e
+        WHERE e.id = $1
+        FOR UPDATE
+      `,
+      [normalizedEventId],
+    );
+
+    if (eventResult.rows.length === 0) {
+      throw createValidationError("Event not found");
+    }
+
+    const totalPaid = Number(eventResult.rows[0].total_paid || 0);
+    if (isGreaterThan(totalPaid, total_amount)) {
+      throw createValidationError("Total amount cannot be less than the amount already paid");
+    }
+
+    await db.query(
+      `
+        UPDATE events
+        SET total_amount = $2,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [normalizedEventId, total_amount],
+    );
+
+    await db.query("COMMIT");
+    return getEventDetails(db, normalizedEventId);
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  }
+};
+
+const updateEventStatus = async (db, eventId, payload) => {
+  const normalizedEventId = Number(eventId);
+  if (!Number.isInteger(normalizedEventId) || normalizedEventId <= 0) {
+    throw createValidationError("Event id is invalid");
+  }
+
+  const { status } = normalizeStatusUpdatePayload(payload);
+
+  const updated = await db.query(
+    `
+      UPDATE events
+      SET status = $2,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING id
+    `,
+    [normalizedEventId, status],
+  );
+
+  if (updated.rows.length === 0) {
+    throw createValidationError("Event not found");
+  }
+
+  return getEventDetails(db, normalizedEventId);
+};
+
 module.exports = {
   EVENT_CATEGORY_NAME,
   EVENT_ITEM_NAME,
@@ -656,4 +786,6 @@ module.exports = {
   getEventDetails,
   getEventPayments,
   addEventPayment,
+  updateEventAmount,
+  updateEventStatus,
 };

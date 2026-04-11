@@ -1,7 +1,23 @@
 const RECEIPT_PRINTER_STORAGE_KEY = "pos.receiptPrinterName";
+const DEFAULT_RECEIPT_CAPABILITIES = {
+  directPrintSupported: false,
+  cashDrawer: {
+    supported: false,
+    mode: null,
+  },
+};
 
 export function isElectronReceiptPrintingAvailable() {
   return Boolean(window.api?.receipt?.print);
+}
+
+export async function getReceiptCapabilities() {
+  if (!window.api?.receipt?.getCapabilities) {
+    return DEFAULT_RECEIPT_CAPABILITIES;
+  }
+
+  const capabilities = await window.api.receipt.getCapabilities();
+  return capabilities || DEFAULT_RECEIPT_CAPABILITIES;
 }
 
 export function getStoredReceiptPrinterName() {
@@ -37,4 +53,16 @@ export async function printReceipt(payload) {
   }
 
   return window.api.receipt.print(payload);
+}
+
+export async function openCashDrawer() {
+  if (!window.api?.receipt?.openDrawer) {
+    return {
+      success: false,
+      supported: false,
+      error: "Independent cash drawer opening is not available in this desktop app.",
+    };
+  }
+
+  return window.api.receipt.openDrawer();
 }

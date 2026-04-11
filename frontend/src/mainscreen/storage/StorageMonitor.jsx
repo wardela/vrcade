@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import api from "../../utils/axiosInstance";
 
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import PrintableStorageMovement from "./PrintableStorageMovement";
 import StorageTransactionModal from "./adjustmodal";
 import QuickStorageAdjustModal from "./QuickStorageAdjustModal";

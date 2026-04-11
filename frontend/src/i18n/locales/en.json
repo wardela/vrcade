@@ -1928,11 +1928,14 @@
     "empty": {
       "title": "No events found",
       "description": "Create your first event to start tracking bookings, balances, and related payments.",
-      "action": "Create Event"
+      "action": "Create Event",
+      "filtered_title": "No events match this filter",
+      "filtered_description": "Try another status filter to view a different set of events."
     },
     "form": {
       "create_title": "Create Event",
       "create_subtitle": "Capture the event details and the initial financial information.",
+      "initial_payment_method_hint": "Choose how the initial payment was received.",
       "sections": {
         "event_details": "Event Details",
         "event_details_hint": "Basic operational information for the event.",
@@ -1941,12 +1944,18 @@
       }
     },
     "payment_modal": {
-      "subtitle": "Record a payment for {{eventName}}."
+      "subtitle": "Record a payment for {{eventName}}.",
+      "method_hint": "Choose the payment method used for this event payment."
+    },
+    "amount_modal": {
+      "subtitle": "Update the total amount for {{eventName}}.",
+      "minimum_hint": "The total amount cannot be less than the amount already paid: {{amount}} JOD."
     },
     "fields": {
       "name": "Name",
       "event_name": "Event Name",
       "type": "Type",
+      "status": "Status",
       "location": "Location",
       "client": "Client",
       "event_date": "Event Date",
@@ -1958,7 +1967,9 @@
       "initial_payment_date": "Initial Payment Date",
       "amount": "Amount",
       "payment_date": "Payment Date",
+      "payment_method": "Payment Method",
       "created": "Created",
+      "updated": "Updated",
       "payment_count": "Payment Count",
       "invoice_pattern": "Invoice Pattern"
     },
@@ -1974,12 +1985,20 @@
       "card": "Card",
       "bank": "Bank Transfer"
     },
+    "status": {
+      "open": "Open",
+      "ended": "Ended"
+    },
     "actions": {
       "close": "Close",
       "select": "Select",
       "cancel": "Cancel",
       "save_event": "Save Event",
+      "save_changes": "Save Changes",
       "add_payment": "Add Payment",
+      "edit_total_amount": "Edit Total Amount",
+      "mark_open": "Mark Open",
+      "mark_ended": "Mark Ended",
       "event_details": "Event Details",
       "print_details": "Print Details",
       "open": "Open",
@@ -2003,16 +2022,29 @@
     "sections": {
       "operational_details": "Operational Details",
       "financial_snapshot": "Financial Snapshot",
-      "payment_history": "Payment History"
+      "payment_history": "Payment History",
+      "status_control": "Event Status"
     },
     "details": {
       "subtitle": "Review operational details, balances, and payment activity.",
+      "status_hint": "Mark the event as open or ended whenever its operational state changes.",
       "invoice_pattern_value": "Payments are linked to event invoices automatically.",
       "payment_history_hint": "All saved event payments are listed below."
+    },
+    "filters": {
+      "title": "Status Filter",
+      "hint": "Filter the event list by operational status.",
+      "options": {
+        "all": "All Events",
+        "open": "Open",
+        "ended": "Ended"
+      }
     },
     "table": {
       "date": "Date",
       "type": "Type",
+      "status": "Status",
+      "payment_method": "Payment Method",
       "amount": "Amount",
       "invoice": "Invoice",
       "invoice_id": "Invoice ID #{{id}}",
@@ -2035,11 +2067,15 @@
     "messages": {
       "create_failed": "Failed to create event",
       "add_payment_failed": "Failed to save event payment",
+      "update_amount_failed": "Failed to update event total amount",
+      "update_status_failed": "Failed to update event status",
       "load_details_failed": "Failed to load event details",
       "load_failed": "Failed to load events",
       "print_failed": "Failed to prepare event print",
       "create_success": "Event created successfully.",
-      "payment_saved_success": "Event payment saved and invoice created successfully."
+      "payment_saved_success": "Event payment saved and invoice created successfully.",
+      "amount_updated_success": "Event total amount updated successfully.",
+      "status_updated_success": "Event status updated successfully."
     },
     "print": {
       "company": "Company",
@@ -2066,7 +2102,8 @@
     },
     "modal": {
       "subtitle": "Configure the POS station details and availability.",
-      "station_status_hint": "Disable the station if it should be hidden from POS users."
+      "station_status_hint": "Disable the station if it should be hidden from POS users.",
+      "summary_timeframe_hint": "Choose the time frame to print an aggregated POS summary across all terminals."
     },
     "fields": {
       "name": "Name",
@@ -2080,6 +2117,11 @@
     "actions": {
       "edit_pos": "Edit POS",
       "create_pos": "Create POS",
+      "summary_by_time_frame": "Summary by Time Frame",
+      "print_summary": "Print Summary",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last_7_days": "Last 7 Days",
       "cancel": "Cancel",
       "save_changes": "Save Changes",
       "close": "Close",
@@ -2090,6 +2132,8 @@
       "hide_sessions": "Hide Sessions",
       "edit": "Edit",
       "view_details": "View Details",
+      "force_close": "Force Close",
+      "force_close_session": "Force-Close Session",
       "print_session_summary": "Print Session Summary",
       "preparing": "Preparing..."
     },
@@ -2099,7 +2143,10 @@
       "load_monitoring_failed": "Failed to load POS monitoring",
       "save_failed": "Failed to save POS station",
       "load_history_failed": "Failed to load session history",
-      "load_print_summary_failed": "Failed to load session summary for printing"
+      "load_print_summary_failed": "Failed to load session summary for printing",
+      "load_aggregate_summary_failed": "Failed to load aggregated summary for printing",
+      "force_close_failed": "Failed to force-close the session",
+      "force_close_confirm": "You are about to force-close session #{{id}}."
     },
     "labels": {
       "pos_station": "POS Station",
@@ -2111,6 +2158,12 @@
       "opened_by": "Opened By",
       "started": "Started",
       "ended": "Ended",
+      "from": "From",
+      "to": "To",
+      "time_frame": "Time Frame",
+      "all_pos_stations": "All POS Stations",
+      "sessions_count": "Sessions",
+      "pos_count": "POS Terminals",
       "current_occupancy": "Current Occupancy",
       "session_history": "Session History",
       "session_period": "{{start}} to {{end}}",
@@ -2128,8 +2181,8 @@
       "total_sales": "Total Sales",
       "total_tokens": "Total Tokens",
       "cash": "Cash",
-      "card": "Card",
-      "transfer": "Bank Transfer",
+      "card": "Visa",
+      "transfer": "CLIQ",
       "cash_received": "Cash Received",
       "change_given": "Change Given"
     },
@@ -2167,6 +2220,7 @@
     },
     "print": {
       "title": "POS Session Summary Report",
+      "aggregate_title": "POS Summary by Time Frame",
       "company_logo": "Company logo",
       "tax_number": "Tax Number",
       "session_info": "Session Information",
@@ -2212,6 +2266,8 @@
 
       "unit_price": "Unit Price",
       "quantity": "Quantity",
+      "quantity_enter_hint": "Type a quantity and press Enter",
+      "invalid_quantity": "Enter a valid quantity greater than zero",
       "total": "Total",
       "per_item": "item",
 
@@ -2262,6 +2318,9 @@
       "choose_station_required": "Please choose a POS station first",
       "start_failed": "Failed to start POS session",
       "end_failed": "Failed to end POS session",
+      "closed_by_admin": "Your POS session was closed by {{user}}.",
+      "closed_by_system": "Your POS session was closed automatically at 3:00 AM.",
+      "closed_remotely": "Your POS session was closed from the POS monitor.",
       "user": "User",
       "station": "POS Station",
       "started": "Started",
@@ -2321,8 +2380,8 @@
 
     "payment_types": {
       "cash": "Cash",
-      "card": "Card",
-      "bank": "Bank Transfer"
+      "card": "Visa",
+      "bank": "CLIQ"
     },
 
     "totals": {
