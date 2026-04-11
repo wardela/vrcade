@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { getDirFromLang } from "./utils/lang";
 import api from "./utils/axiosInstance";
 import { clearStoragePreservingTheme } from "./theme/ThemeProvider";
+import { logoutToLogin } from "./utils/logout";
 
 export default function App() {
   const { i18n } = useTranslation();
@@ -41,12 +42,7 @@ export default function App() {
   // ==========================================
   useEffect(() => {
 const handleForceLogout = () => {
-  clearStoragePreservingTheme(localStorage);
-
-  // 👇 tell login WHY we were logged out
-  localStorage.setItem("logout_reason", "PLAN_EXPIRED");
-
-  window.location.replace("/#/login");
+  logoutToLogin({ reason: "PLAN_EXPIRED" });
 };
 
 

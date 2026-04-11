@@ -8,6 +8,7 @@ import BarcodeModal from "./barcodemodal";
 import ReceiptPreviewModal from "./ReceiptPreviewModal";
 import HeldInvoicesModal from "./HeldInvoicesModal";
 import { fetchCompanyWithLogo } from "../../utils/companyLogo";
+import { logoutToLogin } from "../../utils/logout";
 
 const decodeTokenPayload = () => {
   try {
@@ -138,6 +139,7 @@ export default function POSScreen() {
     const [selectedPosPointId, setSelectedPosPointId] = useState("");
     const [isSessionLoading, setIsSessionLoading] = useState(true);
     const [sessionActionLoading, setSessionActionLoading] = useState(false);
+    const [sessionActionMode, setSessionActionMode] = useState("end");
     const [sessionError, setSessionError] = useState("");
     const [endedSessionSummary, setEndedSessionSummary] = useState(null);
     const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
@@ -149,6 +151,7 @@ export default function POSScreen() {
 const companyFetchedRef = useRef(false);
 const currentUser = getCurrentPosUser();
 const paymentSubmitLockRef = useRef(false);
+const sessionActionLockRef = useRef(false);
 const quantityInputRef = useRef(null);
 
 const loadCompany = async ({ force = false } = {}) => {
@@ -269,11 +272,14 @@ useEffect(() => {
     };
 
     const handleStartSession = async () => {
+    if (sessionActionLockRef.current) return;
+
     if (!selectedPosPointId) {
         setSessionError(t("POS.session.choose_station_required"));
         return;
     }
 
+    sessionActionLockRef.current = true;
     setSessionActionLoading(true);
     setSessionError("");
 
@@ -292,6 +298,7 @@ useEffect(() => {
         console.error("Failed to start POS session", err);
         setSessionError(getApiMessage(err, t("POS.session.start_failed")));
     } finally {
+        sessionActionLockRef.current = false;
         setSessionActionLoading(false);
     }
     };
@@ -317,10 +324,12 @@ useEffect(() => {
     setShowEndSessionConfirm(true);
     };
 
-    const confirmEndSession = async () => {
-    if (!activeSession) return;
+    const confirmEndSession = async ({ logoutAfter = false } = {}) => {
+    if (!activeSession || sessionActionLoading || sessionActionLockRef.current) return;
 
+    sessionActionLockRef.current = true;
     setSessionActionLoading(true);
+    setSessionActionMode(logoutAfter ? "end-and-logout" : "end");
     setSessionError("");
 
     try {
@@ -328,15 +337,28 @@ useEffect(() => {
         ended_at: formatLocalDateTime(),
         });
         setShowEndSessionConfirm(false);
-        setEndedSessionSummary(res.data);
         setSelectedPosPointId(activeSession?.pos_point_id ? String(activeSession.pos_point_id) : "");
         setActiveSession(null);
         resetPosWorkspace();
+
+        if (logoutAfter) {
+          try {
+            logoutToLogin();
+            return;
+          } catch (logoutError) {
+            console.error("Failed to log out after ending POS session", logoutError);
+            setSessionError(t("POS.session.logout_after_end_failed"));
+          }
+        }
+
+        setEndedSessionSummary(res.data);
     } catch (err) {
         console.error("Failed to end POS session", err);
         setSessionError(getApiMessage(err, t("POS.session.end_failed")));
     } finally {
+        sessionActionLockRef.current = false;
         setSessionActionLoading(false);
+        setSessionActionMode("end");
     }
     };
 
@@ -1756,8 +1778,11 @@ onConfirm={async ({ payments }) => {
   open={showEndSessionConfirm}
   session={activeSession}
   loading={sessionActionLoading}
+  loadingAction={sessionActionMode}
+  error={sessionError}
   onCancel={() => setShowEndSessionConfirm(false)}
-  onConfirm={confirmEndSession}
+  onConfirm={() => confirmEndSession()}
+  onConfirmAndLogout={() => confirmEndSession({ logoutAfter: true })}
 />
       </div>
 
@@ -1904,13 +1929,22 @@ function NoAccess() {
   );
 }
 
-function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm }) {
+function EndSessionConfirmModal({
+  open,
+  session,
+  loading,
+  loadingAction,
+  error,
+  onCancel,
+  onConfirm,
+  onConfirmAndLogout,
+}) {
   const { t } = useTranslation();
   if (!open || !session) return null;
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
         <div className="border-b px-6 py-4">
           <h2 className="text-xl font-bold text-gray-900">{t("POS.session.end_session")}</h2>
           <p className="mt-1 text-sm text-gray-500">
@@ -1927,12 +1961,18 @@ function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm })
               {t("POS.session.started")}: <span className="font-semibold text-gray-900">{formatSessionDateTime(session.started_at)}</span>
             </div>
           </div>
+
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4">
+        <div className="grid gap-3 px-6 py-4 sm:grid-cols-2">
           <button
             type="button"
-            className="btn btn-outline"
+            className="btn btn-outline w-full sm:col-span-2"
             onClick={onCancel}
             disabled={loading}
           >
@@ -1940,11 +1980,23 @@ function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm })
           </button>
           <button
             type="button"
-            className="btn btn-error"
+            className="btn btn-error w-full whitespace-normal text-center leading-tight"
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? t("POS.session.ending") : t("POS.session.confirm_end")}
+            {loading && loadingAction === "end"
+              ? t("POS.session.ending")
+              : t("POS.session.confirm_end")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary w-full whitespace-normal text-center leading-tight"
+            onClick={onConfirmAndLogout}
+            disabled={loading}
+          >
+            {loading && loadingAction === "end-and-logout"
+              ? t("POS.session.ending_and_logging_out")
+              : t("POS.session.end_and_logout")}
           </button>
         </div>
       </div>

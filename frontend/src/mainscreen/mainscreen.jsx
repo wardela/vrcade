@@ -18,6 +18,7 @@ import POSManagementScreen from "./POS/POSManagementScreen";
 import EventsScreen from "./events/EventsScreen";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../theme/ThemeProvider";
+import { logoutToLogin } from "../utils/logout";
 
 const MainScreen = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -29,10 +30,6 @@ const [isSalesExpanded, setIsSalesExpanded] = useState(false);
 const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
 const { t } = useTranslation();
 const { theme, isDark, toggleTheme } = useAppTheme();
-
-const logout = () => {
-  window.location.hash = "#/login";
-};
 
 let permissions = {};
 
@@ -694,10 +691,7 @@ const raw = localStorage.getItem("permissions");
             onClick={() => {
               setLoggingOut(true);
               setTimeout(() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("full_name");
-              localStorage.removeItem("permissions");
-              window.location.hash = "#/login";
+              logoutToLogin();
               }, 800);
             }}
             className="w-full py-2.5 bg-red-600 text-white rounded-lg font-semibold shadow-sm hover:bg-red-700 transition-colors"
