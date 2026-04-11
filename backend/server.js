@@ -53,7 +53,7 @@ app.use("/api/session", sessionRoutes);
 // =============================
 // SERVER
 // ============================= 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3004;
 
 const startServer = async () => {
   try {
