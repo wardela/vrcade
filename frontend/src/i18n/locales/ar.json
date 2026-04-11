@@ -1931,11 +1931,14 @@
     "empty": {
       "title": "لا توجد فعاليات",
       "description": "أنشئ أول فعالية لبدء متابعة الحجوزات والأرصدة والدفعات المرتبطة بها.",
-      "action": "إنشاء فعالية"
+      "action": "إنشاء فعالية",
+      "filtered_title": "لا توجد فعاليات مطابقة لهذا الفلتر",
+      "filtered_description": "جرّب فلتر حالة مختلفًا لعرض مجموعة أخرى من الفعاليات."
     },
     "form": {
       "create_title": "إنشاء فعالية",
       "create_subtitle": "أدخل تفاصيل الفعالية والبيانات المالية الأولية.",
+      "initial_payment_method_hint": "اختر طريقة استلام الدفعة الأولية.",
       "sections": {
         "event_details": "تفاصيل الفعالية",
         "event_details_hint": "المعلومات التشغيلية الأساسية للفعالية.",
@@ -1944,12 +1947,18 @@
       }
     },
     "payment_modal": {
-      "subtitle": "تسجيل دفعة للفعالية {{eventName}}."
+      "subtitle": "تسجيل دفعة للفعالية {{eventName}}.",
+      "method_hint": "اختر طريقة الدفع المستخدمة لهذه الدفعة."
+    },
+    "amount_modal": {
+      "subtitle": "تحديث إجمالي مبلغ الفعالية {{eventName}}.",
+      "minimum_hint": "لا يمكن أن يكون إجمالي المبلغ أقل من المدفوع بالفعل: {{amount}} دينار."
     },
     "fields": {
       "name": "الاسم",
       "event_name": "اسم الفعالية",
       "type": "النوع",
+      "status": "الحالة",
       "location": "الموقع",
       "client": "العميل",
       "event_date": "تاريخ الفعالية",
@@ -1961,7 +1970,9 @@
       "initial_payment_date": "تاريخ الدفعة الأولية",
       "amount": "المبلغ",
       "payment_date": "تاريخ الدفعة",
+      "payment_method": "طريقة الدفع",
       "created": "تاريخ الإنشاء",
+      "updated": "آخر تحديث",
       "payment_count": "عدد الدفعات",
       "invoice_pattern": "نمط الفاتورة"
     },
@@ -1977,12 +1988,20 @@
       "card": "بطاقة",
       "bank": "تحويل بنكي"
     },
+    "status": {
+      "open": "مفتوحة",
+      "ended": "منتهية"
+    },
     "actions": {
       "close": "إغلاق",
       "select": "اختيار",
       "cancel": "إلغاء",
       "save_event": "حفظ الفعالية",
+      "save_changes": "حفظ التعديلات",
       "add_payment": "إضافة دفعة",
+      "edit_total_amount": "تعديل إجمالي المبلغ",
+      "mark_open": "تعيين كمفتوحة",
+      "mark_ended": "تعيين كمنتهية",
       "event_details": "تفاصيل الفعالية",
       "print_details": "طباعة التفاصيل",
       "open": "فتح",
@@ -2006,16 +2025,29 @@
     "sections": {
       "operational_details": "التفاصيل التشغيلية",
       "financial_snapshot": "الملخص المالي",
-      "payment_history": "سجل الدفعات"
+      "payment_history": "سجل الدفعات",
+      "status_control": "حالة الفعالية"
     },
     "details": {
       "subtitle": "مراجعة التفاصيل التشغيلية والأرصدة وحركة الدفعات.",
+      "status_hint": "يمكنك تعيين الفعالية كمفتوحة أو منتهية عند تغيّر حالتها التشغيلية.",
       "invoice_pattern_value": "يتم ربط الدفعات بفواتير الفعالية تلقائيًا.",
       "payment_history_hint": "جميع دفعات الفعالية المحفوظة تظهر أدناه."
+    },
+    "filters": {
+      "title": "فلتر الحالة",
+      "hint": "تصفية قائمة الفعاليات حسب الحالة التشغيلية.",
+      "options": {
+        "all": "كل الفعاليات",
+        "open": "المفتوحة",
+        "ended": "المنتهية"
+      }
     },
     "table": {
       "date": "التاريخ",
       "type": "النوع",
+      "status": "الحالة",
+      "payment_method": "طريقة الدفع",
       "amount": "المبلغ",
       "invoice": "الفاتورة",
       "invoice_id": "معرّف الفاتورة #{{id}}",
@@ -2038,11 +2070,15 @@
     "messages": {
       "create_failed": "فشل إنشاء الفعالية",
       "add_payment_failed": "فشل حفظ دفعة الفعالية",
+      "update_amount_failed": "فشل تحديث إجمالي مبلغ الفعالية",
+      "update_status_failed": "فشل تحديث حالة الفعالية",
       "load_details_failed": "فشل تحميل تفاصيل الفعالية",
       "load_failed": "فشل تحميل الفعاليات",
       "print_failed": "فشل تجهيز طباعة الفعالية",
       "create_success": "تم إنشاء الفعالية بنجاح.",
-      "payment_saved_success": "تم حفظ دفعة الفعالية وإنشاء الفاتورة بنجاح."
+      "payment_saved_success": "تم حفظ دفعة الفعالية وإنشاء الفاتورة بنجاح.",
+      "amount_updated_success": "تم تحديث إجمالي مبلغ الفعالية بنجاح.",
+      "status_updated_success": "تم تحديث حالة الفعالية بنجاح."
     },
     "print": {
       "company": "الشركة",
@@ -2069,7 +2105,8 @@
     },
     "modal": {
       "subtitle": "إعداد تفاصيل نقطة البيع وحالة توفرها.",
-      "station_status_hint": "قم بتعطيل النقطة إذا أردت إخفاءها عن مستخدمي نقطة البيع."
+      "station_status_hint": "قم بتعطيل النقطة إذا أردت إخفاءها عن مستخدمي نقطة البيع.",
+      "summary_timeframe_hint": "اختر الفترة الزمنية لطباعة ملخص مجمع لجميع نقاط البيع."
     },
     "fields": {
       "name": "الاسم",
@@ -2083,6 +2120,11 @@
     "actions": {
       "edit_pos": "تعديل نقطة البيع",
       "create_pos": "إنشاء نقطة بيع",
+      "summary_by_time_frame": "ملخص حسب الفترة",
+      "print_summary": "طباعة الملخص",
+      "today": "اليوم",
+      "yesterday": "أمس",
+      "last_7_days": "آخر 7 أيام",
       "cancel": "إلغاء",
       "save_changes": "حفظ التعديلات",
       "close": "إغلاق",
@@ -2093,6 +2135,8 @@
       "hide_sessions": "إخفاء الجلسات",
       "edit": "تعديل",
       "view_details": "عرض التفاصيل",
+      "force_close": "إغلاق إجباري",
+      "force_close_session": "إغلاق الجلسة إجباريًا",
       "print_session_summary": "طباعة ملخص الجلسة",
       "preparing": "جاري التجهيز..."
     },
@@ -2102,7 +2146,10 @@
       "load_monitoring_failed": "فشل تحميل مراقبة نقاط البيع",
       "save_failed": "فشل حفظ نقطة البيع",
       "load_history_failed": "فشل تحميل سجل الجلسات",
-      "load_print_summary_failed": "فشل تحميل ملخص الجلسة للطباعة"
+      "load_print_summary_failed": "فشل تحميل ملخص الجلسة للطباعة",
+      "load_aggregate_summary_failed": "فشل تحميل الملخص المجمع للطباعة",
+      "force_close_failed": "فشل إغلاق الجلسة إجباريًا",
+      "force_close_confirm": "أنت على وشك إغلاق الجلسة #{{id}} إجباريًا."
     },
     "labels": {
       "pos_station": "نقطة البيع",
@@ -2114,6 +2161,12 @@
       "opened_by": "تم الفتح بواسطة",
       "started": "وقت البدء",
       "ended": "وقت الإنهاء",
+      "from": "من",
+      "to": "إلى",
+      "time_frame": "الفترة الزمنية",
+      "all_pos_stations": "جميع نقاط البيع",
+      "sessions_count": "عدد الجلسات",
+      "pos_count": "عدد نقاط البيع",
       "current_occupancy": "الإشغال الحالي",
       "session_history": "سجل الجلسات",
       "session_period": "{{start}} إلى {{end}}",
@@ -2131,8 +2184,8 @@
       "total_sales": "إجمالي المبيعات",
       "total_tokens": "إجمالي التوكنز",
       "cash": "نقدي",
-      "card": "بطاقة",
-      "transfer": "تحويل بنكي",
+      "card": "فيزا",
+      "transfer": "كليك",
       "cash_received": "النقد المستلم",
       "change_given": "الباقي المعاد"
     },
@@ -2170,6 +2223,7 @@
     },
     "print": {
       "title": "تقرير ملخص جلسة نقطة البيع",
+      "aggregate_title": "تقرير ملخص نقاط البيع حسب الفترة",
       "company_logo": "شعار الشركة",
       "tax_number": "الرقم الضريبي",
       "session_info": "معلومات الجلسة",
@@ -2215,6 +2269,8 @@
 
       "unit_price": "سعر الوحدة",
       "quantity": "الكمية",
+      "quantity_enter_hint": "اكتب الكمية ثم اضغط Enter",
+      "invalid_quantity": "أدخل كمية صحيحة أكبر من صفر",
       "total": "الإجمالي",
       "per_item": "للصنف",
 
@@ -2265,6 +2321,9 @@
       "choose_station_required": "يرجى اختيار نقطة بيع أولاً",
       "start_failed": "فشل بدء جلسة نقطة البيع",
       "end_failed": "فشل إنهاء جلسة نقطة البيع",
+      "closed_by_admin": "تم إغلاق جلسة نقطة البيع الخاصة بك بواسطة {{user}}.",
+      "closed_by_system": "تم إغلاق جلسة نقطة البيع تلقائيًا الساعة 3:00 صباحًا.",
+      "closed_remotely": "تم إغلاق جلسة نقطة البيع من شاشة المراقبة.",
       "user": "المستخدم",
       "station": "نقطة البيع",
       "started": "وقت البدء",
@@ -2324,8 +2383,8 @@
 
     "payment_types": {
       "cash": "نقدًا",
-      "card": "بطاقة",
-      "bank": "تحويل بنكي"
+      "card": "فيزا",
+      "bank": "كليك"
     },
 
     "totals": {

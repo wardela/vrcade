@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import PaymentMethodPicker from "../../components/PaymentMethodPicker";
 
 const QUICK_CASH_VALUES = [50, 20, 10];
 const MILL_FACTOR = 1000;
@@ -73,40 +74,6 @@ function CashSection({
         <span className={change > 0 ? "text-green-600" : ""}>
           {formatAmount(change)} JOD
         </span>
-      </div>
-    </div>
-  );
-}
-
-function PaymentMethodPicker({
-  methods,
-  value,
-  onChange,
-  disabled,
-  title,
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="space-y-2">
-      {title && (
-        <div className="text-sm font-semibold text-gray-700">{title}</div>
-      )}
-      <div className="grid grid-cols-3 gap-2">
-        {methods.map((method) => (
-          <button
-            key={method.value}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(method.value)}
-            className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-              value === method.value
-                ? "border-green-500 bg-green-500 text-white"
-                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-            }`}
-          >
-            {method.label}
-          </button>
-        ))}
       </div>
     </div>
   );

@@ -5,7 +5,9 @@ contextBridge.exposeInMainWorld("api", {
     preview: (payload) => ipcRenderer.invoke("document-print:preview", payload),
   },
   receipt: {
+    getCapabilities: () => ipcRenderer.invoke("receipt:get-capabilities"),
     getPrinters: () => ipcRenderer.invoke("receipt:get-printers"),
+    openDrawer: () => ipcRenderer.invoke("receipt:open-drawer"),
     print: (payload) => ipcRenderer.invoke("receipt:print", payload),
   },
   zoom: {

@@ -62,6 +62,43 @@ const formatNumber = (value) =>
     maximumFractionDigits: 3,
   });
 
+const parsePositiveCartQuantity = (value) => {
+  const normalized = String(value ?? "").trim();
+
+  if (!/^\d+$/.test(normalized)) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const selectInputText = (input) => {
+  if (!input) return;
+
+  input.focus();
+  input.setSelectionRange(0, input.value.length);
+};
+
+const getRemoteSessionClosureMessage = (notice, t) => {
+  if (!notice?.closed_via) return "";
+
+  if (notice.closed_via === "admin") {
+    const closedBy =
+      notice.closed_by_full_name || notice.closed_by_username || t("POS.states.unknown_user");
+
+    return t("POS.session.closed_by_admin", {
+      user: closedBy,
+    });
+  }
+
+  if (notice.closed_via === "system") {
+    return t("POS.session.closed_by_system");
+  }
+
+  return "";
+};
+
 export default function POSScreen() {
     const { t } = useTranslation();
     const [posMode, setPosMode] = useState("new"); 
@@ -89,6 +126,9 @@ export default function POSScreen() {
     const [showRecentInvoices, setShowRecentInvoices] = useState(false);
     const [showReceiptPreview, setShowReceiptPreview] = useState(false);
     const [lastInvoiceNumber, setLastInvoiceNumber] = useState(null);
+    const [receiptPreviewOptions, setReceiptPreviewOptions] = useState({
+      allowCashDrawerWithoutPrint: false,
+    });
     const [heldInvoices, setHeldInvoices] = useState([]);
     const [showHeldModal, setShowHeldModal] = useState(false);
     const [company, setCompany] = useState(null);
@@ -103,9 +143,13 @@ export default function POSScreen() {
     const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [paymentRequestKey, setPaymentRequestKey] = useState("");
+    const [selectedCartIndex, setSelectedCartIndex] = useState(null);
+    const [quantityDraft, setQuantityDraft] = useState("");
+    const [quantityEditError, setQuantityEditError] = useState("");
 const companyFetchedRef = useRef(false);
 const currentUser = getCurrentPosUser();
 const paymentSubmitLockRef = useRef(false);
+const quantityInputRef = useRef(null);
 
 const loadCompany = async ({ force = false } = {}) => {
   try {
@@ -165,20 +209,28 @@ useEffect(() => {
     setShowHeldModal(false);
     setShowReceiptPreview(false);
     setLastInvoiceNumber(null);
+    setReceiptPreviewOptions({ allowCashDrawerWithoutPrint: false });
     setHeldInvoices([]);
+    setSelectedCartIndex(null);
+    setQuantityDraft("");
+    setQuantityEditError("");
     };
 
-    const loadActiveSession = async () => {
+    const loadActiveSession = async ({ lastSessionId = null } = {}) => {
     setIsSessionLoading(true);
 
     try {
-        const res = await api.get("/api/pos-sessions/active");
+        const res = await api.get("/api/pos-sessions/active", {
+          params: lastSessionId ? { last_session_id: lastSessionId } : undefined,
+        });
         const session = res.data?.session || null;
+        const closureNotice = res.data?.closure_notice || null;
         setActiveSession(session);
         if (session?.pos_point_id) {
           setSelectedPosPointId(String(session.pos_point_id));
         }
-        setSessionError("");
+        const closureMessage = getRemoteSessionClosureMessage(closureNotice, t);
+        setSessionError(closureMessage);
     } catch (err) {
         console.error("Failed to load active POS session", err);
         setSessionError(getApiMessage(err, t("POS.session.load_status_failed")));
@@ -253,8 +305,9 @@ useEffect(() => {
         code === "POS_SESSION_NOT_FOUND" ||
         code === "POS_SESSION_FORBIDDEN"
     ) {
+        const lastSessionId = activeSession?.id || null;
         resetPosWorkspace();
-        await loadActiveSession();
+        await loadActiveSession({ lastSessionId });
     }
     };
 
@@ -293,6 +346,66 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
+  if (!activeSession?.id) return undefined;
+
+  let cancelled = false;
+
+  const pollActiveSessionStatus = async () => {
+    if (document.visibilityState === "hidden") return;
+
+    try {
+      const res = await api.get("/api/pos-sessions/active", {
+        params: {
+          last_session_id: activeSession.id,
+        },
+      });
+
+      if (cancelled) return;
+
+      const nextSession = res.data?.session || null;
+      const closureNotice = res.data?.closure_notice || null;
+
+      if (nextSession?.id === activeSession.id) {
+        return;
+      }
+
+      if (!nextSession) {
+        resetPosWorkspace();
+        setActiveSession(null);
+        setShowEndSessionConfirm(false);
+        setEndedSessionSummary(null);
+        setSessionError(
+          getRemoteSessionClosureMessage(closureNotice, t) || t("POS.session.closed_remotely"),
+        );
+        return;
+      }
+
+      setActiveSession(nextSession);
+      setSessionError("");
+    } catch (error) {
+      if (!cancelled) {
+        console.error("Failed to poll active POS session", error);
+      }
+    }
+  };
+
+  const intervalId = window.setInterval(pollActiveSessionStatus, 5000);
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      pollActiveSessionStatus();
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  return () => {
+    cancelled = true;
+    window.clearInterval(intervalId);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+  };
+}, [activeSession, t]);
+
+useEffect(() => {
   if (showPayModal) {
     setPaymentRequestKey(crypto.randomUUID());
   } else {
@@ -301,6 +414,32 @@ useEffect(() => {
     paymentSubmitLockRef.current = false;
   }
 }, [showPayModal]);
+
+useEffect(() => {
+  if (selectedCartIndex == null) {
+    setQuantityDraft("");
+    setQuantityEditError("");
+    return;
+  }
+
+  const selectedCartItem = cartItems[selectedCartIndex];
+  if (!selectedCartItem) {
+    setSelectedCartIndex(null);
+    setQuantityDraft("");
+    setQuantityEditError("");
+    return;
+  }
+
+  setQuantityDraft(String(selectedCartItem.qty));
+}, [cartItems, selectedCartIndex]);
+
+useEffect(() => {
+  if (selectedCartIndex == null || !quantityInputRef.current) return;
+
+  requestAnimationFrame(() => {
+    selectInputText(quantityInputRef.current);
+  });
+}, [selectedCartIndex]);
 
     const holdCurrentInvoice = () => {
     if (isPosBlocked || cartItems.length === 0) return;
@@ -496,6 +635,9 @@ const handleInvoiceClick = async (inv) => {
     });
 
     setCartItems(mappedCart);
+    setSelectedCartIndex(null);
+    setQuantityDraft("");
+    setQuantityEditError("");
   } catch (err) {
     console.error("Failed to load invoice into POS", err);
     alert(t("POS.states.load_failed"));
@@ -604,8 +746,39 @@ const handleInvoiceClick = async (inv) => {
     });
     };
 
+    const selectCartItem = (index) => {
+    if (isPosBlocked) return;
+
+    setSelectedCartIndex(index);
+    setQuantityEditError("");
+    };
+
+    const applySelectedCartQuantity = (index = selectedCartIndex) => {
+    if (index == null || !cartItems[index]) return;
+
+    const nextQty = parsePositiveCartQuantity(quantityDraft);
+    if (!nextQty) {
+        setQuantityEditError(t("POS.cart.invalid_quantity"));
+        quantityInputRef.current?.focus();
+        quantityInputRef.current?.select();
+        return;
+    }
+
+    updateCartItem(index, "qty", nextQty);
+    setQuantityDraft(String(nextQty));
+    setQuantityEditError("");
+    setSelectedCartIndex(null);
+    };
+
     const removeCartItem = (index) => {
           if (isPosBlocked) return; // 🔒 BLOCK
+    setSelectedCartIndex((current) => {
+        if (current == null) return current;
+        if (current === index) return null;
+        if (current > index) return current - 1;
+        return current;
+    });
+    setQuantityEditError("");
     setCartItems((prev) =>
         prev
         .filter((_, i) => i !== index)
@@ -1117,7 +1290,15 @@ const beep = (type = "success") => {
     const isDiscountOpen = openDiscountIndex === i;
 
     return (
-      <div key={cart.id} className="p-4 hover:bg-gray-50 transition-colors">
+      <div
+        key={cart.id}
+        className={`p-4 transition-colors ${
+          selectedCartIndex === i
+            ? "bg-blue-50 ring-1 ring-blue-200"
+            : "hover:bg-gray-50"
+        }`}
+        onClick={() => selectCartItem(i)}
+      >
         
         {/* ================= Item Header ================= */}
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -1130,7 +1311,10 @@ const beep = (type = "success") => {
           {/* Remove Button */}
           <button
             className="text-gray-400 hover:text-red-600 transition-colors p-1"
-            onClick={() => removeCartItem(i)}
+            onClick={(event) => {
+              event.stopPropagation();
+              removeCartItem(i);
+            }}
             aria-label={t("POS.aria.remove_item")}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1151,7 +1335,11 @@ const beep = (type = "success") => {
           <div className="flex items-center gap-3 bg-gray-100 rounded-lg px-2 py-1">
             <button
               className="w-7 h-7 flex items-center justify-center text-gray-600 hover:text-gray-900 transition-colors"
-              onClick={() => updateCartItem(i, "qty", cart.qty - 1)}
+              onClick={(event) => {
+                event.stopPropagation();
+                const nextQty = Math.max(1, Number(cart.qty) - 1);
+                updateCartItem(i, "qty", nextQty);
+              }}
               aria-label={t("POS.aria.decrease_quantity")}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1165,7 +1353,10 @@ const beep = (type = "success") => {
 
             <button
               className="w-7 h-7 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              onClick={() => updateCartItem(i, "qty", cart.qty + 1)}
+              onClick={(event) => {
+                event.stopPropagation();
+                updateCartItem(i, "qty", Number(cart.qty) + 1);
+              }}
               aria-label={t("POS.aria.increase_quantity")}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1174,6 +1365,62 @@ const beep = (type = "success") => {
               </button>
           </div>
         </div>
+
+        {selectedCartIndex === i && (
+          <div className="mb-3 rounded-lg border border-blue-200 bg-white px-3 py-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                {t("POS.cart.quantity")}
+              </label>
+              <input
+                ref={quantityInputRef}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={quantityDraft}
+                onClick={(event) => event.stopPropagation()}
+                onFocus={(event) => {
+                  event.stopPropagation();
+                  selectInputText(event.target);
+                }}
+                onMouseUp={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  selectInputText(event.currentTarget);
+                }}
+                onChange={(event) => {
+                  setQuantityDraft(event.target.value.replace(/[^\d]/g, ""));
+                  setQuantityEditError("");
+                }}
+                onKeyDown={(event) => {
+                  event.stopPropagation();
+
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    applySelectedCartQuantity(i);
+                    return;
+                  }
+
+                  if (event.key === "Escape") {
+                    setQuantityDraft(String(cart.qty));
+                    setQuantityEditError("");
+                  }
+                }}
+                className="input input-sm input-bordered w-full sm:max-w-[120px]"
+                placeholder={String(cart.qty)}
+              />
+              <span className="text-xs text-gray-500">
+                {t("POS.cart.quantity_enter_hint")}
+              </span>
+            </div>
+
+            {quantityEditError && (
+              <div className="mt-2 text-xs font-medium text-red-600">
+                {quantityEditError}
+              </div>
+            )}
+          </div>
+        )}
 
         {cart.has_tokens && Number(cart.token_count) > 0 && (
           <div className="mb-2 flex items-center justify-start">
@@ -1374,6 +1621,7 @@ const beep = (type = "success") => {
     if (!selectedInvoice?.invoice_number) return;
 
     setLastInvoiceNumber(selectedInvoice.invoice_number);
+    setReceiptPreviewOptions({ allowCashDrawerWithoutPrint: false });
     setShowReceiptPreview(true);
   }}
 >
@@ -1451,6 +1699,11 @@ onConfirm={async ({ payments }) => {
 
     // ✅ store invoice number
     setLastInvoiceNumber(saved.header.invoice_number);
+    setReceiptPreviewOptions({
+      allowCashDrawerWithoutPrint: payments.some(
+        (payment) => payment.payment_method === "cash" && Number(payment.amount || 0) > 0,
+      ),
+    });
 
     // close payment modal
     setShowPayModal(false);
@@ -1461,6 +1714,9 @@ onConfirm={async ({ payments }) => {
     // reset POS
     setCartItems([]);
     setSelectedClient(null);
+    setSelectedCartIndex(null);
+    setQuantityDraft("");
+    setQuantityEditError("");
 
     fetchInvoices();
   } catch (err) {
@@ -1483,9 +1739,11 @@ onConfirm={async ({ payments }) => {
   open={showReceiptPreview}
   invoiceNumber={lastInvoiceNumber}
   company={company}
+  allowCashDrawerWithoutPrint={receiptPreviewOptions.allowCashDrawerWithoutPrint}
   onClose={() => {
     setShowReceiptPreview(false);
     setLastInvoiceNumber(null);
+    setReceiptPreviewOptions({ allowCashDrawerWithoutPrint: false });
   }}
 />
 <HeldInvoicesModal

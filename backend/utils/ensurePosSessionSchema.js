@@ -44,6 +44,16 @@ const applyPosSessionSchema = async (db, schemaName) => {
   `);
 
   await db.query(`
+    ALTER TABLE ${posSessionsTable}
+    ADD COLUMN IF NOT EXISTS closed_via CHARACTER VARYING(20)
+  `);
+
+  await db.query(`
+    ALTER TABLE ${posSessionsTable}
+    ADD COLUMN IF NOT EXISTS closed_by_user_id INTEGER
+  `);
+
+  await db.query(`
     ALTER TABLE ${invoiceHeaderTable}
     ADD COLUMN IF NOT EXISTS session_id INTEGER
   `);
@@ -73,6 +83,21 @@ const applyPosSessionSchema = async (db, schemaName) => {
       db,
       schemaName,
       "pos_sessions",
+      "pos_sessions_closed_via_check",
+    ))
+  ) {
+    await db.query(`
+      ALTER TABLE ${posSessionsTable}
+      ADD CONSTRAINT pos_sessions_closed_via_check
+      CHECK (closed_via IS NULL OR closed_via IN ('user', 'admin', 'system'))
+    `);
+  }
+
+  if (
+    !(await constraintExists(
+      db,
+      schemaName,
+      "pos_sessions",
       "pos_sessions_user_id_fkey",
     ))
   ) {
@@ -82,6 +107,23 @@ const applyPosSessionSchema = async (db, schemaName) => {
       FOREIGN KEY (user_id)
       REFERENCES ${usersTable}(id)
       ON DELETE RESTRICT
+    `);
+  }
+
+  if (
+    !(await constraintExists(
+      db,
+      schemaName,
+      "pos_sessions",
+      "pos_sessions_closed_by_user_id_fkey",
+    ))
+  ) {
+    await db.query(`
+      ALTER TABLE ${posSessionsTable}
+      ADD CONSTRAINT pos_sessions_closed_by_user_id_fkey
+      FOREIGN KEY (closed_by_user_id)
+      REFERENCES ${usersTable}(id)
+      ON DELETE SET NULL
     `);
   }
 

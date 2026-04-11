@@ -25,6 +25,24 @@ const formatCount = (value) =>
     minimumFractionDigits: Number(value || 0) % 1 === 0 ? 0 : 3,
     maximumFractionDigits: 3,
   });
+const pad = (value) => String(value).padStart(2, "0");
+const toDateTimeLocalValue = (date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours(),
+  )}:${pad(date.getMinutes())}`;
+const toSqlDateTimeValue = (value) => {
+  if (!value) return "";
+  return `${value.replace("T", " ")}:00.000`;
+};
+const getStartOfDay = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+const getEndOfDay = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+const addDays = (date, amount) => {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + amount);
+  return nextDate;
+};
 
 const getApiMessage = (error, fallbackMessage) =>
   error?.response?.data?.message || fallbackMessage;
@@ -186,6 +204,203 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function SummaryTimeFrameModal({
+  open,
+  onClose,
+  onSubmit,
+  submitting,
+  initialRange,
+}) {
+  const { t } = useTranslation();
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+
+    setFrom(initialRange?.from || "");
+    setTo(initialRange?.to || "");
+  }, [initialRange, open]);
+
+  if (!open) return null;
+
+  const applyPreset = (preset) => {
+    const now = new Date();
+
+    if (preset === "today") {
+      setFrom(toDateTimeLocalValue(getStartOfDay(now)));
+      setTo(toDateTimeLocalValue(getEndOfDay(now)));
+      return;
+    }
+
+    if (preset === "yesterday") {
+      const yesterday = addDays(now, -1);
+      setFrom(toDateTimeLocalValue(getStartOfDay(yesterday)));
+      setTo(toDateTimeLocalValue(getEndOfDay(yesterday)));
+      return;
+    }
+
+    if (preset === "last7") {
+      setFrom(toDateTimeLocalValue(getStartOfDay(addDays(now, -6))));
+      setTo(toDateTimeLocalValue(getEndOfDay(now)));
+    }
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit({
+      from,
+      to,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+      <div className="w-full max-w-xl rounded-3xl border border-base-300 bg-white shadow-2xl">
+        <div className="border-b border-base-300 px-6 py-5">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {t("POSMonitor.actions.summary_by_time_frame")}
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            {t("POSMonitor.modal.summary_timeframe_hint")}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => applyPreset("today")}
+              disabled={submitting}
+            >
+              {t("POSMonitor.actions.today")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => applyPreset("yesterday")}
+              disabled={submitting}
+            >
+              {t("POSMonitor.actions.yesterday")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => applyPreset("last7")}
+              disabled={submitting}
+            >
+              {t("POSMonitor.actions.last_7_days")}
+            </button>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                {t("POSMonitor.labels.from")}
+              </label>
+              <input
+                type="datetime-local"
+                value={from}
+                onChange={(event) => setFrom(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
+                disabled={submitting}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                {t("POSMonitor.labels.to")}
+              </label>
+              <input
+                type="datetime-local"
+                value={to}
+                onChange={(event) => setTo(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
+                disabled={submitting}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={onClose}
+              disabled={submitting}
+            >
+              {t("POSMonitor.actions.cancel")}
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting
+                ? t("POSMonitor.actions.preparing")
+                : t("POSMonitor.actions.print_summary")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ForceCloseSessionModal({ open, session, loading, onCancel, onConfirm }) {
+  const { t } = useTranslation();
+
+  if (!open || !session) return null;
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-xl font-bold text-gray-900">
+            {t("POSMonitor.actions.force_close_session")}
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            {t("POSMonitor.messages.force_close_confirm", { id: session.id })}
+          </p>
+        </div>
+
+        <div className="px-6 py-5 text-sm text-gray-700">
+          <div className="rounded-xl border border-base-300 bg-base-100 px-4 py-4">
+            <div>
+              {t("POSMonitor.labels.opened_by")}:{" "}
+              <span className="font-semibold text-gray-900">
+                {session.full_name || session.username || "—"}
+              </span>
+            </div>
+            <div className="mt-2">
+              {t("POSMonitor.labels.started")}:{" "}
+              <span className="font-semibold text-gray-900">
+                {formatDateTime(session.started_at)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 px-6 py-4">
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            {t("POSMonitor.actions.cancel")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-error"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? t("POSMonitor.actions.preparing") : t("POSMonitor.actions.force_close")}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -485,6 +700,17 @@ export default function POSManagementScreen() {
   const [company, setCompany] = useState(null);
   const [pendingPrint, setPendingPrint] = useState(false);
   const [printingSessionId, setPrintingSessionId] = useState(null);
+  const [forceCloseTarget, setForceCloseTarget] = useState(null);
+  const [forceClosing, setForceClosing] = useState(false);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
+  const [printingAggregate, setPrintingAggregate] = useState(false);
+  const [summaryRange, setSummaryRange] = useState(() => {
+    const now = new Date();
+    return {
+      from: toDateTimeLocalValue(getStartOfDay(now)),
+      to: toDateTimeLocalValue(getEndOfDay(now)),
+    };
+  });
   const printRef = useRef(null);
 
   const handlePrint = useReactToPrint({
@@ -507,6 +733,14 @@ export default function POSManagementScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadSessionsForPosPoint = async (posPointId) => {
+    const res = await api.get(`/api/pos-points/${posPointId}/sessions`);
+    setSessionsByPosPointId((prev) => ({
+      ...prev,
+      [posPointId]: res.data?.sessions || [],
+    }));
   };
 
   useEffect(() => {
@@ -567,11 +801,7 @@ export default function POSManagementScreen() {
     setHistoryLoadingFor(posPointId);
 
     try {
-      const res = await api.get(`/api/pos-points/${posPointId}/sessions`);
-      setSessionsByPosPointId((prev) => ({
-        ...prev,
-        [posPointId]: res.data?.sessions || [],
-      }));
+      await loadSessionsForPosPoint(posPointId);
     } catch (err) {
       alert(getApiMessage(err, t("POSMonitor.messages.load_history_failed")));
     } finally {
@@ -596,6 +826,53 @@ export default function POSManagementScreen() {
     }
   };
 
+  const handleForceClose = async () => {
+    if (!forceCloseTarget) return;
+
+    setForceClosing(true);
+
+    try {
+      await api.post(`/api/pos-sessions/${forceCloseTarget.id}/force-close`, {});
+      setForceCloseTarget(null);
+      await loadMonitoring();
+
+      if (sessionsByPosPointId[forceCloseTarget.posPointId]) {
+        await loadSessionsForPosPoint(forceCloseTarget.posPointId);
+      }
+    } catch (err) {
+      alert(getApiMessage(err, t("POSMonitor.messages.force_close_failed")));
+    } finally {
+      setForceClosing(false);
+    }
+  };
+
+  const handlePrintAggregateSummary = async ({ from, to }) => {
+    setPrintingAggregate(true);
+
+    try {
+      const normalizedRange = { from, to };
+      const [summaryRes, companyRes] = await Promise.all([
+        api.get("/api/pos-sessions/aggregate-summary", {
+          params: {
+            from: toSqlDateTimeValue(from),
+            to: toSqlDateTimeValue(to),
+          },
+        }),
+        company ? Promise.resolve({ data: company }) : api.get("/api/invoices/company"),
+      ]);
+
+      setSummaryRange(normalizedRange);
+      setSummaryModalOpen(false);
+      setSessionPrintData(summaryRes.data);
+      setCompany(companyRes.data || null);
+      setPendingPrint(true);
+    } catch (err) {
+      alert(getApiMessage(err, t("POSMonitor.messages.load_aggregate_summary_failed")));
+    } finally {
+      setPrintingAggregate(false);
+    }
+  };
+
   if (!canView) {
     return <NoAccess />;
   }
@@ -614,6 +891,13 @@ export default function POSManagementScreen() {
           <div className="flex gap-3">
             <button type="button" className="btn btn-outline" onClick={loadMonitoring}>
               {t("POSMonitor.actions.refresh")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setSummaryModalOpen(true)}
+            >
+              {t("POSMonitor.actions.summary_by_time_frame")}
             </button>
             {canCreate && (
               <button type="button" className="btn btn-primary" onClick={handleOpenCreate}>
@@ -673,6 +957,20 @@ export default function POSManagementScreen() {
                             <div className="mt-1 text-sm text-gray-500">
                               {t("POSMonitor.labels.started")} {formatDateTime(activeSession.started_at)}
                             </div>
+                            {canEdit && (
+                              <button
+                                type="button"
+                                className="btn btn-error btn-xs mt-3"
+                                onClick={() =>
+                                  setForceCloseTarget({
+                                    ...activeSession,
+                                    posPointId: posPoint.id,
+                                  })
+                                }
+                              >
+                                {t("POSMonitor.actions.force_close")}
+                              </button>
+                            )}
                           </>
                         ) : (
                           <div className="mt-2 text-sm text-gray-500">
@@ -797,6 +1095,20 @@ export default function POSManagementScreen() {
                                       ? t("POSMonitor.actions.preparing")
                                       : t("POSMonitor.actions.print_session_summary")}
                                   </button>
+                                  {canEdit && session.status === "active" && !session.ended_at && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-error btn-sm"
+                                      onClick={() =>
+                                        setForceCloseTarget({
+                                          ...session,
+                                          posPointId: posPoint.id,
+                                        })
+                                      }
+                                    >
+                                      {t("POSMonitor.actions.force_close")}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -823,6 +1135,28 @@ export default function POSManagementScreen() {
         submitting={submitting}
         initialData={editingPoint}
         canEdit={editingPoint ? canEdit : canCreate}
+      />
+
+      <SummaryTimeFrameModal
+        open={summaryModalOpen}
+        onClose={() => {
+          if (printingAggregate) return;
+          setSummaryModalOpen(false);
+        }}
+        onSubmit={handlePrintAggregateSummary}
+        submitting={printingAggregate}
+        initialRange={summaryRange}
+      />
+
+      <ForceCloseSessionModal
+        open={Boolean(forceCloseTarget)}
+        session={forceCloseTarget}
+        loading={forceClosing}
+        onCancel={() => {
+          if (forceClosing) return;
+          setForceCloseTarget(null);
+        }}
+        onConfirm={handleForceClose}
       />
 
       <SessionDetailModal

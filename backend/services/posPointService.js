@@ -1,3 +1,5 @@
+const { formatTimestampWithoutTimezone } = require("../utils/jordanTimestamp");
+
 const createPosPointError = (message, statusCode, code) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -13,8 +15,8 @@ const normalizePosPoint = (row) => ({
   code: row.code,
   is_active: row.is_active,
   description: row.description,
-  created_at: row.created_at,
-  updated_at: row.updated_at,
+  created_at: formatTimestampWithoutTimezone(row.created_at),
+  updated_at: formatTimestampWithoutTimezone(row.updated_at),
 });
 
 const normalizeMonitoringRow = (row) => ({
@@ -26,7 +28,7 @@ const normalizeMonitoringRow = (row) => ({
         user_id: row.active_user_id,
         username: row.active_username,
         full_name: row.active_full_name,
-        started_at: row.active_started_at,
+        started_at: formatTimestampWithoutTimezone(row.active_started_at),
         status: row.active_status,
       }
     : null,
@@ -298,8 +300,8 @@ const getSessionsForPosPoint = async (db, posPointId) => {
       user_id: row.user_id,
       username: row.username,
       full_name: row.full_name,
-      started_at: row.started_at,
-      ended_at: row.ended_at,
+      started_at: formatTimestampWithoutTimezone(row.started_at),
+      ended_at: formatTimestampWithoutTimezone(row.ended_at),
       status: row.status,
       invoice_count: Number(row.invoice_count || 0),
       total_sales_amount: toNumber(row.total_sales_amount),

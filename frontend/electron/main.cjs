@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const fs = require("fs/promises");
+const net = require("net");
 const os = require("os");
 const path = require("path");
 
@@ -11,6 +12,9 @@ const DEFAULT_ZOOM_FACTOR = 0.9;
 const ZOOM_STEP_PERCENT = 5;
 const PRINT_WINDOW_READY_TIMEOUT_MS = 30000;
 const PRINT_TEMP_DIR_PREFIX = "fawtartak-print-";
+const CASH_DRAWER_DEFAULT_PORT = 9100;
+const CASH_DRAWER_DEFAULT_TIMEOUT_MS = 3000;
+const CASH_DRAWER_DEFAULT_PULSE_HEX = "1B700019FA";
 
 let mainWindow;
 
@@ -19,6 +23,48 @@ const toFactor = (percent) => Number(percent) / 100;
 const isValidFactor = (value) => Number.isFinite(value) && value > 0;
 const isNonEmptyString = (value) =>
   typeof value === "string" && value.trim().length > 0;
+
+const normalizeHexBytes = (value) =>
+  String(value || "")
+    .replace(/0x/gi, "")
+    .replace(/[^a-fA-F0-9]/g, "")
+    .toUpperCase();
+
+const getCashDrawerPulseBuffer = () => {
+  const normalizedHex = normalizeHexBytes(
+    process.env.POS_CASH_DRAWER_PULSE_HEX || CASH_DRAWER_DEFAULT_PULSE_HEX,
+  );
+
+  if (!normalizedHex || normalizedHex.length % 2 !== 0) {
+    return Buffer.from(CASH_DRAWER_DEFAULT_PULSE_HEX, "hex");
+  }
+
+  try {
+    return Buffer.from(normalizedHex, "hex");
+  } catch (_error) {
+    return Buffer.from(CASH_DRAWER_DEFAULT_PULSE_HEX, "hex");
+  }
+};
+
+const getCashDrawerConfig = () => {
+  const host = String(process.env.POS_CASH_DRAWER_HOST || "").trim();
+  const rawPort = Number(process.env.POS_CASH_DRAWER_PORT || CASH_DRAWER_DEFAULT_PORT);
+  const timeoutMs = Number(
+    process.env.POS_CASH_DRAWER_TIMEOUT_MS || CASH_DRAWER_DEFAULT_TIMEOUT_MS,
+  );
+
+  return {
+    supported: isNonEmptyString(host) && Number.isInteger(rawPort) && rawPort > 0,
+    mode: "network-escpos",
+    host,
+    port: Number.isInteger(rawPort) && rawPort > 0 ? rawPort : CASH_DRAWER_DEFAULT_PORT,
+    timeoutMs:
+      Number.isFinite(timeoutMs) && timeoutMs > 0
+        ? timeoutMs
+        : CASH_DRAWER_DEFAULT_TIMEOUT_MS,
+    pulseBuffer: getCashDrawerPulseBuffer(),
+  };
+};
 
 const getAppRoot = () => app.getAppPath();
 const getAppIconPath = () => path.join(__dirname, "..", "assets", "fawtartak.ico");
@@ -241,6 +287,83 @@ const destroyWindowSafely = (window) => {
   }
 };
 
+const getReceiptCapabilities = () => {
+  const cashDrawerConfig = getCashDrawerConfig();
+
+  return {
+    directPrintSupported: true,
+    cashDrawer: {
+      supported: cashDrawerConfig.supported,
+      mode: cashDrawerConfig.supported ? cashDrawerConfig.mode : null,
+    },
+  };
+};
+
+const openCashDrawerDirectly = async () => {
+  const cashDrawerConfig = getCashDrawerConfig();
+
+  if (!cashDrawerConfig.supported) {
+    return {
+      success: false,
+      supported: false,
+      error:
+        "Independent cash drawer opening is not configured on this desktop app.",
+    };
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const socket = new net.Socket();
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(result);
+    };
+
+    socket.setTimeout(cashDrawerConfig.timeoutMs);
+
+    socket.once("connect", () => {
+      socket.write(cashDrawerConfig.pulseBuffer, (error) => {
+        if (error) {
+          finish({
+            success: false,
+            supported: true,
+            error: error.message || "Failed to send the cash drawer pulse.",
+          });
+          return;
+        }
+
+        socket.end();
+        finish({
+          success: true,
+          supported: true,
+          mode: cashDrawerConfig.mode,
+        });
+      });
+    });
+
+    socket.once("timeout", () => {
+      finish({
+        success: false,
+        supported: true,
+        error: "Timed out while opening the cash drawer.",
+      });
+    });
+
+    socket.once("error", (error) => {
+      finish({
+        success: false,
+        supported: true,
+        error: error?.message || "Failed to open the cash drawer.",
+      });
+    });
+
+    socket.connect(cashDrawerConfig.port, cashDrawerConfig.host);
+  });
+};
+
 const printReceiptSilently = async ({
   html,
   printerName,
@@ -439,9 +562,13 @@ ipcMain.handle("receipt:get-printers", async (event) => {
   return printers.map(normalizePrinter);
 });
 
+ipcMain.handle("receipt:get-capabilities", async () => getReceiptCapabilities());
+
 ipcMain.handle("receipt:print", async (_event, payload = {}) =>
   printReceiptSilently(payload)
 );
+
+ipcMain.handle("receipt:open-drawer", async () => openCashDrawerDirectly());
 
 ipcMain.handle("document-print:preview", async (event, payload = {}) =>
   openDocumentPrintPreview({

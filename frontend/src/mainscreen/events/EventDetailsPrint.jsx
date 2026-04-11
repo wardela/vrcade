@@ -61,6 +61,14 @@ const translatePaymentType = (value, t) => {
   return value || "—";
 };
 
+const translateEventStatus = (value, t) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "ended" || normalized === "closed") {
+    return t("EventsScreen.status.ended");
+  }
+  return t("EventsScreen.status.open");
+};
+
 const InfoField = ({ label, value }) => (
   <div className="rounded-md border border-gray-300 bg-white px-3 py-2">
     <div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div>
@@ -158,6 +166,10 @@ const EventDetailsPrint = forwardRef(({ company, event }, ref) => {
                 <div className="grid grid-cols-2 gap-3">
                   <InfoField label={t("EventsScreen.fields.event_name")} value={event?.name} />
                   <InfoField label={t("EventsScreen.fields.type")} value={translateEventType(event?.type, t)} />
+                  <InfoField
+                    label={t("EventsScreen.fields.status")}
+                    value={translateEventStatus(event?.status, t)}
+                  />
                   <InfoField label={t("EventsScreen.fields.client")} value={event?.client_name} />
                   <InfoField label={t("EventsScreen.fields.location")} value={event?.location} />
                   <InfoField
@@ -220,7 +232,7 @@ const EventDetailsPrint = forwardRef(({ company, event }, ref) => {
                 <thead className="bg-gray-100 border-b border-gray-400">
                   <tr>
                     <th className="py-2 px-3 font-semibold">{t("EventsScreen.table.date")}</th>
-                    <th className="py-2 px-3 font-semibold">{t("EventsScreen.table.type")}</th>
+                    <th className="py-2 px-3 font-semibold">{t("EventsScreen.table.payment_method")}</th>
                     <th className="py-2 px-3 font-semibold">{t("EventsScreen.table.amount")}</th>
                     <th className="py-2 px-3 font-semibold">{t("EventsScreen.table.invoice")}</th>
                     <th className="py-2 px-3 font-semibold">{t("EventsScreen.table.notes")}</th>
@@ -233,7 +245,9 @@ const EventDetailsPrint = forwardRef(({ company, event }, ref) => {
                       className={`border-b border-gray-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                     >
                       <td className="py-2 px-3">{formatDate(payment?.payment_date)}</td>
-                      <td className="py-2 px-3">{translatePaymentType(payment?.payment_type, t)}</td>
+                      <td className="py-2 px-3">
+                        {translatePaymentType(payment?.payment_method || payment?.payment_type, t)}
+                      </td>
                       <td className="py-2 px-3 font-medium" dir="ltr">
                         {formatCurrency(payment?.amount)} JOD
                       </td>

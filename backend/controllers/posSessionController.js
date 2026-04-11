@@ -26,12 +26,15 @@ const handleError = (res, error, fallbackMessage) => {
 
 const getActiveSession = async (req, res) => {
   try {
-    const session = await posSessionService.getActiveSessionForUser(
+    const payload = await posSessionService.getActiveSessionStatusForUser(
       req.db,
-      req.user.user_id,
+      {
+        userId: req.user.user_id,
+        lastSessionId: req.query?.last_session_id,
+      },
     );
 
-    return res.status(200).json({ session });
+    return res.status(200).json(payload);
   } catch (error) {
     return handleError(res, error, "Failed to load active POS session");
   }
@@ -118,9 +121,48 @@ const getSessionDetail = async (req, res) => {
   }
 };
 
+const forceCloseSession = async (req, res) => {
+  const sessionId = parseSessionId(req.params.id);
+  if (!sessionId) {
+    return res.status(400).json({
+      code: "POS_SESSION_INVALID_ID",
+      message: "Invalid POS session id",
+    });
+  }
+
+  try {
+    const summary = await posSessionService.forceCloseSession(req.db, {
+      sessionId,
+      actingUserId: req.user.user_id,
+      closingNote: req.body?.closing_note,
+      endedAt: req.body?.ended_at,
+    });
+
+    return res.status(200).json(summary);
+  } catch (error) {
+    return handleError(res, error, "Failed to force-close POS session");
+  }
+};
+
+const getAggregateSummary = async (req, res) => {
+  try {
+    await posSessionService.assertUserHasPosPermission(req.db, req.user.user_id, "view");
+    const summary = await posSessionService.getAggregateSessionSummary(req.db, {
+      from: req.query?.from,
+      to: req.query?.to,
+    });
+
+    return res.status(200).json(summary);
+  } catch (error) {
+    return handleError(res, error, "Failed to load POS aggregate summary");
+  }
+};
+
 module.exports = {
   endSession,
+  forceCloseSession,
   getActiveSession,
+  getAggregateSummary,
   getSessionDetail,
   getSessionSummary,
   startSession,

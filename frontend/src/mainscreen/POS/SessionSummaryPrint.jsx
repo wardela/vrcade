@@ -40,6 +40,10 @@ const SessionSummaryPrint = forwardRef(({ session, company }, ref) => {
   const isArabic = i18n.language === "ar";
   const pageDir = isArabic ? "rtl" : "ltr";
   const textAlign = isArabic ? "text-right" : "text-left";
+  const isAggregateSummary = session?.summary_kind === "aggregate";
+  const reportTitle = isAggregateSummary
+    ? t("POSMonitor.print.aggregate_title")
+    : t("POSMonitor.print.title");
 
   if (!session) return null;
 
@@ -131,13 +135,19 @@ const SessionSummaryPrint = forwardRef(({ session, company }, ref) => {
 
           <div className="mb-4 flex justify-center">
             <div className="flex items-center gap-4 px-4 py-1.5 border border-gray-500 rounded-md text-[12px] text-gray-800 tracking-wide">
-              <span className="font-bold whitespace-nowrap">{t("POSMonitor.print.title")}</span>
+              <span className="font-bold whitespace-nowrap">{reportTitle}</span>
               <span className="font-bold whitespace-nowrap">|</span>
-              <span className="text-gray-700 whitespace-nowrap">
-                {t("POSMonitor.labels.session_number_prefix")}
-                {" "}
-                <span dir="ltr" className="font-mono text-gray-900">{session.id}</span>
-              </span>
+              {isAggregateSummary ? (
+                <span className="text-gray-700 whitespace-nowrap">
+                  {t("POSMonitor.labels.time_frame")}
+                </span>
+              ) : (
+                <span className="text-gray-700 whitespace-nowrap">
+                  {t("POSMonitor.labels.session_number_prefix")}
+                  {" "}
+                  <span dir="ltr" className="font-mono text-gray-900">{session.id}</span>
+                </span>
+              )}
             </div>
           </div>
 
@@ -145,24 +155,51 @@ const SessionSummaryPrint = forwardRef(({ session, company }, ref) => {
             <div className="bg-gray-100 px-3 py-1.5 font-semibold">{t("POSMonitor.print.session_info")}</div>
             <table className="w-full border-collapse text-[10px]">
               <tbody>
-                <tr className="border-t">
-                  <CellLabel>{t("POSMonitor.labels.session_id")}</CellLabel>
-                  <CellValue dir="ltr">#{session.id}</CellValue>
-                  <CellLabel>{t("POSMonitor.labels.pos_station")}</CellLabel>
-                  <CellValue>{session.pos_point_name || session.pos || "—"}</CellValue>
-                  <CellLabel>{t("POSMonitor.labels.employee_name")}</CellLabel>
-                  <CellValue>
-                    {session.employee_full_name || session.full_name || session.username || "—"}
-                  </CellValue>
-                </tr>
-                <tr className="border-t">
-                  <CellLabel>{t("POSMonitor.labels.started")}</CellLabel>
-                  <CellValue dir="ltr">{formatDateTime(session.started_at)}</CellValue>
-                  <CellLabel>{t("POSMonitor.labels.ended")}</CellLabel>
-                  <CellValue dir="ltr">{formatDateTime(session.ended_at)}</CellValue>
-                  <CellLabel>{t("POSMonitor.labels.duration")}</CellLabel>
-                  <CellValue dir="ltr">{session.duration_label || "—"}</CellValue>
-                </tr>
+                {isAggregateSummary ? (
+                  <>
+                    <tr className="border-t">
+                      <CellLabel>{t("POSMonitor.labels.time_frame")}</CellLabel>
+                      <CellValue dir="ltr">
+                        {formatDateTime(session.timeframe_start || session.started_at)}
+                        {" - "}
+                        {formatDateTime(session.timeframe_end || session.ended_at)}
+                      </CellValue>
+                      <CellLabel>{t("POSMonitor.labels.pos_station")}</CellLabel>
+                      <CellValue>{t("POSMonitor.labels.all_pos_stations")}</CellValue>
+                      <CellLabel>{t("POSMonitor.labels.sessions_count")}</CellLabel>
+                      <CellValue dir="ltr">{session.session_count || 0}</CellValue>
+                    </tr>
+                    <tr className="border-t">
+                      <CellLabel>{t("POSMonitor.labels.pos_count")}</CellLabel>
+                      <CellValue dir="ltr">{session.pos_point_count || 0}</CellValue>
+                      <CellLabel>{t("POSMonitor.labels.ended")}</CellLabel>
+                      <CellValue dir="ltr">{formatDateTime(session.ended_at)}</CellValue>
+                      <CellLabel>{t("POSMonitor.labels.duration")}</CellLabel>
+                      <CellValue dir="ltr">{session.duration_label || "—"}</CellValue>
+                    </tr>
+                  </>
+                ) : (
+                  <>
+                    <tr className="border-t">
+                      <CellLabel>{t("POSMonitor.labels.session_id")}</CellLabel>
+                      <CellValue dir="ltr">#{session.id}</CellValue>
+                      <CellLabel>{t("POSMonitor.labels.pos_station")}</CellLabel>
+                      <CellValue>{session.pos_point_name || session.pos || "—"}</CellValue>
+                      <CellLabel>{t("POSMonitor.labels.employee_name")}</CellLabel>
+                      <CellValue>
+                        {session.employee_full_name || session.full_name || session.username || "—"}
+                      </CellValue>
+                    </tr>
+                    <tr className="border-t">
+                      <CellLabel>{t("POSMonitor.labels.started")}</CellLabel>
+                      <CellValue dir="ltr">{formatDateTime(session.started_at)}</CellValue>
+                      <CellLabel>{t("POSMonitor.labels.ended")}</CellLabel>
+                      <CellValue dir="ltr">{formatDateTime(session.ended_at)}</CellValue>
+                      <CellLabel>{t("POSMonitor.labels.duration")}</CellLabel>
+                      <CellValue dir="ltr">{session.duration_label || "—"}</CellValue>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>
