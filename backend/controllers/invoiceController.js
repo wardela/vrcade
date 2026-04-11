@@ -4,6 +4,7 @@ const posSessionService = require("../services/posSessionService");
 const posInvoiceRequestService = require("../services/posInvoiceRequestService");
 const { buildReturnInvoiceXml, sendReturnToISTD, processReturnInvoice } = require("../einvoice_return");
 const { buildEinvoiceXml, sendEinvoice, extractQR } = require("../einvoice");
+const util = require("util");
 
 const EINV_DEBUG = process.env.EINV_DEBUG === "true";
 const POS_EINV_SYNC_WAIT_MS = (() => {
@@ -43,13 +44,24 @@ function logIstdError(context, err, extra = {}) {
     ...extra,
   });
 
-  if (EINV_DEBUG && err?.response?.data) {
-    const responseSnippet =
+  if (err?.response?.data !== undefined) {
+    const responseBody =
       typeof err.response.data === "string"
-        ? err.response.data.slice(0, 300)
-        : JSON.stringify(err.response.data).slice(0, 300);
+        ? err.response.data
+        : util.inspect(err.response.data, {
+            depth: null,
+            colors: false,
+            maxArrayLength: null,
+            maxStringLength: null,
+            breakLength: 120,
+          });
 
-    console.error("[ISTD] response snippet:", responseSnippet);
+    console.error("[ISTD] full response body:");
+    console.error(responseBody);
+  }
+
+  if (EINV_DEBUG && err?.response?.headers) {
+    console.error("[ISTD] response headers:", err.response.headers);
   }
 }
 

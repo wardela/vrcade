@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 import { useRef } from "react";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import EInvoicingTransferReportPrint from "./printables/EInvoicingTransferReportPrint";
 import TaxDeclarationReportPrint from "./printables/TaxDeclarationReportPrint";
 import InvoiceTaxSummaryReportPrint from "./printables/InvoiceTaxSummaryReportPrint";

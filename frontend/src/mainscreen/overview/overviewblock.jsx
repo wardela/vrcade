@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import api from "../../utils/axiosInstance";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import InvoiceViewPopup from "../clients/InvoiceViewPopup";
 import PrintableInvoice from "../invoices/PrintableInvoice";
 import { useTranslation } from "react-i18next";

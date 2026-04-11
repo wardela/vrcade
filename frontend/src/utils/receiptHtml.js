@@ -1,3 +1,5 @@
+export const DEFAULT_RECEIPT_TAX_LABEL = "Tax @ 16.00 %";
+
 export function buildReceiptHtml({
   invoice,
   company,
@@ -14,7 +16,7 @@ export function buildReceiptHtml({
     employee: labels.employee || "Employee",
     totalDiscount: labels.totalDiscount || "Total discount",
     totalBeforeTax: labels.totalBeforeTax || "Total before tax",
-    tax: labels.tax || "Tax",
+    tax: labels.tax || DEFAULT_RECEIPT_TAX_LABEL,
     grandTotal: labels.grandTotal || "Grand total",
   };
 

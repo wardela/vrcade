@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
 import SalesRefundsCombinedByClientReportPrint from "./printables/SalesRefundsCombinedByClientReportPrint";

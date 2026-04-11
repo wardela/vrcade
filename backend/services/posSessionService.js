@@ -1,5 +1,13 @@
 const ACTIVE_STATUS = "active";
 const ENDED_STATUS = "ended";
+const CLOSE_VIA_USER = "user";
+const CLOSE_VIA_ADMIN = "admin";
+const CLOSE_VIA_SYSTEM = "system";
+const {
+  formatTimestampWithoutTimezone,
+  getJordanCurrentTimestamp,
+  parseFloatingTimestamp,
+} = require("../utils/jordanTimestamp");
 
 const createPosSessionError = (message, statusCode, code, details = null) => {
   const error = new Error(message);
@@ -21,10 +29,12 @@ const getSessionDuration = (startedAt, endedAt) => {
     };
   }
 
-  const start = new Date(startedAt);
-  const end = endedAt ? new Date(endedAt) : new Date();
+  const start = parseFloatingTimestamp(startedAt);
+  const end = endedAt
+    ? parseFloatingTimestamp(endedAt)
+    : parseFloatingTimestamp(getJordanCurrentTimestamp());
 
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+  if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return {
       duration_minutes: 0,
       duration_label: "0h 0m",
@@ -73,13 +83,17 @@ const normalizeSession = (row) => {
     pos_point_name: row.pos_point_name,
     pos_point_code: row.pos_point_code,
     pos_point: posPoint,
-    started_at: row.started_at,
-    ended_at: row.ended_at,
+    started_at: formatTimestampWithoutTimezone(row.started_at),
+    ended_at: formatTimestampWithoutTimezone(row.ended_at),
     status: row.status,
     opening_note: row.opening_note,
     closing_note: row.closing_note,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
+    created_at: formatTimestampWithoutTimezone(row.created_at),
+    updated_at: formatTimestampWithoutTimezone(row.updated_at),
+    closed_via: row.closed_via || null,
+    closed_by_user_id: row.closed_by_user_id || null,
+    closed_by_username: row.closed_by_username || null,
+    closed_by_full_name: row.closed_by_full_name || null,
   };
 };
 
@@ -109,6 +123,8 @@ const getSessionQuery = (forUpdate) => `
     ps.*,
     u.username,
     u.full_name,
+    closed_by_user.username AS closed_by_username,
+    closed_by_user.full_name AS closed_by_full_name,
     pp.id AS pos_point_id,
     pp.name AS pos_point_name,
     pp.code AS pos_point_code,
@@ -117,6 +133,8 @@ const getSessionQuery = (forUpdate) => `
   FROM pos_sessions ps
   JOIN users u
     ON u.id = ps.user_id
+  LEFT JOIN users closed_by_user
+    ON closed_by_user.id = ps.closed_by_user_id
   LEFT JOIN pos_points pp
     ON pp.id = ps.pos_point_id
 `;
@@ -195,6 +213,43 @@ const ensureSessionIsActive = (session) => {
       "POS_SESSION_ENDED",
     );
   }
+};
+
+const assertUserHasPosPermission = async (db, userId, permission = "view") => {
+  const permissionColumnMap = {
+    view: "can_view",
+    add: "can_add",
+    edit: "can_edit",
+    delete: "can_delete",
+  };
+
+  const permissionColumn = permissionColumnMap[permission];
+  if (!permissionColumn) {
+    throw createPosSessionError("Invalid POS permission check", 500, "POS_PERMISSION_INVALID");
+  }
+
+  const result = await db.query(
+    `
+      SELECT ${permissionColumn} AS allowed
+      FROM user_permissions
+      WHERE user_id = $1
+        AND module = 'pos'
+      LIMIT 1
+    `,
+    [userId],
+  );
+
+  if (!result.rows[0]?.allowed) {
+    throw createPosSessionError("You do not have permission for this POS action", 403, "POS_FORBIDDEN");
+  }
+};
+
+const getSummaryDuration = (startedAt, endedAt) => {
+  const duration = getSessionDuration(startedAt, endedAt);
+  return {
+    duration_minutes: duration.duration_minutes,
+    duration_label: duration.duration_label,
+  };
 };
 
 const getSessionPaymentStats = async (db, sessionId) => {
@@ -288,7 +343,7 @@ const getSessionSoldItemsBreakdown = async (db, sessionId) => {
     total_amount: toNumber(row.total_amount),
     tokens_per_item: toNumber(row.tokens_per_item),
     total_tokens: toNumber(row.total_tokens),
-    last_sold_at: row.last_sold_at,
+    last_sold_at: formatTimestampWithoutTimezone(row.last_sold_at),
   }));
 };
 
@@ -311,7 +366,160 @@ const getSessionInvoices = async (db, sessionId) => {
   return result.rows.map((invoice) => ({
     ...invoice,
     total: toNumber(invoice.total),
+    date: formatTimestampWithoutTimezone(invoice.date),
   }));
+};
+
+const getRangeInvoiceStats = async (db, { from, to }) => {
+  const result = await db.query(
+    `
+      SELECT
+        COUNT(*)::int AS invoice_count,
+        COALESCE(SUM(total), 0) AS total_sales_amount
+      FROM invoice_header ih
+      JOIN pos_sessions ps
+        ON ps.id = ih.session_id
+      WHERE ps.started_at <= $2
+        AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
+    `,
+    [from, to],
+  );
+
+  return {
+    invoice_count: Number(result.rows[0]?.invoice_count || 0),
+    total_sales_amount: toNumber(result.rows[0]?.total_sales_amount),
+  };
+};
+
+const getRangePaymentStats = async (db, { from, to }) => {
+  const result = await db.query(
+    `
+      SELECT
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.amount ELSE 0 END), 0) AS total_cash,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'card' THEN ip.amount ELSE 0 END), 0) AS total_card,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'transfer' THEN ip.amount ELSE 0 END), 0) AS total_transfer,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.amount_paid ELSE 0 END), 0) AS total_cash_received,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.change_amount ELSE 0 END), 0) AS total_change_given
+      FROM invoice_payments ip
+      JOIN pos_sessions ps
+        ON ps.id = ip.session_id
+      WHERE ps.started_at <= $2
+        AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
+    `,
+    [from, to],
+  );
+
+  const row = result.rows[0] || {};
+
+  return {
+    cash: toNumber(row.total_cash),
+    card: toNumber(row.total_card),
+    transfer: toNumber(row.total_transfer),
+    total_cash_received: toNumber(row.total_cash_received),
+    total_change_given: toNumber(row.total_change_given),
+  };
+};
+
+const getRangeSoldItemsBreakdown = async (db, { from, to }) => {
+  const result = await db.query(
+    `
+      SELECT
+        il.item_id,
+        COALESCE(
+          NULLIF(MAX(i.name), ''),
+          NULLIF(MAX(il.description), ''),
+          CONCAT('Item #', il.item_id::text)
+        ) AS item_name,
+        COALESCE(SUM(il.qty), 0) AS quantity_sold,
+        COALESCE(SUM(il.total), 0) AS total_amount,
+        CASE
+          WHEN COALESCE(BOOL_OR(COALESCE(i.has_tokens, false)), false)
+            THEN COALESCE(MAX(i.token_count), 0)
+          ELSE 0
+        END AS tokens_per_item,
+        COALESCE(
+          SUM(
+            il.qty * CASE
+              WHEN COALESCE(i.has_tokens, false) THEN COALESCE(i.token_count, 0)
+              ELSE 0
+            END
+          ),
+          0
+        ) AS total_tokens,
+        MAX(ih.date) AS last_sold_at
+      FROM invoice_header ih
+      JOIN pos_sessions ps
+        ON ps.id = ih.session_id
+      JOIN invoice_lines il
+        ON il.invoice_number = ih.invoice_number
+      LEFT JOIN items i
+        ON i.id = il.item_id
+      WHERE ps.started_at <= $2
+        AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
+        AND il.item_id IS NOT NULL
+      GROUP BY il.item_id
+      ORDER BY quantity_sold DESC, last_sold_at DESC, item_name ASC
+    `,
+    [from, to],
+  );
+
+  return result.rows.map((row) => ({
+    item_id: row.item_id,
+    item_name: row.item_name,
+    quantity_sold: toNumber(row.quantity_sold),
+    total_amount: toNumber(row.total_amount),
+    tokens_per_item: toNumber(row.tokens_per_item),
+    total_tokens: toNumber(row.total_tokens),
+    last_sold_at: formatTimestampWithoutTimezone(row.last_sold_at),
+  }));
+};
+
+const getRangeSessionMeta = async (db, { from, to }) => {
+  const result = await db.query(
+    `
+      SELECT
+        COUNT(*)::int AS session_count,
+        COUNT(DISTINCT pos_point_id)::int AS pos_point_count
+      FROM pos_sessions
+      WHERE started_at <= $2
+        AND COALESCE(ended_at, timezone('Asia/Amman', NOW())) >= $1
+    `,
+    [from, to],
+  );
+
+  return {
+    session_count: Number(result.rows[0]?.session_count || 0),
+    pos_point_count: Number(result.rows[0]?.pos_point_count || 0),
+  };
+};
+
+const validateSummaryRange = ({ from, to }) => {
+  const normalizedFrom = formatTimestampWithoutTimezone(from);
+  const normalizedTo = formatTimestampWithoutTimezone(to);
+
+  if (!normalizedFrom || !normalizedTo) {
+    throw createPosSessionError(
+      "A valid start and end time are required",
+      400,
+      "POS_SUMMARY_RANGE_REQUIRED",
+    );
+  }
+
+  const parsedFrom = parseFloatingTimestamp(normalizedFrom);
+  const parsedTo = parseFloatingTimestamp(normalizedTo);
+
+  if (!parsedFrom || !parsedTo || parsedFrom.getTime() > parsedTo.getTime()) {
+    throw createPosSessionError(
+      "The selected time frame is invalid",
+      400,
+      "POS_SUMMARY_RANGE_INVALID",
+    );
+  }
+
+  return {
+    from: normalizedFrom,
+    to: normalizedTo,
+  };
 };
 
 const getSessionSummary = async (
@@ -366,6 +574,63 @@ const getSessionSummary = async (
       bank_transfer: paymentStats.transfer,
     },
     invoices,
+  };
+};
+
+const getAggregateSessionSummary = async (db, { from, to }) => {
+  const range = validateSummaryRange({ from, to });
+  const [sessionMeta, invoiceStats, paymentStats, soldItemsBreakdown] = await Promise.all([
+    getRangeSessionMeta(db, range),
+    getRangeInvoiceStats(db, range),
+    getRangePaymentStats(db, range),
+    getRangeSoldItemsBreakdown(db, range),
+  ]);
+
+  const totalTokensSold = soldItemsBreakdown.reduce(
+    (sum, item) => sum + toNumber(item.total_tokens),
+    0,
+  );
+  const duration = getSummaryDuration(range.from, range.to);
+
+  return {
+    id: null,
+    summary_kind: "aggregate",
+    timeframe_start: range.from,
+    timeframe_end: range.to,
+    started_at: range.from,
+    ended_at: range.to,
+    status: ENDED_STATUS,
+    employee_full_name: null,
+    invoice_count: invoiceStats.invoice_count,
+    total_sales: invoiceStats.total_sales_amount,
+    total_sales_amount: invoiceStats.total_sales_amount,
+    total_tokens_sold: totalTokensSold,
+    duration_minutes: duration.duration_minutes,
+    duration_label: duration.duration_label,
+    session_count: sessionMeta.session_count,
+    pos_point_count: sessionMeta.pos_point_count,
+    pos: "All POS Stations",
+    pos_point_name: "All POS Stations",
+    sold_items_breakdown: soldItemsBreakdown,
+    payment_totals: {
+      cash: paymentStats.cash,
+      card: paymentStats.card,
+      transfer: paymentStats.transfer,
+      bank_transfer: paymentStats.transfer,
+    },
+    total_cash: paymentStats.cash,
+    total_card: paymentStats.card,
+    total_bank_transfer: paymentStats.transfer,
+    total_cash_received: paymentStats.total_cash_received,
+    total_change_given: paymentStats.total_change_given,
+    totals: {
+      sales: invoiceStats.total_sales_amount,
+      tokens_sold: totalTokensSold,
+      cash: paymentStats.cash,
+      card: paymentStats.card,
+      bank_transfer: paymentStats.transfer,
+    },
+    invoices: [],
   };
 };
 
@@ -426,8 +691,24 @@ const startSession = async (db, { userId, posPointId, openingNote, startedAt }) 
 
     const insertResult = await db.query(
       `
-        INSERT INTO pos_sessions (user_id, pos, pos_point_id, opening_note, started_at)
-        VALUES ($1, $2, $3, $4, COALESCE($5, NOW()))
+        INSERT INTO pos_sessions (
+          user_id,
+          pos,
+          pos_point_id,
+          opening_note,
+          started_at,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          COALESCE($5, timezone('Asia/Amman', NOW())),
+          timezone('Asia/Amman', NOW()),
+          timezone('Asia/Amman', NOW())
+        )
         RETURNING id
       `,
       [
@@ -435,7 +716,7 @@ const startSession = async (db, { userId, posPointId, openingNote, startedAt }) 
         posPoint.name,
         parsedPosPointId,
         openingNote || null,
-        startedAt || null,
+        formatTimestampWithoutTimezone(startedAt) || null,
       ],
     );
 
@@ -499,28 +780,119 @@ const resolveActiveSessionForUser = async (db, { userId, sessionId }) => {
   return activeSession;
 };
 
+const buildSessionClosureNotice = (session) => {
+  if (!session || !session.ended_at) {
+    return null;
+  }
+
+  if (session.closed_via !== CLOSE_VIA_ADMIN && session.closed_via !== CLOSE_VIA_SYSTEM) {
+    return null;
+  }
+
+  return {
+    session_id: session.id,
+    closed_via: session.closed_via,
+    closed_at: session.ended_at,
+    closed_by_user_id: session.closed_by_user_id || null,
+    closed_by_username: session.closed_by_username || null,
+    closed_by_full_name: session.closed_by_full_name || null,
+  };
+};
+
+const getActiveSessionStatusForUser = async (db, { userId, lastSessionId = null } = {}) => {
+  const session = await getActiveSessionForUser(db, userId);
+  if (session) {
+    return {
+      session,
+      closure_notice: null,
+    };
+  }
+
+  const parsedLastSessionId = Number.parseInt(lastSessionId, 10);
+  if (!Number.isInteger(parsedLastSessionId) || parsedLastSessionId <= 0) {
+    return {
+      session: null,
+      closure_notice: null,
+    };
+  }
+
+  const lastSession = await getSessionById(db, parsedLastSessionId);
+  if (!lastSession || lastSession.user_id !== userId) {
+    return {
+      session: null,
+      closure_notice: null,
+    };
+  }
+
+  return {
+    session: null,
+    closure_notice: buildSessionClosureNotice(lastSession),
+  };
+};
+
+const closeSessionRecord = async (
+  db,
+  {
+    sessionId,
+    userId = null,
+    requireOwner = true,
+    closingNote,
+    endedAt,
+    closedVia = CLOSE_VIA_USER,
+    closedByUserId = null,
+  },
+) => {
+  const session = requireOwner
+    ? await getOwnedSessionById(db, sessionId, userId, {
+        forUpdate: true,
+      })
+    : await getSessionById(db, sessionId, {
+        forUpdate: true,
+      });
+
+  if (!session) {
+    throw createPosSessionError("POS session not found", 404, "POS_SESSION_NOT_FOUND");
+  }
+
+  ensureSessionIsActive(session);
+
+  const normalizedEndedAt = formatTimestampWithoutTimezone(endedAt) || null;
+
+  await db.query(
+    `
+      UPDATE pos_sessions
+      SET
+        ended_at = COALESCE($2, timezone('Asia/Amman', NOW())),
+        status = $1,
+        closing_note = COALESCE($3, closing_note),
+        closed_via = $4,
+        closed_by_user_id = $5,
+        updated_at = timezone('Asia/Amman', NOW())
+      WHERE id = $6
+    `,
+    [
+      ENDED_STATUS,
+      normalizedEndedAt,
+      closingNote || null,
+      closedVia,
+      closedByUserId,
+      sessionId,
+    ],
+  );
+};
+
 const endSession = async (db, { sessionId, userId, closingNote, endedAt }) => {
   try {
     await db.query("BEGIN");
-
-    const session = await getOwnedSessionById(db, sessionId, userId, {
-      forUpdate: true,
+    await closeSessionRecord(db, {
+      sessionId,
+      userId,
+      requireOwner: true,
+      closingNote,
+      endedAt,
+      closedVia: CLOSE_VIA_USER,
+      closedByUserId: userId,
     });
-
-    ensureSessionIsActive(session);
-
-    await db.query(
-      `
-        UPDATE pos_sessions
-        SET
-          ended_at = COALESCE($2, NOW()),
-          status = $1,
-          closing_note = COALESCE($3, closing_note),
-          updated_at = NOW()
-        WHERE id = $4
-      `,
-      [ENDED_STATUS, endedAt || null, closingNote || null, sessionId],
-    );
 
     await db.query("COMMIT");
     return getSessionSummary(db, sessionId, {
@@ -534,10 +906,102 @@ const endSession = async (db, { sessionId, userId, closingNote, endedAt }) => {
   }
 };
 
+const forceCloseSession = async (db, { sessionId, actingUserId, closingNote, endedAt }) => {
+  await assertUserHasPosPermission(db, actingUserId, "edit");
+
+  try {
+    await db.query("BEGIN");
+    await closeSessionRecord(db, {
+      sessionId,
+      requireOwner: false,
+      closingNote,
+      endedAt,
+      closedVia: CLOSE_VIA_ADMIN,
+      closedByUserId: actingUserId,
+    });
+
+    await db.query("COMMIT");
+    return getSessionSummary(db, sessionId, {
+      requireOwner: false,
+      includeInvoices: true,
+    });
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  }
+};
+
+const autoCloseOpenSessions = async (
+  db,
+  {
+    endedAt = null,
+    startedBefore = null,
+    closingNote = "Automatically closed by the POS daily scheduler.",
+  } = {},
+) => {
+  const params = [ACTIVE_STATUS];
+  let startedBeforeClause = "";
+
+  if (startedBefore) {
+    params.push(formatTimestampWithoutTimezone(startedBefore));
+    startedBeforeClause = `AND started_at < $${params.length}`;
+  }
+
+  const activeResult = await db.query(
+    `
+      SELECT id
+      FROM pos_sessions
+      WHERE status = $1
+        AND ended_at IS NULL
+        ${startedBeforeClause}
+      ORDER BY started_at ASC, id ASC
+    `,
+    params,
+  );
+
+  const closedSessionIds = [];
+
+  for (const row of activeResult.rows) {
+    const sessionId = Number(row.id);
+
+    try {
+      await db.query("BEGIN");
+      await closeSessionRecord(db, {
+        sessionId,
+        requireOwner: false,
+        closingNote,
+        endedAt,
+        closedVia: CLOSE_VIA_SYSTEM,
+        closedByUserId: null,
+      });
+      await db.query("COMMIT");
+      closedSessionIds.push(sessionId);
+    } catch (error) {
+      await db.query("ROLLBACK");
+
+      if (error?.code === "POS_SESSION_ENDED" || error?.code === "POS_SESSION_NOT_FOUND") {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  return {
+    closed_count: closedSessionIds.length,
+    closed_session_ids: closedSessionIds,
+  };
+};
+
 module.exports = {
+  assertUserHasPosPermission,
+  autoCloseOpenSessions,
   endSession,
+  forceCloseSession,
   getActiveSessionForPosPoint,
+  getActiveSessionStatusForUser,
   getActiveSessionForUser,
+  getAggregateSessionSummary,
   getSessionById,
   getSessionSummary,
   resolveActiveSessionForUser,

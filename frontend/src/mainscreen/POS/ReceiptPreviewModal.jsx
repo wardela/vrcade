@@ -1,11 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../../utils/axiosInstance";
 import { QRCodeSVG } from "qrcode.react";
-import { buildReceiptHtml } from "../../utils/receiptHtml";
 import {
+  buildReceiptHtml,
+  DEFAULT_RECEIPT_TAX_LABEL,
+} from "../../utils/receiptHtml";
+import {
+  getReceiptCapabilities,
   getReceiptPrinters,
   getStoredReceiptPrinterName,
   isElectronReceiptPrintingAvailable,
+  openCashDrawer,
   printReceipt,
   setStoredReceiptPrinterName,
 } from "../../utils/electronReceiptPrint";
@@ -25,7 +30,7 @@ const RECEIPT_TEXT = {
   taxNumber: "Tax No",
   totalDiscount: "Total discount",
   totalBeforeTax: "Total before tax",
-  tax: "Tax",
+  tax: DEFAULT_RECEIPT_TAX_LABEL,
   grandTotal: "Grand total",
   footerPoweredBy: "Powered by",
   loadingReceipt: "Loading receipt…",
@@ -51,6 +56,8 @@ const RECEIPT_TEXT = {
   submitSuccess: (printer) => `Receipt submitted successfully to ${printer}.`,
   printerTarget: (printer) => `"${printer}"`,
   printerTargetDefault: "the system default printer",
+  openDrawer: "No Receipt + Open Drawer",
+  openDrawerFailed: "Failed to open the cash drawer.",
   print: "Print",
   printing: "Sending...",
   close: "Close",
@@ -109,11 +116,32 @@ const getReceiptTotals = (invoice) => {
 
 const desktopReceiptPrintingEnabled = isElectronReceiptPrintingAvailable();
 
+const resolveCompanyForPrint = async ({
+  company,
+  resolvedCompany,
+  force = false,
+}) => {
+  let nextCompany = resolvedCompany || company || null;
+
+  if (
+    force ||
+    (nextCompany?.logo_url && !nextCompany?.logo_data_url) ||
+    !getCompanyLogoSrc(nextCompany)
+  ) {
+    nextCompany = await fetchCompanyWithLogo(api, { force: true });
+  } else if (nextCompany && !nextCompany.logo_data_url) {
+    nextCompany = await prepareCompanyWithLogo(nextCompany);
+  }
+
+  return nextCompany || null;
+};
+
 export default function ReceiptPreviewModal({
   open,
   invoiceNumber,
   company,
   onClose,
+  allowCashDrawerWithoutPrint = false,
 }) {
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState(null);
@@ -126,19 +154,20 @@ export default function ReceiptPreviewModal({
   const [printSuccess, setPrintSuccess] = useState("");
   const [isSubmittingPrint, setIsSubmittingPrint] = useState(false);
   const [isPreparingCompany, setIsPreparingCompany] = useState(false);
+  const [isClosingForAction, setIsClosingForAction] = useState(false);
+  const [cashDrawerSupported, setCashDrawerSupported] = useState(false);
+  const actionInFlightRef = useRef(false);
 
   const ensureCompanyReady = useCallback(
     async ({ force = false } = {}) => {
       setIsPreparingCompany(true);
 
       try {
-        let nextCompany = company || null;
-
-        if (force || (nextCompany?.logo_url && !nextCompany?.logo_data_url) || !getCompanyLogoSrc(nextCompany)) {
-          nextCompany = await fetchCompanyWithLogo(api, { force: true });
-        } else if (nextCompany && !nextCompany.logo_data_url) {
-          nextCompany = await prepareCompanyWithLogo(nextCompany);
-        }
+        const nextCompany = await resolveCompanyForPrint({
+          company,
+          resolvedCompany,
+          force,
+        });
 
         setResolvedCompany(nextCompany || null);
         return nextCompany;
@@ -153,7 +182,7 @@ export default function ReceiptPreviewModal({
         setIsPreparingCompany(false);
       }
     },
-    [company],
+    [company, resolvedCompany],
   );
 
   useEffect(() => {
@@ -203,6 +232,9 @@ export default function ReceiptPreviewModal({
       setPrinterWarning("");
       setSelectedPrinterName("");
       setPrinters([]);
+      setCashDrawerSupported(false);
+      setIsClosingForAction(false);
+      actionInFlightRef.current = false;
       return;
     }
 
@@ -261,7 +293,33 @@ export default function ReceiptPreviewModal({
     };
   }, [open]);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    const loadCapabilities = async () => {
+      try {
+        const capabilities = await getReceiptCapabilities();
+        if (cancelled) return;
+
+        setCashDrawerSupported(Boolean(capabilities?.cashDrawer?.supported));
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load receipt capabilities", error);
+          setCashDrawerSupported(false);
+        }
+      }
+    };
+
+    loadCapabilities();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  if (!open || isClosingForAction) return null;
 
   const qrValue =
     invoice?.header?.qr && invoice.header.qr !== "123456789"
@@ -274,8 +332,28 @@ export default function ReceiptPreviewModal({
     : "";
   const defaultPrinter = printers.find((printer) => printer.isDefault) || null;
 
+  const closeModalAfterAction = () => {
+    setIsClosingForAction(false);
+    onClose?.();
+  };
+
+  const runBackgroundReceiptAction = async (action, fallbackMessage) => {
+    actionInFlightRef.current = true;
+    setIsClosingForAction(true);
+
+    try {
+      await action();
+    } catch (error) {
+      console.error("POS receipt action failed", error);
+      window.alert(error?.message || fallbackMessage);
+    } finally {
+      actionInFlightRef.current = false;
+      closeModalAfterAction();
+    }
+  };
+
   const submitPrint = async () => {
-    if (!invoice || isSubmittingPrint) return;
+    if (!invoice || isSubmittingPrint || actionInFlightRef.current) return;
 
     setPrintError("");
     setPrintSuccess("");
@@ -285,12 +363,14 @@ export default function ReceiptPreviewModal({
       return;
     }
 
-    try {
-      setIsSubmittingPrint(true);
-      const companyForPrint = await ensureCompanyReady({
+    setIsSubmittingPrint(true);
+
+    await runBackgroundReceiptAction(async () => {
+      const companyForPrint = await resolveCompanyForPrint({
+        company,
+        resolvedCompany,
         force: !getCompanyLogoSrc(resolvedCompany),
       });
-
       const html = buildReceiptHtml({
         invoice: {
           ...invoice,
@@ -328,20 +408,28 @@ export default function ReceiptPreviewModal({
       }
 
       setStoredReceiptPrinterName(selectedPrinterName);
+    }, RECEIPT_TEXT.submitFailed);
 
-      const printedTo = result.printerName
-        ? RECEIPT_TEXT.printerTarget(result.printerName)
-        : RECEIPT_TEXT.printerTargetDefault;
+    setIsSubmittingPrint(false);
+  };
 
-      setPrintSuccess(RECEIPT_TEXT.submitSuccess(printedTo));
-    } catch (error) {
-      console.error("Failed to print POS receipt", error);
-      setPrintError(
-        error?.message || RECEIPT_TEXT.submitFailed,
-      );
-    } finally {
-      setIsSubmittingPrint(false);
+  const submitDrawerOnly = async () => {
+    if (
+      !allowCashDrawerWithoutPrint ||
+      !cashDrawerSupported ||
+      loading ||
+      actionInFlightRef.current
+    ) {
+      return;
     }
+
+    await runBackgroundReceiptAction(async () => {
+      const result = await openCashDrawer();
+
+      if (!result?.success) {
+        throw new Error(result?.error || RECEIPT_TEXT.openDrawerFailed);
+      }
+    }, RECEIPT_TEXT.openDrawerFailed);
   };
 
   return (
@@ -590,6 +678,16 @@ export default function ReceiptPreviewModal({
           )}
 
           <div className="flex gap-2">
+            {allowCashDrawerWithoutPrint && cashDrawerSupported && (
+              <button
+                onClick={submitDrawerOnly}
+                disabled={loading || isSubmittingPrint || isPreparingCompany}
+                className="btn btn-outline flex-1"
+              >
+                {RECEIPT_TEXT.openDrawer}
+              </button>
+            )}
+
             <button
               onClick={submitPrint}
               disabled={!invoice || loading || isSubmittingPrint || isPreparingCompany}

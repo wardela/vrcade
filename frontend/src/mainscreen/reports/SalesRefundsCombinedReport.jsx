@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
 import SalesRefundsCombinedReportPrint from "./printables/SalesRefundsCombinedReportPrint";

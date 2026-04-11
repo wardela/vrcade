@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import api from "../../utils/axiosInstance";
-import { useReactToPrint } from "react-to-print";
+import { useReactToPrint } from "@/utils/useAppReactToPrint";
 import PrintableInvoice from "../invoices/PrintableInvoice";
 import InvoiceViewPopup from "./InvoiceViewPopup";
 import Popup from "../../components/Popup";
