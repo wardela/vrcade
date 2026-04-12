@@ -53,9 +53,10 @@ const SessionSummaryPrint = forwardRef(({ session, company }, ref) => {
       dir={pageDir}
       className="page bg-white text-[10px] text-gray-900 font-sans"
       style={{
-        width: "198mm",
-        height: "285mm",
+        width: "210mm",
+        minHeight: "297mm",
         overflow: "hidden",
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -67,22 +68,30 @@ const SessionSummaryPrint = forwardRef(({ session, company }, ref) => {
         }}
       >
         <div
-          className="p-8"
+          className="px-[8mm] pb-[10mm] pt-[8mm]"
           style={{
             lineHeight: "1.35",
             position: "relative",
-            minHeight: "285mm",
-            maxHeight: "285mm",
+            minHeight: "297mm",
+            maxHeight: "297mm",
             overflow: "hidden",
+            boxSizing: "border-box",
+            backgroundColor: "#fff",
           }}
         >
           <style>{`
             @page {
               size: A4;
-              margin: 6mm;
+              margin: 0;
             }
 
             @media print {
+              html, body {
+                margin: 0;
+                padding: 0;
+                background: #fff !important;
+              }
+
               body {
                 width: 210mm;
                 height: 297mm;
@@ -90,8 +99,13 @@ const SessionSummaryPrint = forwardRef(({ session, company }, ref) => {
               }
 
               .page {
+                width: 210mm !important;
+                min-height: 297mm !important;
+                margin: 0 !important;
                 page-break-after: avoid;
                 page-break-inside: avoid;
+                box-shadow: none !important;
+                background: #fff !important;
               }
             }
           `}</style>
@@ -211,14 +225,24 @@ const SessionSummaryPrint = forwardRef(({ session, company }, ref) => {
                 <tr className="border-t">
                   <CellLabel>{t("POSMonitor.summary.total_sales")}</CellLabel>
                   <CellValue dir="ltr">{formatCurrency(session.total_sales)}</CellValue>
-                  <CellLabel>{t("POSMonitor.summary.total_tokens")}</CellLabel>
+                  <CellLabel>{t("POSMonitor.summary.sold_tokens")}</CellLabel>
                   <CellValue dir="ltr">{formatCount(session.total_tokens_sold)}</CellValue>
+                  <CellLabel>{t("POSMonitor.summary.manual_charged_tokens")}</CellLabel>
+                  <CellValue dir="ltr">{formatCount(session.manual_tokens_charged)}</CellValue>
+                  <CellLabel>{t("POSMonitor.summary.total_tokens_charged")}</CellLabel>
+                  <CellValue dir="ltr">{formatCount(session.total_tokens_charged)}</CellValue>
+                </tr>
+                <tr className="border-t">
                   <CellLabel>{t("POSMonitor.summary.cash")}</CellLabel>
                   <CellValue dir="ltr">{formatCurrency(session.total_cash)}</CellValue>
                   <CellLabel>{t("POSMonitor.summary.card")}</CellLabel>
                   <CellValue dir="ltr">{formatCurrency(session.total_card)}</CellValue>
                   <CellLabel>{t("POSMonitor.summary.transfer")}</CellLabel>
                   <CellValue dir="ltr">{formatCurrency(session.total_bank_transfer)}</CellValue>
+                  <CellLabel>{t("POSMonitor.summary.cash_received")}</CellLabel>
+                  <CellValue dir="ltr">{formatCurrency(session.total_cash_received)}</CellValue>
+                  <CellLabel>{t("POSMonitor.summary.change_given")}</CellLabel>
+                  <CellValue dir="ltr">{formatCurrency(session.total_change_given)}</CellValue>
                 </tr>
               </tbody>
             </table>
@@ -266,7 +290,7 @@ const SessionSummaryPrint = forwardRef(({ session, company }, ref) => {
           </div>
 
           <div
-            className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-300 py-2"
+            className="absolute bottom-[8mm] left-[8mm] right-[8mm] bg-white border-t border-gray-300 py-2"
             dir="ltr"
           >
             <div className="text-center text-[11px] text-gray-700 flex items-center justify-center gap-2">

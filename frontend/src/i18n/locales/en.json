@@ -178,6 +178,22 @@
     "top_sales_count_title": "Top Clients by Sales Count",
     "top_sales_count_hint": "Number of invoices issued"
   },
+  "DashPos": {
+    "title": "POS Analytics",
+    "prev_year": "Previous year",
+    "next_year": "Next year",
+    "months_12": "12 months",
+    "sales_vs_tokens_title": "Sales vs Tokens",
+    "sales_line": "Total Sales (JOD)",
+    "tokens_line": "Total Tokens Charged",
+    "pos_performance_title": "POS Performance Comparison",
+    "pos_performance_hint": "Year total",
+    "top_users_title": "Top Performing Users",
+    "top_users_hint": "Highest POS sales this year",
+    "top_users_chart_title": "Top 3 Users by Monthly Sales",
+    "empty_pos_performance": "No POS sales recorded for the selected year.",
+    "empty_top_users": "No POS user sales recorded for the selected year."
+  },
 
   
    "Invoices": {
@@ -1478,6 +1494,7 @@
 
     "modules": {
       "sales": "Sales",
+      "events": "Events",
       "refunds": "Refunds",
       "items": "Items",
       "clients": "Clients",
@@ -2177,9 +2194,15 @@
       "inactive": "Inactive"
     },
     "summary": {
+      "overview": "Overview",
       "invoices": "Invoices",
       "total_sales": "Total Sales",
       "total_tokens": "Total Tokens",
+      "sold_tokens": "Sold Tokens",
+      "manual_charged_tokens": "Manual Charged Tokens",
+      "total_tokens_charged": "Total Tokens Charged",
+      "tokens_group": "Token Summary",
+      "payments_group": "Payment Summary",
       "cash": "Cash",
       "card": "Visa",
       "transfer": "CLIQ",
@@ -2292,7 +2315,8 @@
       "clear": "Clear",
       "print": "Print",
       "save": "Save",
-      "back": "Back"
+      "back": "Back",
+      "ok": "OK"
     },
 
     "aria": {
@@ -2343,10 +2367,45 @@
       "open_monitor": "Open POS Monitor",
       "end_confirm_message": "You are about to end session #{{id}}.",
       "confirm_end": "Confirm End Session",
+      "end_and_logout": "End Session and Log Out",
+      "ending_and_logging_out": "Ending session and logging out...",
+      "logout_after_end_failed": "Session ended, but logout failed. Please log out manually.",
       "summary_title": "Session Closed",
       "summary_subtitle": "Session #{{id}} has been closed successfully.",
       "number_of_invoices": "Number of Invoices",
-      "session_number": "Session #{{id}}"
+      "session_number": "Session #{{id}}",
+      "sold_tokens": "Sold Tokens",
+      "manual_charged_tokens": "Manual Charged Tokens",
+      "total_tokens_charged": "Total Tokens Charged"
+    },
+
+    "manual_tokens": {
+      "title": "Manual Token Charge",
+      "subtitle": "Record manual token charging for the current session on {{pos}}.",
+      "current_session": "the current POS session",
+      "hint": "This records manual token charging separately from invoice sales and refunds.",
+      "fields": {
+        "amount": "Token Amount"
+      },
+      "placeholders": {
+        "amount": "Enter token amount"
+      },
+      "actions": {
+        "open": "Manual Tokens",
+        "submit": "Charge Tokens",
+        "submitting": "Charging..."
+      },
+      "feedback": {
+        "success_title": "Manual Token Charge Recorded",
+        "error_title": "Manual Token Charge Failed"
+      },
+      "states": {
+        "success": "Manual token charge recorded: {{count}} tokens.",
+        "failed": "Failed to record manual token charge."
+      },
+      "validation": {
+        "invalid_amount": "Token amount must be a whole number greater than zero."
+      }
     },
 
     "no_access": {

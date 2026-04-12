@@ -368,7 +368,13 @@ const printReceiptSilently = async ({
   html,
   printerName,
   jobTitle,
+  openCashDrawer = false,
+  openCashDrawerOnly = false,
 }) => {
+  if (openCashDrawerOnly) {
+    return openCashDrawerDirectly();
+  }
+
   if (!isNonEmptyString(html)) {
     return {
       success: false,
@@ -446,6 +452,15 @@ const printReceiptSilently = async ({
       };
     }
 
+    let cashDrawer = null;
+    if (openCashDrawer) {
+      cashDrawer = await openCashDrawerDirectly();
+
+      if (!cashDrawer?.success) {
+        console.warn("Receipt printed but cash drawer did not open", cashDrawer);
+      }
+    }
+
     return {
       success: true,
       printerName: deviceName || defaultPrinter?.name || null,
@@ -454,6 +469,7 @@ const printReceiptSilently = async ({
         : null,
       usedDefaultPrinter: !requestedPrinter,
       jobTitle: isNonEmptyString(jobTitle) ? jobTitle.trim() : "POS Receipt",
+      cashDrawer,
     };
   } catch (error) {
     console.error("Silent receipt printing failed", error);

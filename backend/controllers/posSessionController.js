@@ -78,6 +78,30 @@ const endSession = async (req, res) => {
   }
 };
 
+const recordManualTokenCharge = async (req, res) => {
+  const sessionId = parseSessionId(req.params.id);
+  if (!sessionId) {
+    return res.status(400).json({
+      code: "POS_SESSION_INVALID_ID",
+      message: "Invalid POS session id",
+    });
+  }
+
+  try {
+    const manualTokenCharge = await posSessionService.createManualTokenCharge(req.db, {
+      sessionId,
+      userId: req.user.user_id,
+      tokenAmount: req.body?.token_amount,
+    });
+
+    return res.status(201).json({
+      manual_token_charge: manualTokenCharge,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to record manual token charge");
+  }
+};
+
 const getSessionSummary = async (req, res) => {
   const sessionId = parseSessionId(req.params.id);
   if (!sessionId) {
@@ -165,5 +189,6 @@ module.exports = {
   getAggregateSummary,
   getSessionDetail,
   getSessionSummary,
+  recordManualTokenCharge,
   startSession,
 };

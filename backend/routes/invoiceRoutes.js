@@ -144,6 +144,7 @@ router.get("/reports/sales/sales-refunds-combined-by-client", invoiceController.
 // ======== Dashboard =========
 router.get("/stats/dashboard-kpis", invoiceController.getDashboardKpis);
 router.get("/stats/dashboard-overview", invoiceController.getDashboardOverview);
+router.get("/stats/dashboard-pos-analytics", invoiceController.getDashboardPosAnalytics);
 router.get("/stats/dashboard-sales", invoiceController.getDashboardSales);
 router.get("/stats/dashboard-inventory", invoiceController.getDashboardInventory);
 router.get("/stats/dashboard-clients", invoiceController.getDashboardClients);

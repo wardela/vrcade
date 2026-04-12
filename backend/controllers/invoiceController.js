@@ -71,10 +71,41 @@ const getInvoices = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 100;
     const offset = parseInt(req.query.offset) || 0;
+    const requestedPosPointId =
+      req.query.pos_point_id == null || req.query.pos_point_id === ""
+        ? null
+        : Number.parseInt(req.query.pos_point_id, 10);
 
-    const invoices = await invoiceService.getInvoices(req.db,limit, offset);
+    if (
+      req.query.pos_point_id != null &&
+      (!Number.isInteger(requestedPosPointId) || requestedPosPointId <= 0)
+    ) {
+      return res.status(400).json({ message: "Invalid POS point id" });
+    }
+
+    let posPointId = null;
+    if (requestedPosPointId != null) {
+      const activeSession = await posSessionService.resolveActiveSessionForUser(req.db, {
+        userId: req.user?.user_id,
+      });
+      posPointId = activeSession.pos_point_id;
+    }
+
+    const invoices = await invoiceService.getInvoices(req.db, {
+      limit,
+      offset,
+      posPointId,
+      creatorUserId: posPointId ? req.user?.user_id : null,
+    });
     res.status(200).json(invoices);
   } catch (error) {
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({
+        code: error.code,
+        message: error.message,
+      });
+    }
+
     console.error("Error fetching invoices:", error);
     res.status(500).json({ message: "Error fetching invoices", error });
   }
@@ -96,7 +127,20 @@ const getInvoiceDetails = async (req, res) => {
 const getFullInvoice = async (req, res) => {
   try {
     const { invoice_number } = req.params;
-    const invoice = await invoiceService.getFullInvoice(req.db,invoice_number);
+    const isPosContext = req.query?.context === "pos";
+    const activeSession = isPosContext
+      ? await posSessionService.resolveActiveSessionForUser(req.db, {
+          userId: req.user?.user_id,
+        })
+      : null;
+    const invoice = await invoiceService.getFullInvoice(req.db, invoice_number, {
+      posAccess: isPosContext
+        ? {
+            posPointId: activeSession?.pos_point_id,
+            userId: req.user?.user_id,
+          }
+        : null,
+    });
 
     if (!invoice.header) {
       return res.status(404).json({ message: "Invoice not found" });
@@ -104,6 +148,13 @@ const getFullInvoice = async (req, res) => {
 
     res.status(200).json(invoice);
   } catch (error) {
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({
+        code: error.code,
+        message: error.message,
+      });
+    }
+
     console.error("Error fetching full invoice:", error);
     res.status(500).json({ message: "Error fetching full invoice", error });
   }
@@ -561,6 +612,12 @@ const updateInvoiceFull = async (req, res) => {
   try {
     const { invoice_number } = req.params;
     const { header, lines } = req.body;
+    const isPosContext = req.query?.context === "pos";
+    const activeSession = isPosContext
+      ? await posSessionService.resolveActiveSessionForUser(req.db, {
+          userId: req.user?.user_id,
+        })
+      : null;
 
     if (!Array.isArray(lines)) {
       return res.status(400).json({ message: "Lines array is required" });
@@ -570,11 +627,26 @@ const updateInvoiceFull = async (req, res) => {
       req.db,
       invoice_number,
       header,
-      lines
+      lines,
+      {
+        posAccess: isPosContext
+          ? {
+              posPointId: activeSession?.pos_point_id,
+              userId: req.user?.user_id,
+            }
+          : null,
+      },
     );
 
     res.status(200).json(updated);
   } catch (error) {
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({
+        code: error.code,
+        message: error.message,
+      });
+    }
+
     console.error("Error updating invoice fully:", error);
     res.status(500).json({ message: "Error updating invoice", error });
   }
@@ -1857,6 +1929,17 @@ const getDashboardClients = async (req, res) => {
   }
 };
 
+const getDashboardPosAnalytics = async (req, res) => {
+  try {
+    const year = Number(req.query.year) || new Date().getFullYear();
+    const data = await invoiceService.getDashboardPosAnalytics(req.db, year);
+    res.json(data);
+  } catch (err) {
+    console.error("Dashboard POS analytics error:", err);
+    res.status(500).json({ message: "Failed to fetch POS analytics dashboard" });
+  }
+};
+
 const deleteStorageTransaction = async (req, res) => {
   try {
     const { id } = req.params;
@@ -2776,6 +2859,7 @@ module.exports = {
   getDashboardSales,
   getDashboardInventory,
   getDashboardClients,
+  getDashboardPosAnalytics,
   getItemsSoldForClientTotals,
   deleteStorageTransaction,
   createDueBalance,

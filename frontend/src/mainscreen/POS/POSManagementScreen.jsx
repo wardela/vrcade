@@ -478,46 +478,23 @@ function SessionDetailModal({ sessionId, onClose }) {
             </div>
           ) : session ? (
             <div className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">
-                    {t("POSMonitor.labels.pos_station")}
+              <div className="rounded-2xl border border-base-300 bg-base-100 px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
+                      {t("POSMonitor.labels.pos_station")}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <h3 className="text-2xl font-semibold tracking-tight text-gray-900">
+                        {session.pos_point_name || session.pos || "—"}
+                      </h3>
+                      <span className="text-sm text-gray-500">
+                        {t("POSMonitor.labels.session_number", { id: session.id })}
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-2 text-lg font-semibold text-gray-900">
-                    {session.pos_point_name || session.pos || "—"}
-                  </div>
-                  <div className="mt-1 text-sm text-gray-500">
-                    {t("POSMonitor.labels.session_number", { id: session.id })}
-                  </div>
-                </div>
 
-                <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">
-                    {t("POSMonitor.labels.opened_by")}
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-gray-900">
-                    {session.full_name || session.username || "—"}
-                  </div>
-                  <div className="mt-1 text-sm text-gray-500">{session.username || "—"}</div>
-                </div>
-
-                <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">
-                    {t("POSMonitor.labels.started")}
-                  </div>
-                  <div className="mt-2 text-sm font-semibold text-gray-900">
-                    {formatDateTime(session.started_at)}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">
-                    {t("POSMonitor.labels.ended")}
-                  </div>
-                  <div className="mt-2 text-sm font-semibold text-gray-900">
-                    {formatDateTime(session.ended_at)}
-                  </div>
-                  <div className="mt-2">
+                  <div className="shrink-0 pt-0.5">
                     <StatusBadge
                       active={session.status === "active" && !session.ended_at}
                       activeLabel={t("POSMonitor.badges.active_session")}
@@ -525,29 +502,73 @@ function SessionDetailModal({ sessionId, onClose }) {
                     />
                   </div>
                 </div>
+
+                <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+                  <dl className="grid gap-x-5 gap-y-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <CompactMetaItem
+                      label={t("POSMonitor.labels.opened_by")}
+                      value={session.full_name || session.username || "—"}
+                      hint={session.username || "—"}
+                    />
+                    <CompactMetaItem
+                      label={t("POSMonitor.labels.started")}
+                      value={formatDateTime(session.started_at)}
+                    />
+                    <CompactMetaItem
+                      label={t("POSMonitor.labels.ended")}
+                      value={formatDateTime(session.ended_at)}
+                    />
+                    <CompactMetaItem
+                      label={t("POSMonitor.labels.duration")}
+                      value={session.duration_label || "—"}
+                    />
+                  </dl>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <CompactKpiCard
+                      label={t("POSMonitor.summary.invoices")}
+                      value={session.invoice_count || 0}
+                    />
+                    <CompactKpiCard
+                      label={t("POSMonitor.summary.total_sales")}
+                      value={formatCurrency(session.total_sales_amount)}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <SummaryCard label={t("POSMonitor.summary.invoices")} value={session.invoice_count || 0} />
-                <SummaryCard label={t("POSMonitor.summary.total_sales")} value={formatCurrency(session.total_sales_amount)} />
-                <SummaryCard
-                  label={t("POSMonitor.summary.total_tokens")}
-                  value={`${formatCount(session.total_tokens_sold)} ${t("POS.items.tokens")}`}
-                />
-                <SummaryCard label={t("POSMonitor.summary.cash")} value={formatCurrency(session.payment_totals?.cash)} />
-                <SummaryCard label={t("POSMonitor.summary.card")} value={formatCurrency(session.payment_totals?.card)} />
-                <SummaryCard
-                  label={t("POSMonitor.summary.transfer")}
-                  value={formatCurrency(session.payment_totals?.transfer)}
-                />
-                <SummaryCard
-                  label={t("POSMonitor.summary.cash_received")}
-                  value={formatCurrency(session.total_cash_received)}
-                />
-                <SummaryCard
-                  label={t("POSMonitor.summary.change_given")}
-                  value={formatCurrency(session.total_change_given)}
-                />
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <SummaryGroup title={t("POSMonitor.summary.tokens_group")} className="bg-base-100">
+                  <SummaryCard
+                    label={t("POSMonitor.summary.sold_tokens")}
+                    value={`${formatCount(session.total_tokens_sold)} ${t("POS.items.tokens")}`}
+                  />
+                  <SummaryCard
+                    label={t("POSMonitor.summary.manual_charged_tokens")}
+                    value={`${formatCount(session.manual_tokens_charged)} ${t("POS.items.tokens")}`}
+                  />
+                  <SummaryCard
+                    label={t("POSMonitor.summary.total_tokens_charged")}
+                    value={`${formatCount(session.total_tokens_charged)} ${t("POS.items.tokens")}`}
+                  />
+                </SummaryGroup>
+
+                <SummaryGroup title={t("POSMonitor.summary.payments_group")} className="bg-base-100">
+                  <SummaryCard label={t("POSMonitor.summary.cash")} value={formatCurrency(session.payment_totals?.cash)} />
+                  <SummaryCard label={t("POSMonitor.summary.card")} value={formatCurrency(session.payment_totals?.card)} />
+                  <SummaryCard
+                    label={t("POSMonitor.summary.transfer")}
+                    value={formatCurrency(session.payment_totals?.transfer)}
+                  />
+                  <SummaryCard
+                    label={t("POSMonitor.summary.cash_received")}
+                    value={formatCurrency(session.total_cash_received)}
+                  />
+                  <SummaryCard
+                    label={t("POSMonitor.summary.change_given")}
+                    value={formatCurrency(session.total_change_given)}
+                  />
+                </SummaryGroup>
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-base-300">
@@ -671,9 +692,39 @@ function SessionDetailModal({ sessionId, onClose }) {
 
 function SummaryCard({ label, value }) {
   return (
-    <div className="rounded-2xl border border-base-300 bg-base-100 px-4 py-4">
-      <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
-      <div className="mt-2 text-lg font-semibold text-gray-900">{value}</div>
+    <div className="rounded-2xl border border-base-300 bg-white px-4 py-4">
+      <div className="text-[11px] uppercase tracking-[0.16em] text-gray-500">{label}</div>
+      <div className="mt-3 text-xl font-semibold leading-snug text-gray-900">{value}</div>
+    </div>
+  );
+}
+
+function SummaryGroup({ title, children, className = "" }) {
+  return (
+    <div className={`rounded-2xl border border-base-300 bg-white ${className}`}>
+      <div className="border-b border-base-300 px-4 py-3">
+        <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+      </div>
+      <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3 content-start">{children}</div>
+    </div>
+  );
+}
+
+function CompactKpiCard({ label, value }) {
+  return (
+    <div className="rounded-xl border border-base-300 bg-white px-4 py-3">
+      <div className="text-[11px] uppercase tracking-[0.14em] text-gray-500">{label}</div>
+      <div className="mt-2 text-xl font-semibold leading-tight text-gray-900">{value}</div>
+    </div>
+  );
+}
+
+function CompactMetaItem({ label, value, hint = "" }) {
+  return (
+    <div>
+      <dt className="text-[11px] uppercase tracking-[0.14em] text-gray-500">{label}</dt>
+      <dd className="mt-1 text-sm font-semibold leading-5 text-gray-900">{value}</dd>
+      {hint ? <div className="mt-0.5 text-xs text-gray-500">{hint}</div> : null}
     </div>
   );
 }

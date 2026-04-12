@@ -178,6 +178,22 @@
     "top_sales_count_title": "أعلى العملاء من حيث عدد الفواتير",
     "top_sales_count_hint": "عدد الفواتير الصادرة"
   },
+  "DashPos": {
+    "title": "تحليلات نقطة البيع",
+    "prev_year": "السنة السابقة",
+    "next_year": "السنة التالية",
+    "months_12": "آخر 12 شهر",
+    "sales_vs_tokens_title": "المبيعات مقابل التوكنز",
+    "sales_line": "إجمالي المبيعات (دينار)",
+    "tokens_line": "إجمالي التوكنز المشحونة",
+    "pos_performance_title": "مقارنة أداء نقاط البيع",
+    "pos_performance_hint": "إجمالي السنة",
+    "top_users_title": "أفضل المستخدمين أداءً",
+    "top_users_hint": "أعلى مبيعات نقطة بيع خلال السنة",
+    "top_users_chart_title": "أفضل 3 مستخدمين حسب مبيعات كل شهر",
+    "empty_pos_performance": "لا توجد مبيعات نقطة بيع خلال السنة المحددة.",
+    "empty_top_users": "لا توجد مبيعات مستخدمين لنقطة البيع خلال السنة المحددة."
+  },
 
   "Invoices": {
     "recent_invoices": "آخر الفواتير",
@@ -1480,6 +1496,7 @@
 
     "modules": {
       "sales": "المبيعات",
+      "events": "الفعاليات",
       "refunds": "المرتجعات",
       "items": "الأصناف",
       "clients": "العملاء",
@@ -2180,9 +2197,15 @@
       "inactive": "غير نشطة"
     },
     "summary": {
+      "overview": "نظرة عامة",
       "invoices": "الفواتير",
       "total_sales": "إجمالي المبيعات",
       "total_tokens": "إجمالي التوكنز",
+      "sold_tokens": "التوكنز المباعة",
+      "manual_charged_tokens": "التوكنز المشحونة يدويًا",
+      "total_tokens_charged": "إجمالي التوكنز المشحونة",
+      "tokens_group": "ملخص التوكنز",
+      "payments_group": "ملخص الدفعات",
       "cash": "نقدي",
       "card": "فيزا",
       "transfer": "كليك",
@@ -2295,7 +2318,8 @@
       "clear": "تفريغ",
       "print": "طباعة",
       "save": "حفظ",
-      "back": "رجوع"
+      "back": "رجوع",
+      "ok": "موافق"
     },
 
     "aria": {
@@ -2346,10 +2370,45 @@
       "open_monitor": "فتح مراقبة نقاط البيع",
       "end_confirm_message": "أنت على وشك إنهاء الجلسة #{{id}}.",
       "confirm_end": "تأكيد إنهاء الجلسة",
+      "end_and_logout": "إنهاء الجلسة وتسجيل الخروج",
+      "ending_and_logging_out": "جاري إنهاء الجلسة وتسجيل الخروج...",
+      "logout_after_end_failed": "تم إنهاء الجلسة، لكن فشل تسجيل الخروج. يرجى تسجيل الخروج يدويًا.",
       "summary_title": "تم إغلاق الجلسة",
       "summary_subtitle": "تم إغلاق الجلسة #{{id}} بنجاح.",
       "number_of_invoices": "عدد الفواتير",
-      "session_number": "الجلسة #{{id}}"
+      "session_number": "الجلسة #{{id}}",
+      "sold_tokens": "التوكنز المباعة",
+      "manual_charged_tokens": "التوكنز المشحونة يدويًا",
+      "total_tokens_charged": "إجمالي التوكنز المشحونة"
+    },
+
+    "manual_tokens": {
+      "title": "شحن توكنز يدوي",
+      "subtitle": "تسجيل شحن توكنز يدوي للجلسة الحالية على {{pos}}.",
+      "current_session": "جلسة نقطة البيع الحالية",
+      "hint": "يتم تسجيل شحن التوكنز اليدوي بشكل منفصل عن مبيعات الفواتير والمرتجعات.",
+      "fields": {
+        "amount": "عدد التوكنز"
+      },
+      "placeholders": {
+        "amount": "أدخل عدد التوكنز"
+      },
+      "actions": {
+        "open": "شحن يدوي",
+        "submit": "شحن التوكنز",
+        "submitting": "جاري الشحن..."
+      },
+      "feedback": {
+        "success_title": "تم تسجيل الشحن اليدوي",
+        "error_title": "فشل الشحن اليدوي"
+      },
+      "states": {
+        "success": "تم تسجيل شحن يدوي بمقدار {{count}} توكنز.",
+        "failed": "فشل تسجيل شحن التوكنز اليدوي."
+      },
+      "validation": {
+        "invalid_amount": "يجب أن يكون عدد التوكنز رقمًا صحيحًا أكبر من صفر."
+      }
     },
 
     "no_access": {
