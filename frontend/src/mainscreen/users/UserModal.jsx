@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
-const emptyPermissions = {
+
+const buildEmptyPermissions = () => ({
   dashboard: { view: false, add: false, edit: false, delete: false },
   sales: { view: false, add: false, edit: false, delete: false },
+  events: { view: false, add: false, edit: false, delete: false },
   pos: { view:false, add:false, edit:false, delete:false }, 
   refunds: { view: false, add: false, edit: false, delete: false },
   items: { view: false, add: false, edit: false, delete: false },
@@ -14,13 +16,27 @@ const emptyPermissions = {
   company_config: { view: false, add: false, edit: false, delete: false },
   einvoicing: { view: false, add: false, edit: false, delete: false },
   receipts: { view: false, add: false, edit: false, delete: false },
+});
+
+const mergePermissionsWithDefaults = (permissions = {}) => {
+  const defaults = buildEmptyPermissions();
+  const merged = { ...defaults };
+
+  Object.entries(permissions || {}).forEach(([module, modulePermissions]) => {
+    merged[module] = {
+      ...(defaults[module] || { view: false, add: false, edit: false, delete: false }),
+      ...modulePermissions,
+    };
+  });
+
+  return merged;
 };
 
 export default function UserModal({ close, refresh, editData }) {
   const [full_name, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [permissions, setPermissions] = useState(emptyPermissions);
+  const [permissions, setPermissions] = useState(buildEmptyPermissions);
   const {t} = useTranslation();
   let currentPermissions = {};
 try {
@@ -43,8 +59,10 @@ const isReadOnly =
     if (editData) {
       setFullName(editData.full_name || "");
       setUsername(editData.username || "");
-      setPermissions(editData.permissions || emptyPermissions);
+      setPermissions(mergePermissionsWithDefaults(editData.permissions));
+      return;
     }
+    setPermissions(buildEmptyPermissions());
   }, [editData]);
 
 const toggle = (module, key) => {
@@ -285,6 +303,7 @@ const PermissionRow = ({ label, module, actions }) => {
 
   <div className="px-2">
     <PermissionRow label={t("UserModal.modules.sales")} module="sales" actions={["view","add","edit","delete"]} />
+    <PermissionRow label={t("UserModal.modules.events")} module="events" actions={["view","add","edit","delete"]} />
     <PermissionRow label={t("UserModal.modules.refunds")} module="refunds" actions={["view","add"]} />
     <PermissionRow label={t("UserModal.modules.items")} module="items" actions={["view","add","edit","delete"]} />
     <PermissionRow label={t("UserModal.modules.clients")} module="clients" actions={["view","add","edit","delete"]} />

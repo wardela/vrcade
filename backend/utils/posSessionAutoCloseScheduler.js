@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const posSessionService = require("../services/posSessionService");
+const { quoteIdentifier } = require("./sqlIdentifiers");
 
 const JORDAN_TIME_ZONE = "Asia/Amman";
 const AUTO_CLOSE_HOUR = 3;
@@ -8,8 +9,6 @@ const CHECK_INTERVAL_MS = 60 * 1000;
 
 let schedulerIntervalId = null;
 let lastScheduledRunDayKey = null;
-
-const quoteIdent = (value) => `"${String(value).replace(/"/g, "\"\"")}"`;
 
 const getJordanParts = (date = new Date()) => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -82,7 +81,7 @@ const withTenantDb = async (schemaName, callback) => {
   const client = await pool.connect();
 
   try {
-    await client.query(`SET search_path TO ${quoteIdent(schemaName)}`);
+    await client.query(`SET search_path TO ${quoteIdentifier(schemaName, "Tenant schema")}, public`);
     await callback({
       query: (text, params) => client.query(text, params),
     });

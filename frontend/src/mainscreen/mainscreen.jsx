@@ -47,6 +47,7 @@ const raw = localStorage.getItem("permissions");
   const order = [
     { module: "dashboard", path: "/overview" },
     { module: "sales", path: "/process" },
+    { module: "events", path: "/events" },
     { module: "refunds", path: "/refund" },
     { module: "einvoicing", path: "/unshared" },
     { module: "items", path: "/items" },
@@ -129,7 +130,7 @@ const raw = localStorage.getItem("permissions");
     )}
 
     {/* Sales Section */}
-    {(canView("sales") || canView("refunds") || canView("einvoicing") || canView("pos")) && (
+    {(canView("sales") || canView("events") || canView("refunds") || canView("einvoicing") || canView("pos")) && (
       <div>
         <button
           onClick={() => !isCollapsed && setIsSalesExpanded(!isSalesExpanded)}
@@ -177,7 +178,7 @@ const raw = localStorage.getItem("permissions");
             </NavLink>
           )}
 
-          {canView("sales") && (
+          {canView("events") && (
             <NavLink
               to="/events"
               className={({ isActive }) =>
@@ -575,7 +576,7 @@ const raw = localStorage.getItem("permissions");
           <Route
             path="/events"
             element={
-              canView("sales")
+              canView("events")
                 ? <EventsScreen />
                 : <Navigate to={firstAllowedRoute} replace />
             }

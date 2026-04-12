@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { assertSafeSqlIdentifier, setTenantSearchPath } = require("../utils/sqlIdentifiers");
 
 module.exports = async function tenantDb(req, res, next) {
   // 🔴 Schema must come from JWT
@@ -12,6 +13,7 @@ module.exports = async function tenantDb(req, res, next) {
 
   try {
     client = await pool.connect();
+    const schemaName = assertSafeSqlIdentifier(req.user.schema, "Tenant schema");
 
     // ==================================================
     // 1. Validate tenant from PUBLIC schema
@@ -22,7 +24,7 @@ module.exports = async function tenantDb(req, res, next) {
       FROM public.tenants
       WHERE schema_name = $1
       `,
-      [req.user.schema]
+      [schemaName]
     );
 
     if (tenantResult.rows.length === 0) {
@@ -36,7 +38,8 @@ module.exports = async function tenantDb(req, res, next) {
 
     // Attach tenant meta (future-proof)
     req.tenant = {
-      active: tenant.active
+      active: tenant.active,
+      schema: schemaName,
     };
 
     // ==================================================
@@ -53,7 +56,7 @@ module.exports = async function tenantDb(req, res, next) {
     // ==================================================
     // 3. Force schema isolation
     // ==================================================
-    await client.query(`SET search_path TO ${req.user.schema}`);
+    await setTenantSearchPath(client, schemaName);
 
     // ==================================================
     // 4. Attach DB helper (tenant-scoped)
@@ -65,9 +68,15 @@ module.exports = async function tenantDb(req, res, next) {
     // ==================================================
     // 5. Release connection automatically
     // ==================================================
-    res.on("finish", () => {
+    let released = false;
+    const releaseClient = () => {
+      if (released) return;
+      released = true;
       client.release();
-    });
+    };
+
+    res.once("finish", releaseClient);
+    res.once("close", releaseClient);
 
     next();
 

@@ -1,5 +1,10 @@
 import { clearStoragePreservingTheme } from "../theme/ThemeProvider";
 
+const getLoginLocation = () => {
+  const currentLocation = window.location.href.split("#")[0] || window.location.href;
+  return `${currentLocation}#/login`;
+};
+
 export function logoutToLogin({ reason } = {}) {
   clearStoragePreservingTheme(localStorage);
 
@@ -13,5 +18,5 @@ export function logoutToLogin({ reason } = {}) {
     localStorage.setItem("logout_reason", reason);
   }
 
-  window.location.replace("/#/login");
+  window.location.replace(getLoginLocation());
 }

@@ -7,6 +7,13 @@ const EVENT_ITEM_TAX_PERCENTAGE = 16;
 const INVOICE_NUMBER_LOCK_KEY = 904119;
 const VALID_EVENT_PAYMENT_METHODS = new Set(["cash", "card", "transfer"]);
 const VALID_EVENT_STATUSES = new Set(["open", "ended"]);
+const NORMALIZED_EVENT_STATUS_SQL = `
+  CASE
+    WHEN LOWER(BTRIM(COALESCE(e.status, ''))) = 'closed' THEN 'ended'
+    WHEN LOWER(BTRIM(COALESCE(e.status, ''))) = 'ended' THEN 'ended'
+    ELSE 'open'
+  END
+`;
 
 const createValidationError = (message) => {
   const error = new Error(message);
@@ -99,11 +106,13 @@ const normalizeEventStatus = (value, fieldLabel = "Event status") => {
     .trim()
     .toLowerCase();
 
-  if (!VALID_EVENT_STATUSES.has(normalized)) {
+  const canonicalStatus = normalized === "closed" ? "ended" : normalized;
+
+  if (!VALID_EVENT_STATUSES.has(canonicalStatus)) {
     throw createValidationError(`${fieldLabel} must be open or ended`);
   }
 
-  return normalized;
+  return canonicalStatus;
 };
 
 const padDatePart = (value) => String(value).padStart(2, "0");
@@ -452,7 +461,7 @@ const getEventDetails = async (db, eventId) => {
         c.phone AS client_phone,
         c.detail_type AS client_detail_type,
         c.detail_value AS client_detail_value,
-        e.status,
+        ${NORMALIZED_EVENT_STATUS_SQL} AS status,
         e.details,
         e.notes,
         e.total_amount,
@@ -499,7 +508,7 @@ const listEvents = async (db) => {
         TO_CHAR(e.event_time, 'HH24:MI:SS') AS event_time,
         e.client_id,
         c.name AS client_name,
-        e.status,
+        ${NORMALIZED_EVENT_STATUS_SQL} AS status,
         e.total_amount,
         COALESCE(payments.total_paid, 0) AS total_paid,
         e.total_amount - COALESCE(payments.total_paid, 0) AS remaining_balance,
