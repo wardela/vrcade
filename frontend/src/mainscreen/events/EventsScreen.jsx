@@ -9,6 +9,13 @@ import { useTranslation } from "react-i18next";
 
 const EVENT_STATUS_FILTERS = ["all", "open", "ended"];
 
+const normalizeEventStatusValue = (value) => {
+  const normalized = String(value || "open").trim().toLowerCase();
+  if (normalized === "closed") return "ended";
+  if (normalized === "ended") return "ended";
+  return "open";
+};
+
 const formatCurrency = (value) => `${Number(value || 0).toFixed(3)} JOD`;
 
 const formatDate = (value) => {
@@ -49,8 +56,8 @@ const translatePaymentMethod = (value, t) => {
 };
 
 const translateEventStatus = (value, t) => {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "ended" || normalized === "closed") {
+  const normalized = normalizeEventStatusValue(value);
+  if (normalized === "ended") {
     return t("EventsScreen.status.ended");
   }
   return t("EventsScreen.status.open");
@@ -83,7 +90,7 @@ function SummaryCard({ label, value, accentClass = "text-[#2f788a]" }) {
 
 function EventStatusBadge({ status }) {
   const { t } = useTranslation();
-  const normalized = String(status || "open").trim().toLowerCase();
+  const normalized = normalizeEventStatusValue(status);
   const className =
     normalized === "ended"
       ? "border-gray-300 bg-gray-100 text-gray-700"
@@ -790,7 +797,32 @@ function EventDetailsModal({
     setError("");
 
     try {
-      const response = await api.put(`/api/events/${event.id}/status`, { status });
+      const payload = { status };
+      const requestAttempts = [
+        () => api.put(`/api/events/${event.id}/status`, payload),
+        () => api.patch(`/api/events/${event.id}/status`, payload),
+        () => api.post(`/api/events/${event.id}/status`, payload),
+      ];
+
+      let response = null;
+      let lastError = null;
+
+      for (const runRequest of requestAttempts) {
+        try {
+          response = await runRequest();
+          break;
+        } catch (requestError) {
+          lastError = requestError;
+          if (requestError?.response?.status !== 404) {
+            throw requestError;
+          }
+        }
+      }
+
+      if (!response) {
+        throw lastError || new Error(t("EventsScreen.messages.update_status_failed"));
+      }
+
       setEvent(response.data);
       onEventUpdated?.(response.data, t("EventsScreen.messages.status_updated_success"));
     } catch (err) {
@@ -799,6 +831,8 @@ function EventDetailsModal({
       setStatusSaving(false);
     }
   };
+
+  const normalizedEventStatus = normalizeEventStatusValue(event?.status);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
@@ -891,24 +925,24 @@ function EventDetailsModal({
                     <button
                       type="button"
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                        event.status === "open"
+                        normalizedEventStatus === "open"
                           ? "border-emerald-500 bg-emerald-500 text-white"
                           : "border-base-300 bg-white text-gray-700 hover:bg-base-200"
                       }`}
                       onClick={() => handleStatusUpdate("open")}
-                      disabled={!canEditEvent || statusSaving || event.status === "open"}
+                      disabled={!canEditEvent || statusSaving || normalizedEventStatus === "open"}
                     >
                       {t("EventsScreen.actions.mark_open")}
                     </button>
                     <button
                       type="button"
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                        event.status === "ended"
+                        normalizedEventStatus === "ended"
                           ? "border-gray-700 bg-gray-700 text-white"
                           : "border-base-300 bg-white text-gray-700 hover:bg-base-200"
                       }`}
                       onClick={() => handleStatusUpdate("ended")}
-                      disabled={!canEditEvent || statusSaving || event.status === "ended"}
+                      disabled={!canEditEvent || statusSaving || normalizedEventStatus === "ended"}
                     >
                       {t("EventsScreen.actions.mark_ended")}
                     </button>
@@ -1155,11 +1189,11 @@ function NoAccess() {
 export default function EventsScreen() {
   const { t } = useTranslation();
   const permissions = readPermissions();
-  const salesPerm = permissions?.sales || {};
-  const canView = salesPerm.view === true;
-  const canCreate = salesPerm.add === true;
-  const canAddPayment = salesPerm.edit === true || salesPerm.add === true;
-  const canEditEvent = salesPerm.edit === true || salesPerm.add === true;
+  const eventsPerm = permissions?.events || {};
+  const canView = eventsPerm.view === true;
+  const canCreate = eventsPerm.add === true;
+  const canAddPayment = eventsPerm.edit === true || eventsPerm.add === true;
+  const canEditEvent = eventsPerm.edit === true || eventsPerm.add === true;
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1251,7 +1285,7 @@ export default function EventsScreen() {
 
   const filteredEvents = useMemo(() => {
     if (statusFilter === "all") return events;
-    return events.filter((event) => String(event.status || "open").trim().toLowerCase() === statusFilter);
+    return events.filter((event) => normalizeEventStatusValue(event.status) === statusFilter);
   }, [events, statusFilter]);
 
   if (!canView) {

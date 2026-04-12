@@ -9,6 +9,7 @@ export function buildReceiptHtml({
   labels = {},
 }) {
   const w = `${paperWidthMm}mm`;
+  const contentWidthMm = `${Math.max(Number(paperWidthMm) - 6, 58)}mm`;
   const text = {
     invoiceNumber: labels.invoiceNumber || "Invoice #",
     date: labels.date || "Date",
@@ -41,27 +42,52 @@ export function buildReceiptHtml({
   <title>Receipt</title>
   <style>
     @page { size: ${w} auto; margin: 0; }
-    html, body { margin: 0; padding: 0; }
+    html, body {
+      width: ${w};
+      max-width: ${w};
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #fff;
+    }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
     .receipt {
-      width: ${w};
-      padding: 6mm 4mm;
+      width: ${contentWidthMm};
+      max-width: ${contentWidthMm};
+      margin: 0 auto;
+      padding: 4mm 1.5mm 5mm;
       font-family: Arial, Tahoma, sans-serif;
-      font-size: 11px;
+      font-size: 10px;
+      line-height: 1.25;
       color: #000;
     }
 
     .center { text-align: center; }
     .muted { color: #444; font-size: 10px; }
     .title { font-weight: 700; font-size: 13px; margin-top: 2mm; }
-    .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: flex-start;
+      column-gap: 2mm;
+      width: 100%;
+    }
     .hr { border-top: 1px dashed #000; margin: 3mm 0; }
 
     .items { margin-top: 3mm; }
     .item { margin: 2mm 0; }
-    .item-name { flex: 1; }
-    .nums { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .item-name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .nums {
+      min-width: 16mm;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
 
     .totals .row { margin: 1.2mm 0; }
     .grand { font-weight: 700; font-size: 12px; }

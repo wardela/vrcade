@@ -10,7 +10,6 @@ import {
   getReceiptPrinters,
   getStoredReceiptPrinterName,
   isElectronReceiptPrintingAvailable,
-  openCashDrawer,
   printReceipt,
   setStoredReceiptPrinterName,
 } from "../../utils/electronReceiptPrint";
@@ -56,7 +55,7 @@ const RECEIPT_TEXT = {
   submitSuccess: (printer) => `Receipt submitted successfully to ${printer}.`,
   printerTarget: (printer) => `"${printer}"`,
   printerTargetDefault: "the system default printer",
-  openDrawer: "No Receipt + Open Drawer",
+  openDrawer: "Close and Open Cash Drawer",
   openDrawerFailed: "Failed to open the cash drawer.",
   print: "Print",
   printing: "Sending...",
@@ -399,6 +398,7 @@ export default function ReceiptPreviewModal({
         html,
         printerName: selectedPrinterName || undefined,
         jobTitle: `POS Receipt ${invoice.header.invoice_number}`,
+        openCashDrawer: allowCashDrawerWithoutPrint && cashDrawerSupported,
       });
 
       if (!result?.success) {
@@ -424,7 +424,11 @@ export default function ReceiptPreviewModal({
     }
 
     await runBackgroundReceiptAction(async () => {
-      const result = await openCashDrawer();
+      const result = await printReceipt({
+        printerName: selectedPrinterName || undefined,
+        jobTitle: "POS Cash Drawer Pulse",
+        openCashDrawerOnly: true,
+      });
 
       if (!result?.success) {
         throw new Error(result?.error || RECEIPT_TEXT.openDrawerFailed);

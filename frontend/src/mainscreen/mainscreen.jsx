@@ -18,6 +18,7 @@ import POSManagementScreen from "./POS/POSManagementScreen";
 import EventsScreen from "./events/EventsScreen";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../theme/ThemeProvider";
+import { logoutToLogin } from "../utils/logout";
 
 const MainScreen = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -29,10 +30,6 @@ const [isSalesExpanded, setIsSalesExpanded] = useState(false);
 const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
 const { t } = useTranslation();
 const { theme, isDark, toggleTheme } = useAppTheme();
-
-const logout = () => {
-  window.location.hash = "#/login";
-};
 
 let permissions = {};
 
@@ -50,6 +47,7 @@ const raw = localStorage.getItem("permissions");
   const order = [
     { module: "dashboard", path: "/overview" },
     { module: "sales", path: "/process" },
+    { module: "events", path: "/events" },
     { module: "refunds", path: "/refund" },
     { module: "einvoicing", path: "/unshared" },
     { module: "items", path: "/items" },
@@ -132,7 +130,7 @@ const raw = localStorage.getItem("permissions");
     )}
 
     {/* Sales Section */}
-    {(canView("sales") || canView("refunds") || canView("einvoicing") || canView("pos")) && (
+    {(canView("sales") || canView("events") || canView("refunds") || canView("einvoicing") || canView("pos")) && (
       <div>
         <button
           onClick={() => !isCollapsed && setIsSalesExpanded(!isSalesExpanded)}
@@ -180,7 +178,7 @@ const raw = localStorage.getItem("permissions");
             </NavLink>
           )}
 
-          {canView("sales") && (
+          {canView("events") && (
             <NavLink
               to="/events"
               className={({ isActive }) =>
@@ -578,7 +576,7 @@ const raw = localStorage.getItem("permissions");
           <Route
             path="/events"
             element={
-              canView("sales")
+              canView("events")
                 ? <EventsScreen />
                 : <Navigate to={firstAllowedRoute} replace />
             }
@@ -694,10 +692,7 @@ const raw = localStorage.getItem("permissions");
             onClick={() => {
               setLoggingOut(true);
               setTimeout(() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("full_name");
-              localStorage.removeItem("permissions");
-              window.location.hash = "#/login";
+              logoutToLogin();
               }, 800);
             }}
             className="w-full py-2.5 bg-red-600 text-white rounded-lg font-semibold shadow-sm hover:bg-red-700 transition-colors"

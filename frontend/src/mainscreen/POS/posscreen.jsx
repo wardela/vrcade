@@ -7,7 +7,9 @@ import PayModal from "./PayModal";
 import BarcodeModal from "./barcodemodal";
 import ReceiptPreviewModal from "./ReceiptPreviewModal";
 import HeldInvoicesModal from "./HeldInvoicesModal";
+import ManualTokenChargeModal from "./ManualTokenChargeModal";
 import { fetchCompanyWithLogo } from "../../utils/companyLogo";
+import { logoutToLogin } from "../../utils/logout";
 
 const decodeTokenPayload = () => {
   try {
@@ -61,6 +63,11 @@ const formatNumber = (value) =>
     minimumFractionDigits: Number(value || 0) % 1 === 0 ? 0 : 3,
     maximumFractionDigits: 3,
   });
+
+const getInvoiceNumberSortValue = (invoiceNumber) => {
+  const match = String(invoiceNumber || "").trim().match(/^INV-(\d+)$/i);
+  return match ? Number.parseInt(match[1], 10) : -1;
+};
 
 const parsePositiveCartQuantity = (value) => {
   const normalized = String(value ?? "").trim();
@@ -122,6 +129,9 @@ export default function POSScreen() {
 
     const [showPayModal, setShowPayModal] = useState(false);
     const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+    const [showManualTokenChargeModal, setShowManualTokenChargeModal] = useState(false);
+    const [isSubmittingManualTokenCharge, setIsSubmittingManualTokenCharge] = useState(false);
+    const [manualTokenChargeFeedback, setManualTokenChargeFeedback] = useState(null);
 
     const [showRecentInvoices, setShowRecentInvoices] = useState(false);
     const [showReceiptPreview, setShowReceiptPreview] = useState(false);
@@ -138,6 +148,7 @@ export default function POSScreen() {
     const [selectedPosPointId, setSelectedPosPointId] = useState("");
     const [isSessionLoading, setIsSessionLoading] = useState(true);
     const [sessionActionLoading, setSessionActionLoading] = useState(false);
+    const [sessionActionMode, setSessionActionMode] = useState("end");
     const [sessionError, setSessionError] = useState("");
     const [endedSessionSummary, setEndedSessionSummary] = useState(null);
     const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
@@ -149,6 +160,8 @@ export default function POSScreen() {
 const companyFetchedRef = useRef(false);
 const currentUser = getCurrentPosUser();
 const paymentSubmitLockRef = useRef(false);
+const sessionActionLockRef = useRef(false);
+const manualTokenChargeLockRef = useRef(false);
 const quantityInputRef = useRef(null);
 
 const loadCompany = async ({ force = false } = {}) => {
@@ -192,6 +205,9 @@ useEffect(() => {
     } catch {}
 
     const posPerm = permissions.pos || {};
+    const refundPerm = permissions.refunds || {};
+    const canManualTokenCharge =
+      Boolean(refundPerm.add) && activeSession?.manual_token_charges_enabled === true;
 
     if (!posPerm.view) {
     return <NoAccess />;
@@ -214,6 +230,9 @@ useEffect(() => {
     setSelectedCartIndex(null);
     setQuantityDraft("");
     setQuantityEditError("");
+    setShowManualTokenChargeModal(false);
+    setIsSubmittingManualTokenCharge(false);
+    setManualTokenChargeFeedback(null);
     };
 
     const loadActiveSession = async ({ lastSessionId = null } = {}) => {
@@ -269,11 +288,14 @@ useEffect(() => {
     };
 
     const handleStartSession = async () => {
+    if (sessionActionLockRef.current) return;
+
     if (!selectedPosPointId) {
         setSessionError(t("POS.session.choose_station_required"));
         return;
     }
 
+    sessionActionLockRef.current = true;
     setSessionActionLoading(true);
     setSessionError("");
 
@@ -292,6 +314,7 @@ useEffect(() => {
         console.error("Failed to start POS session", err);
         setSessionError(getApiMessage(err, t("POS.session.start_failed")));
     } finally {
+        sessionActionLockRef.current = false;
         setSessionActionLoading(false);
     }
     };
@@ -307,7 +330,41 @@ useEffect(() => {
     ) {
         const lastSessionId = activeSession?.id || null;
         resetPosWorkspace();
+        setShowManualTokenChargeModal(false);
         await loadActiveSession({ lastSessionId });
+    }
+    };
+
+    const handleManualTokenChargeSubmit = async ({ tokenAmount }) => {
+    if (!activeSession?.id || manualTokenChargeLockRef.current || isSubmittingManualTokenCharge) {
+        return;
+    }
+
+    manualTokenChargeLockRef.current = true;
+    setIsSubmittingManualTokenCharge(true);
+
+    try {
+        await api.post(`/api/pos-sessions/${activeSession.id}/manual-token-charges`, {
+        token_amount: tokenAmount,
+        });
+
+        setShowManualTokenChargeModal(false);
+        setManualTokenChargeFeedback({
+          type: "success",
+          title: t("POS.manual_tokens.feedback.success_title"),
+          message: t("POS.manual_tokens.states.success", { count: formatNumber(tokenAmount) }),
+        });
+    } catch (err) {
+        console.error("Failed to record manual token charge", err);
+        await handleSessionProtectedError(err);
+        setManualTokenChargeFeedback({
+          type: "error",
+          title: t("POS.manual_tokens.feedback.error_title"),
+          message: getApiMessage(err, t("POS.manual_tokens.states.failed")),
+        });
+    } finally {
+        manualTokenChargeLockRef.current = false;
+        setIsSubmittingManualTokenCharge(false);
     }
     };
 
@@ -317,10 +374,12 @@ useEffect(() => {
     setShowEndSessionConfirm(true);
     };
 
-    const confirmEndSession = async () => {
-    if (!activeSession) return;
+    const confirmEndSession = async ({ logoutAfter = false } = {}) => {
+    if (!activeSession || sessionActionLoading || sessionActionLockRef.current) return;
 
+    sessionActionLockRef.current = true;
     setSessionActionLoading(true);
+    setSessionActionMode(logoutAfter ? "end-and-logout" : "end");
     setSessionError("");
 
     try {
@@ -328,15 +387,28 @@ useEffect(() => {
         ended_at: formatLocalDateTime(),
         });
         setShowEndSessionConfirm(false);
-        setEndedSessionSummary(res.data);
         setSelectedPosPointId(activeSession?.pos_point_id ? String(activeSession.pos_point_id) : "");
         setActiveSession(null);
         resetPosWorkspace();
+
+        if (logoutAfter) {
+          try {
+            logoutToLogin();
+            return;
+          } catch (logoutError) {
+            console.error("Failed to log out after ending POS session", logoutError);
+            setSessionError(t("POS.session.logout_after_end_failed"));
+          }
+        }
+
+        setEndedSessionSummary(res.data);
     } catch (err) {
         console.error("Failed to end POS session", err);
         setSessionError(getApiMessage(err, t("POS.session.end_failed")));
     } finally {
+        sessionActionLockRef.current = false;
         setSessionActionLoading(false);
+        setSessionActionMode("end");
     }
     };
 
@@ -563,18 +635,39 @@ const handleBarcodeScan = (barcode) => {
     });
     }, []);
 
-    const dedupeInvoices = (arr) => {
+    const dedupeAndSortInvoices = (arr) => {
     const map = new Map();
     arr.forEach((inv) => map.set(inv.invoice_number, inv));
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((left, right) => {
+      const rightValue = getInvoiceNumberSortValue(right.invoice_number);
+      const leftValue = getInvoiceNumberSortValue(left.invoice_number);
+
+      if (rightValue !== leftValue) {
+        return rightValue - leftValue;
+      }
+
+      return String(right.invoice_number || "").localeCompare(String(left.invoice_number || ""));
+    });
     };
 
-    const fetchInvoices = async () => {
+    const fetchInvoices = async ({ reset = false } = {}) => {
+    if (!activeSession?.pos_point_id) {
+        setFetchedInvoices([]);
+        return;
+    }
+
     try {
         setLoading(true);
-        const res = await api.get(`/api/invoices?limit=50&offset=${offset}`);
+        const nextOffset = reset ? 0 : offset;
+        const res = await api.get("/api/invoices", {
+          params: {
+            limit: 50,
+            offset: nextOffset,
+            pos_point_id: activeSession.pos_point_id,
+          },
+        });
         setFetchedInvoices((prev) =>
-        dedupeInvoices([...prev, ...res.data])
+        dedupeAndSortInvoices([...(reset ? [] : prev), ...(res.data || [])])
         );
     } catch (err) {
         console.error("Error fetching POS invoices:", err);
@@ -584,8 +677,19 @@ const handleBarcodeScan = (barcode) => {
     };
 
     useEffect(() => {
-    fetchInvoices();
-    }, [offset]);
+    if (!activeSession?.pos_point_id) {
+      setFetchedInvoices([]);
+      return;
+    }
+
+    setFetchedInvoices([]);
+    setOffset(0);
+    }, [activeSession?.pos_point_id]);
+
+    useEffect(() => {
+    if (!activeSession?.pos_point_id) return;
+    fetchInvoices({ reset: offset === 0 });
+    }, [offset, activeSession?.pos_point_id]);
 
 const handleInvoiceClick = async (inv) => {
   try {
@@ -593,7 +697,11 @@ const handleInvoiceClick = async (inv) => {
     setPosMode("view");
     setSelectedInvoice(inv);
 
-    const res = await api.get(`/api/invoices/full/${inv.invoice_number}`);
+    const res = await api.get(`/api/invoices/full/${inv.invoice_number}`, {
+      params: {
+        context: "pos",
+      },
+    });
     const data = res.data;
 
     // 🧾 Set client
@@ -886,7 +994,12 @@ const updatePosInvoice = async () => {
 
   await api.put(
     `/api/invoices/${selectedInvoice.invoice_number}`,
-    { header, lines }
+    { header, lines },
+    {
+      params: {
+        context: "pos",
+      },
+    },
   );
 
   alert(t("POS.states.save_success"));
@@ -1023,11 +1136,11 @@ const beep = (type = "success") => {
     <div className="p-4 border-b flex flex-col gap-3">
 
         {/* Search row */}
-<div className="flex gap-2">
+<div className="flex items-center gap-2 overflow-x-auto">
   {/* Toggle Recent Invoices */}
   <button
     onClick={() => setShowRecentInvoices(v => !v)}
-    className={`btn btn-outline ${showRecentInvoices ? "btn-active" : ""}`}
+    className={`btn btn-outline shrink-0 ${showRecentInvoices ? "btn-active" : ""}`}
     title={t("POS.search.toggle_recent")}
   >
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-icon lucide-clock"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
@@ -1037,14 +1150,14 @@ const beep = (type = "success") => {
     value={search}
     onChange={(e) => setSearch(e.target.value)}
     placeholder={t("POS.search.placeholder")}
-    className="input input-bordered w-full"
+    className="input input-bordered min-w-[240px] flex-1"
   />
 
 
   {/* Manual Barcode */}
   <button
     onClick={() => setShowBarcodeModal(true)}
-    className="btn btn-outline"
+    className="btn btn-outline shrink-0"
     title={t("POS.search.manual_barcode")}
   >
     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -1057,9 +1170,19 @@ const beep = (type = "success") => {
       <path d="M17 7v10"/>
     </svg>
   </button>
+  {canManualTokenCharge && activeSession?.id && (
+  <button
+    type="button"
+    onClick={() => setShowManualTokenChargeModal(true)}
+    className="btn btn-outline shrink-0 whitespace-nowrap"
+    title={t("POS.manual_tokens.title")}
+  >
+    {t("POS.manual_tokens.actions.open")}
+  </button>
+)}
   {heldInvoices.length > 0 && (
   <button
-    className="btn btn-warning relative"
+    className="btn btn-warning relative shrink-0"
     onClick={() => setShowHeldModal(true)}
   >
     {t("POS.actions.held")}
@@ -1639,7 +1762,7 @@ const beep = (type = "success") => {
         onClick={async () => {
             try {
             await updatePosInvoice();
-            fetchInvoices(); // refresh recent list
+            fetchInvoices({ reset: true }); // refresh recent list
             } catch (err) {
             console.error(err);
             alert(t("POS.states.save_failed"));
@@ -1718,7 +1841,7 @@ onConfirm={async ({ payments }) => {
     setQuantityDraft("");
     setQuantityEditError("");
 
-    fetchInvoices();
+    fetchInvoices({ reset: true });
   } catch (err) {
     console.error("POS save failed:", err);
     await handleSessionProtectedError(err);
@@ -1734,6 +1857,20 @@ onConfirm={async ({ payments }) => {
   open={showBarcodeModal}
   onClose={() => setShowBarcodeModal(false)}
   onSubmit={(barcode) => handleBarcodeScan(barcode)}
+/>
+<ManualTokenChargeModal
+  open={showManualTokenChargeModal}
+  submitting={isSubmittingManualTokenCharge}
+  posPointName={activeSession?.pos_point_name || activeSession?.pos || ""}
+  onClose={() => setShowManualTokenChargeModal(false)}
+  onSubmit={handleManualTokenChargeSubmit}
+/>
+<ActionFeedbackModal
+  open={Boolean(manualTokenChargeFeedback)}
+  title={manualTokenChargeFeedback?.title}
+  message={manualTokenChargeFeedback?.message}
+  tone={manualTokenChargeFeedback?.type}
+  onClose={() => setManualTokenChargeFeedback(null)}
 />
 <ReceiptPreviewModal
   open={showReceiptPreview}
@@ -1756,8 +1893,11 @@ onConfirm={async ({ payments }) => {
   open={showEndSessionConfirm}
   session={activeSession}
   loading={sessionActionLoading}
+  loadingAction={sessionActionMode}
+  error={sessionError}
   onCancel={() => setShowEndSessionConfirm(false)}
-  onConfirm={confirmEndSession}
+  onConfirm={() => confirmEndSession()}
+  onConfirmAndLogout={() => confirmEndSession({ logoutAfter: true })}
 />
       </div>
 
@@ -1904,13 +2044,22 @@ function NoAccess() {
   );
 }
 
-function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm }) {
+function EndSessionConfirmModal({
+  open,
+  session,
+  loading,
+  loadingAction,
+  error,
+  onCancel,
+  onConfirm,
+  onConfirmAndLogout,
+}) {
   const { t } = useTranslation();
   if (!open || !session) return null;
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
         <div className="border-b px-6 py-4">
           <h2 className="text-xl font-bold text-gray-900">{t("POS.session.end_session")}</h2>
           <p className="mt-1 text-sm text-gray-500">
@@ -1927,12 +2076,18 @@ function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm })
               {t("POS.session.started")}: <span className="font-semibold text-gray-900">{formatSessionDateTime(session.started_at)}</span>
             </div>
           </div>
+
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4">
+        <div className="grid gap-3 px-6 py-4 sm:grid-cols-2">
           <button
             type="button"
-            className="btn btn-outline"
+            className="btn btn-outline w-full sm:col-span-2"
             onClick={onCancel}
             disabled={loading}
           >
@@ -1940,11 +2095,23 @@ function EndSessionConfirmModal({ open, session, loading, onCancel, onConfirm })
           </button>
           <button
             type="button"
-            className="btn btn-error"
+            className="btn btn-error w-full whitespace-normal text-center leading-tight"
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? t("POS.session.ending") : t("POS.session.confirm_end")}
+            {loading && loadingAction === "end"
+              ? t("POS.session.ending")
+              : t("POS.session.confirm_end")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary w-full whitespace-normal text-center leading-tight"
+            onClick={onConfirmAndLogout}
+            disabled={loading}
+          >
+            {loading && loadingAction === "end-and-logout"
+              ? t("POS.session.ending_and_logging_out")
+              : t("POS.session.end_and_logout")}
           </button>
         </div>
       </div>
@@ -2011,6 +2178,39 @@ function EndSessionSummaryModal({ summary, fallbackUsername, onClose }) {
             onClick={onClose}
           >
             {t("POS.actions.back")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActionFeedbackModal({ open, title, message, tone = "success", onClose }) {
+  const { t } = useTranslation();
+
+  if (!open) return null;
+
+  const toneClasses =
+    tone === "error"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : "border-emerald-200 bg-emerald-50 text-emerald-700";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div className="border-b px-6 py-4">
+          <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+        </div>
+
+        <div className="px-6 py-5">
+          <div className={`rounded-xl border px-4 py-4 text-sm ${toneClasses}`}>
+            {message}
+          </div>
+        </div>
+
+        <div className="flex justify-end px-6 py-4">
+          <button type="button" className="btn btn-primary" onClick={onClose}>
+            {t("POS.actions.ok")}
           </button>
         </div>
       </div>

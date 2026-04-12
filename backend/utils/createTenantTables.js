@@ -1,12 +1,14 @@
 const { applyPosSessionSchema } = require("./ensurePosSessionSchema");
+const { assertSafeSqlIdentifier, quoteIdentifier } = require("./sqlIdentifiers");
 
 module.exports = async function createTenantTables(client, newSchema) {
-  const sourceSchema = "dev_sales";
+  const sourceSchema = assertSafeSqlIdentifier("dev_sales", "Source schema");
+  const targetSchema = assertSafeSqlIdentifier(newSchema, "Tenant schema");
 
-  console.log(`🔧 Creating tenant schema: ${newSchema}`);
+  console.log(`🔧 Creating tenant schema: ${targetSchema}`);
 
   // 1) Create tenant schema
-  await client.query(`CREATE SCHEMA IF NOT EXISTS ${newSchema};`);
+  await client.query(`CREATE SCHEMA IF NOT EXISTS ${quoteIdentifier(targetSchema, "Tenant schema")};`);
 
   // 2) Clone TABLES
   await client.query(`
@@ -22,7 +24,7 @@ module.exports = async function createTenantTables(client, newSchema) {
       LOOP
         EXECUTE format(
           'CREATE TABLE %I.%I (LIKE %I.%I INCLUDING ALL);',
-          '${newSchema}', t, '${sourceSchema}', t
+          '${targetSchema}', t, '${sourceSchema}', t
         );
       END LOOP;
     END $$;
@@ -41,7 +43,7 @@ module.exports = async function createTenantTables(client, newSchema) {
         WHERE sequence_schema = '${sourceSchema}'
       )
       LOOP
-        EXECUTE format('CREATE SEQUENCE %I.%I;', '${newSchema}', s);
+        EXECUTE format('CREATE SEQUENCE %I.%I;', '${targetSchema}', s);
       END LOOP;
     END $$;
   `);
@@ -60,15 +62,15 @@ module.exports = async function createTenantTables(client, newSchema) {
       FOR tbl, col, def IN
         SELECT table_name, column_name, column_default
         FROM information_schema.columns
-        WHERE table_schema = '${newSchema}'
+        WHERE table_schema = '${targetSchema}'
           AND column_default LIKE 'nextval(%'
       LOOP
         seqname := regexp_replace(def, '^nextval\\(''([^'']+)''::regclass\\)$', '\\1');
-        newseq := '${newSchema}.' || regexp_replace(seqname, '^[^.]+\\.', '');
+        newseq := '${targetSchema}.' || regexp_replace(seqname, '^[^.]+\\.', '');
 
         EXECUTE format(
           'ALTER TABLE %I.%I ALTER COLUMN %I SET DEFAULT nextval(''%s''::regclass);',
-          '${newSchema}', tbl, col, newseq
+          '${targetSchema}', tbl, col, newseq
         );
       END LOOP;
     END $$;
@@ -84,12 +86,12 @@ module.exports = async function createTenantTables(client, newSchema) {
       FOR s IN (
         SELECT sequence_name
         FROM information_schema.sequences
-        WHERE sequence_schema = '${newSchema}'
+        WHERE sequence_schema = '${targetSchema}'
       )
       LOOP
         EXECUTE format(
           'SELECT setval(''%I.%I'', 1, false);',
-          '${newSchema}', s
+          '${targetSchema}', s
         );
       END LOOP;
     END $$;
@@ -117,7 +119,7 @@ module.exports = async function createTenantTables(client, newSchema) {
         fn_def := regexp_replace(
           fn_def,
           '(CREATE( OR REPLACE)? FUNCTION)[[:space:]]+' || fn.nspname || '\\.' || fn.proname,
-          '\\1 ${newSchema}.' || fn.proname,
+          '\\1 ${targetSchema}.' || fn.proname,
           'i'
         );
 
@@ -156,7 +158,7 @@ module.exports = async function createTenantTables(client, newSchema) {
         fn_def := regexp_replace(
           fn_def,
           '(CREATE( OR REPLACE)? FUNCTION)[[:space:]]+' || fn_schema || '\\.' || fn_name,
-          '\\1 ${newSchema}.' || fn_name,
+          '\\1 ${targetSchema}.' || fn_name,
           'i'
         );
 
@@ -183,9 +185,9 @@ module.exports = async function createTenantTables(client, newSchema) {
           tg.trigger_name,
           tg.action_timing,
           tg.event_manipulation,
-          '${newSchema}',
+          '${targetSchema}',
           tg.event_object_table,
-          replace(tg.action_statement, '${sourceSchema}.', '${newSchema}.')
+          replace(tg.action_statement, '${sourceSchema}.', '${targetSchema}.')
         );
       END LOOP;
     END $$;
@@ -193,8 +195,8 @@ module.exports = async function createTenantTables(client, newSchema) {
 
   console.log("✓ Triggers cloned");
 
-  await applyPosSessionSchema(client, newSchema);
+  await applyPosSessionSchema(client, targetSchema);
   console.log("✓ POS session schema applied");
 
-  console.log(`🎉 Tenant schema "${newSchema}" created successfully.`);
+  console.log(`🎉 Tenant schema "${targetSchema}" created successfully.`);
 };

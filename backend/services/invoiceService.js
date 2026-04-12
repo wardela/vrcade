@@ -17,6 +17,25 @@ const createPosItemError = (message, code = "POS_ITEM_INVALID", statusCode = 400
   return error;
 };
 
+const hasTableInCurrentSchema = async (db, tableName) => {
+  const result = await db.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = current_schema()
+          AND table_name = $1
+      ) AS supported
+    `,
+    [tableName],
+  );
+
+  return result.rows[0]?.supported === true;
+};
+
+const hasManualTokenChargeTable = async (db) =>
+  hasTableInCurrentSchema(db, "pos_manual_token_charges");
+
 const parseBooleanFlag = (value, defaultValue = false) => {
   if (value == null || value === "") return defaultValue;
   if (typeof value === "boolean") return value;
@@ -227,26 +246,114 @@ const assertInvoiceEditable = async (db, invoice_number, client) => {
   }
 };
 
-// Fetch 100 invoices at a time
-const getInvoices = async (db, limit = 100, offset = 0) => {
+const createInvoiceAccessError = (
+  message,
+  statusCode = 403,
+  code = "INVOICE_FORBIDDEN",
+) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.code = code;
+  return error;
+};
+
+const parsePositiveInteger = (value) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const assertPosInvoiceAccess = async (
+  db,
+  invoice_number,
+  { posPointId, userId },
+) => {
+  const normalizedPosPointId = parsePositiveInteger(posPointId);
+  const normalizedUserId = parsePositiveInteger(userId);
+
+  if (!normalizedPosPointId) {
+    throw createInvoiceAccessError("Invalid POS point id", 400, "POS_POINT_INVALID_ID");
+  }
+
+  if (!normalizedUserId) {
+    throw createInvoiceAccessError("Authenticated user is missing", 401, "AUTH_REQUIRED");
+  }
+
+  const result = await db.query(
+    `
+      SELECT
+        ih.invoice_number,
+        ih.user_id,
+        ps.pos_point_id
+      FROM invoice_header ih
+      LEFT JOIN pos_sessions ps
+        ON ps.id = ih.session_id
+      WHERE ih.invoice_number = $1
+      LIMIT 1
+    `,
+    [invoice_number],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    throw createInvoiceAccessError("Invoice not found", 404, "INVOICE_NOT_FOUND");
+  }
+
+  if (
+    Number(row.pos_point_id) !== normalizedPosPointId ||
+    Number(row.user_id) !== normalizedUserId
+  ) {
+    throw createInvoiceAccessError("Invoice not found", 404, "INVOICE_NOT_FOUND");
+  }
+};
+
+// Fetch invoices, optionally scoped to a single POS terminal.
+const getInvoices = async (
+  db,
+  { limit = 100, offset = 0, posPointId = null, creatorUserId = null } = {},
+) => {
+  const filterByPosPoint = Number.isInteger(Number(posPointId)) && Number(posPointId) > 0;
+  const filterByCreatorUser =
+    filterByPosPoint && Number.isInteger(Number(creatorUserId)) && Number(creatorUserId) > 0;
   const query = `
-SELECT 
-  ih.invoice_number,
-  ih.client,
-  ih.total,
-  ih.qr,
-
-  EXISTS (
-    SELECT 1
-    FROM refund_invoice_header rih
-    WHERE rih.original_invoice_number = ih.invoice_number
-  ) AS has_refund
-
-FROM invoice_header ih
-ORDER BY ih.invoice_number DESC
-LIMIT $1 OFFSET $2;
+    SELECT
+      ih.invoice_number,
+      ih.client,
+      ih.total,
+      ih.qr,
+      ih.session_id,
+      ps.pos_point_id,
+      EXISTS (
+        SELECT 1
+        FROM refund_invoice_header rih
+        WHERE rih.original_invoice_number = ih.invoice_number
+      ) AS has_refund
+    FROM invoice_header ih
+    LEFT JOIN pos_sessions ps
+      ON ps.id = ih.session_id
+    WHERE (
+      $3::int IS NULL
+      OR (
+        ih.session_id IS NOT NULL
+        AND ps.pos_point_id = $3
+        AND ($4::int IS NULL OR ih.user_id = $4)
+      )
+    )
+    ORDER BY
+      CASE
+        WHEN ih.invoice_number ~ '^INV-[0-9]+$'
+          THEN SUBSTRING(ih.invoice_number FROM 5)::INT
+        ELSE NULL
+      END DESC NULLS LAST,
+      ih.date DESC,
+      ih.invoice_number DESC
+    LIMIT $1 OFFSET $2;
   `;
-  const result = await db.query(query, [limit, offset]);
+  const result = await db.query(query, [
+    limit,
+    offset,
+    filterByPosPoint ? Number(posPointId) : null,
+    filterByCreatorUser ? Number(creatorUserId) : null,
+  ]);
   return result.rows;
 };
 
@@ -267,7 +374,11 @@ const getInvoiceDetails = async (db, invoice_number) => {
   return result.rows;
 };
 
-const getFullInvoice = async (db, invoice_number) => {
+const getFullInvoice = async (db, invoice_number, options = {}) => {
+  if (options.posAccess) {
+    await assertPosInvoiceAccess(db, invoice_number, options.posAccess);
+  }
+
   const headerQuery = `
   SELECT 
     ih.invoice_number,
@@ -1092,9 +1203,13 @@ const getAllClients = async (db) => {
   return result.rows;
 };
 
-const updateInvoiceFull = async (db, invoice_number, header, lines) => {
+const updateInvoiceFull = async (db, invoice_number, header, lines, options = {}) => {
   try {
     await db.query("BEGIN");
+
+    if (options.posAccess) {
+      await assertPosInvoiceAccess(db, invoice_number, options.posAccess);
+    }
 
     // ❌ REMOVE THIS LINE - we'll check manually below
     // await assertInvoiceEditable(db, invoice_number);
@@ -3841,6 +3956,178 @@ ORDER BY month;
   };
 };
 
+const getDashboardPosAnalytics = async (db, year) => {
+  const manualTokenChargesEnabled = await hasManualTokenChargeTable(db);
+
+  const monthlySalesVsTokensQuery = `
+    WITH months AS (
+      SELECT generate_series(1, 12) AS month_index
+    ),
+    monthly_sales AS (
+      SELECT
+        EXTRACT(MONTH FROM ih.date)::int AS month_index,
+        COALESCE(SUM(ih.total), 0)::numeric AS total_sales
+      FROM invoice_header ih
+      WHERE ih.session_id IS NOT NULL
+        AND EXTRACT(YEAR FROM ih.date)::int = $1
+      GROUP BY 1
+    ),
+    monthly_item_tokens AS (
+      SELECT
+        EXTRACT(MONTH FROM ih.date)::int AS month_index,
+        COALESCE(
+          SUM(
+            il.qty * CASE
+              WHEN COALESCE(i.has_tokens, false) THEN COALESCE(i.token_count, 0)
+              ELSE 0
+            END
+          ),
+          0
+        )::numeric AS total_tokens
+      FROM invoice_header ih
+      JOIN invoice_lines il
+        ON il.invoice_number = ih.invoice_number
+      LEFT JOIN items i
+        ON i.id = il.item_id
+      WHERE ih.session_id IS NOT NULL
+        AND EXTRACT(YEAR FROM ih.date)::int = $1
+      GROUP BY 1
+    ),
+    monthly_manual_tokens AS (
+      ${manualTokenChargesEnabled
+        ? `
+      SELECT
+        EXTRACT(MONTH FROM charged_at)::int AS month_index,
+        COALESCE(SUM(token_amount), 0)::numeric AS total_tokens
+      FROM pos_manual_token_charges
+      WHERE EXTRACT(YEAR FROM charged_at)::int = $1
+      GROUP BY 1
+      `
+        : `
+      SELECT
+        NULL::int AS month_index,
+        0::numeric AS total_tokens
+      WHERE false
+      `}
+    )
+    SELECT
+      months.month_index,
+      COALESCE(monthly_sales.total_sales, 0) AS total_sales,
+      COALESCE(monthly_item_tokens.total_tokens, 0)
+        + COALESCE(monthly_manual_tokens.total_tokens, 0) AS total_tokens
+    FROM months
+    LEFT JOIN monthly_sales
+      ON monthly_sales.month_index = months.month_index
+    LEFT JOIN monthly_item_tokens
+      ON monthly_item_tokens.month_index = months.month_index
+    LEFT JOIN monthly_manual_tokens
+      ON monthly_manual_tokens.month_index = months.month_index
+    ORDER BY months.month_index;
+  `;
+
+  const posPerformanceQuery = `
+    WITH pos_totals AS (
+      SELECT
+        COALESCE(pp.id::text, CONCAT('session-pos:', COALESCE(ps.id::text, 'unknown'))) AS pos_key,
+        COALESCE(
+          NULLIF(MAX(pp.name), ''),
+          NULLIF(MAX(ps.pos), ''),
+          'Unknown POS'
+        ) AS pos_name,
+        COALESCE(SUM(ih.total), 0)::numeric AS total_sales
+      FROM invoice_header ih
+      JOIN pos_sessions ps
+        ON ps.id = ih.session_id
+      LEFT JOIN pos_points pp
+        ON pp.id = ps.pos_point_id
+      WHERE EXTRACT(YEAR FROM ih.date)::int = $1
+      GROUP BY COALESCE(pp.id::text, CONCAT('session-pos:', COALESCE(ps.id::text, 'unknown')))
+    )
+    SELECT
+      pos_key,
+      pos_name,
+      total_sales
+    FROM pos_totals
+    WHERE total_sales > 0
+    ORDER BY total_sales DESC, pos_name ASC;
+  `;
+
+  const topUsersMonthlyQuery = `
+    WITH ranked AS (
+      SELECT
+        EXTRACT(MONTH FROM ih.date)::int AS month,
+        COALESCE(ih.user_id::text, 'unknown') AS user_key,
+        COALESCE(
+          NULLIF(MAX(u.full_name), ''),
+          NULLIF(MAX(u.username), ''),
+          'Unknown User'
+        ) AS user_name,
+        COALESCE(SUM(ih.total), 0)::numeric AS total_sales,
+        ROW_NUMBER() OVER (
+          PARTITION BY EXTRACT(MONTH FROM ih.date)::int
+          ORDER BY COALESCE(SUM(ih.total), 0) DESC, COALESCE(ih.user_id::text, 'unknown')
+        ) AS rn
+      FROM invoice_header ih
+      LEFT JOIN users u
+        ON u.id = ih.user_id
+      WHERE ih.session_id IS NOT NULL
+        AND EXTRACT(YEAR FROM ih.date)::int = $1
+      GROUP BY
+        EXTRACT(MONTH FROM ih.date)::int,
+        COALESCE(ih.user_id::text, 'unknown')
+    )
+    SELECT
+      month,
+      MAX(CASE WHEN rn = 1 THEN total_sales END) AS rank1_value,
+      MAX(CASE WHEN rn = 1 THEN user_name END) AS rank1_name,
+      MAX(CASE WHEN rn = 2 THEN total_sales END) AS rank2_value,
+      MAX(CASE WHEN rn = 2 THEN user_name END) AS rank2_name,
+      MAX(CASE WHEN rn = 3 THEN total_sales END) AS rank3_value,
+      MAX(CASE WHEN rn = 3 THEN user_name END) AS rank3_name
+    FROM ranked
+    WHERE rn <= 3
+    GROUP BY month
+    ORDER BY month;
+  `;
+
+  const topUsersYearQuery = `
+    SELECT
+      COALESCE(ih.user_id::text, 'unknown') AS user_key,
+      COALESCE(
+        NULLIF(MAX(u.full_name), ''),
+        NULLIF(MAX(u.username), ''),
+        'Unknown User'
+      ) AS user_name,
+      COALESCE(SUM(ih.total), 0)::numeric AS total_sales
+    FROM invoice_header ih
+    LEFT JOIN users u
+      ON u.id = ih.user_id
+    WHERE ih.session_id IS NOT NULL
+      AND EXTRACT(YEAR FROM ih.date)::int = $1
+    GROUP BY COALESCE(ih.user_id::text, 'unknown')
+    HAVING COALESCE(SUM(ih.total), 0) > 0
+    ORDER BY total_sales DESC, user_name ASC
+    LIMIT 10;
+  `;
+
+  const [monthlySalesVsTokens, posPerformance, topUsersMonthly, topUsersYear] =
+    await Promise.all([
+      db.query(monthlySalesVsTokensQuery, [year]),
+      db.query(posPerformanceQuery, [year]),
+      db.query(topUsersMonthlyQuery, [year]),
+      db.query(topUsersYearQuery, [year]),
+    ]);
+
+  return {
+    year,
+    manual_token_charges_enabled: manualTokenChargesEnabled,
+    monthly_sales_vs_tokens: monthlySalesVsTokens.rows,
+    pos_performance: posPerformance.rows,
+    top_users_monthly: topUsersMonthly.rows,
+    top_users_year: topUsersYear.rows,
+  };
+};
+
 // ─── 1. Daily KPIs (total sales + invoice count for a given date) ───────────
 const getMobileDailyKpis = async (db, date) => {
   const res = await db.query(
@@ -4854,6 +5141,7 @@ module.exports = {
   getDashboardSales,
   getDashboardInventory,
   getDashboardClients,
+  getDashboardPosAnalytics,
   getItemsSoldForClientTotals,
   deleteStorageTransaction,
   createDueBalance,

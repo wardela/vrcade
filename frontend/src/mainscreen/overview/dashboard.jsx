@@ -1,5 +1,6 @@
 import KpiCards from "./KPIcards";
 import DashboardOverviewBlock from "./overviewblock";
+import DashboardPosAnalyticsBlock from "./posanalyticsblock";
 import DashboardSalesBlock from "./salesblock";
 import DashboardInventoryBlock from "./inventoryblock";
 import ClientsDashboardBlock from "./clientsblock";
@@ -24,6 +25,11 @@ export default function Overview() {
         {/* ================= OVERVIEW SECTION ================= */}
         <div id="overview" className="flex-1 min-h-screen">
           <DashboardOverviewBlock />
+        </div>
+
+        {/* ================= POS ANALYTICS SECTION ================= */}
+        <div id="pos-analytics" className="flex-1 min-h-screen">
+          <DashboardPosAnalyticsBlock />
         </div>
 
         {/* ================= SALES SECTION ================= */}

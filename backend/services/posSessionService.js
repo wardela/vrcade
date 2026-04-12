@@ -20,6 +20,45 @@ const createPosSessionError = (message, statusCode, code, details = null) => {
 };
 
 const toNumber = (value) => Number(value || 0);
+const ZERO_MANUAL_TOKEN_STATS = Object.freeze({
+  charge_count: 0,
+  total_tokens: 0,
+});
+
+const parsePositiveTokenAmount = (value) => {
+  const normalized = String(value ?? "").trim();
+
+  if (!/^\d+$/.test(normalized)) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const hasManualTokenChargeTable = async (db) => {
+  const result = await db.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = current_schema()
+          AND table_name = 'pos_manual_token_charges'
+      ) AS supported
+    `,
+  );
+
+  return result.rows[0]?.supported === true;
+};
+
+const attachManualTokenChargeSupport = async (db, session) => {
+  if (!session) return session;
+
+  return {
+    ...session,
+    manual_token_charges_enabled: await hasManualTokenChargeTable(db),
+  };
+};
 
 const getSessionDuration = (startedAt, endedAt) => {
   if (!startedAt) {
@@ -215,7 +254,12 @@ const ensureSessionIsActive = (session) => {
   }
 };
 
-const assertUserHasPosPermission = async (db, userId, permission = "view") => {
+const assertUserHasModulePermission = async (
+  db,
+  userId,
+  moduleName,
+  permission = "view",
+) => {
   const permissionColumnMap = {
     view: "can_view",
     add: "can_add",
@@ -225,7 +269,11 @@ const assertUserHasPosPermission = async (db, userId, permission = "view") => {
 
   const permissionColumn = permissionColumnMap[permission];
   if (!permissionColumn) {
-    throw createPosSessionError("Invalid POS permission check", 500, "POS_PERMISSION_INVALID");
+    throw createPosSessionError(
+      "Invalid module permission check",
+      500,
+      "MODULE_PERMISSION_INVALID",
+    );
   }
 
   const result = await db.query(
@@ -233,14 +281,34 @@ const assertUserHasPosPermission = async (db, userId, permission = "view") => {
       SELECT ${permissionColumn} AS allowed
       FROM user_permissions
       WHERE user_id = $1
-        AND module = 'pos'
+        AND module = $2
       LIMIT 1
     `,
-    [userId],
+    [userId, moduleName],
   );
 
   if (!result.rows[0]?.allowed) {
-    throw createPosSessionError("You do not have permission for this POS action", 403, "POS_FORBIDDEN");
+    throw createPosSessionError(
+      "You do not have permission for this action",
+      403,
+      "MODULE_FORBIDDEN",
+    );
+  }
+};
+
+const assertUserHasPosPermission = async (db, userId, permission = "view") => {
+  try {
+    await assertUserHasModulePermission(db, userId, "pos", permission);
+  } catch (error) {
+    if (error?.code === "MODULE_PERMISSION_INVALID") {
+      throw createPosSessionError("Invalid POS permission check", 500, "POS_PERMISSION_INVALID");
+    }
+
+    if (error?.code === "MODULE_FORBIDDEN") {
+      throw createPosSessionError("You do not have permission for this POS action", 403, "POS_FORBIDDEN");
+    }
+
+    throw error;
   }
 };
 
@@ -293,6 +361,28 @@ const getSessionInvoiceStats = async (db, sessionId) => {
   return {
     invoice_count: Number(result.rows[0]?.invoice_count || 0),
     total_sales_amount: toNumber(result.rows[0]?.total_sales_amount),
+  };
+};
+
+const getSessionManualTokenStats = async (db, sessionId) => {
+  if (!(await hasManualTokenChargeTable(db))) {
+    return ZERO_MANUAL_TOKEN_STATS;
+  }
+
+  const result = await db.query(
+    `
+      SELECT
+        COUNT(*)::int AS charge_count,
+        COALESCE(SUM(token_amount), 0) AS total_tokens
+      FROM pos_manual_token_charges
+      WHERE session_id = $1
+    `,
+    [sessionId],
+  );
+
+  return {
+    charge_count: Number(result.rows[0]?.charge_count || 0),
+    total_tokens: toNumber(result.rows[0]?.total_tokens),
   };
 };
 
@@ -388,6 +478,31 @@ const getRangeInvoiceStats = async (db, { from, to }) => {
   return {
     invoice_count: Number(result.rows[0]?.invoice_count || 0),
     total_sales_amount: toNumber(result.rows[0]?.total_sales_amount),
+  };
+};
+
+const getRangeManualTokenStats = async (db, { from, to }) => {
+  if (!(await hasManualTokenChargeTable(db))) {
+    return ZERO_MANUAL_TOKEN_STATS;
+  }
+
+  const result = await db.query(
+    `
+      SELECT
+        COUNT(*)::int AS charge_count,
+        COALESCE(SUM(pmct.token_amount), 0) AS total_tokens
+      FROM pos_manual_token_charges pmct
+      JOIN pos_sessions ps
+        ON ps.id = pmct.session_id
+      WHERE ps.started_at <= $2
+        AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
+    `,
+    [from, to],
+  );
+
+  return {
+    charge_count: Number(result.rows[0]?.charge_count || 0),
+    total_tokens: toNumber(result.rows[0]?.total_tokens),
   };
 };
 
@@ -527,22 +642,30 @@ const getSessionSummary = async (
   sessionId,
   { userId = null, requireOwner = true, includeInvoices = true } = {},
 ) => {
-  const session = requireOwner
+  const rawSession = requireOwner
     ? await getOwnedSessionById(db, sessionId, userId)
     : await getSessionById(db, sessionId);
 
-  if (!session) {
+  if (!rawSession) {
     throw createPosSessionError("POS session not found", 404, "POS_SESSION_NOT_FOUND");
   }
 
-  const invoiceStats = await getSessionInvoiceStats(db, sessionId);
-  const paymentStats = await getSessionPaymentStats(db, sessionId);
-  const soldItemsBreakdown = await getSessionSoldItemsBreakdown(db, sessionId);
-  const invoices = includeInvoices ? await getSessionInvoices(db, sessionId) : [];
+  const session = await attachManualTokenChargeSupport(db, rawSession);
+
+  const [invoiceStats, paymentStats, soldItemsBreakdown, manualTokenStats, invoices] =
+    await Promise.all([
+      getSessionInvoiceStats(db, sessionId),
+      getSessionPaymentStats(db, sessionId),
+      getSessionSoldItemsBreakdown(db, sessionId),
+      getSessionManualTokenStats(db, sessionId),
+      includeInvoices ? getSessionInvoices(db, sessionId) : Promise.resolve([]),
+    ]);
   const totalTokensSold = soldItemsBreakdown.reduce(
     (sum, item) => sum + toNumber(item.total_tokens),
     0,
   );
+  const manualTokensCharged = manualTokenStats.total_tokens;
+  const totalTokensCharged = totalTokensSold + manualTokensCharged;
   const duration = getSessionDuration(session.started_at, session.ended_at);
 
   return {
@@ -552,6 +675,8 @@ const getSessionSummary = async (
     total_sales: invoiceStats.total_sales_amount,
     total_sales_amount: invoiceStats.total_sales_amount,
     total_tokens_sold: totalTokensSold,
+    manual_tokens_charged: manualTokensCharged,
+    total_tokens_charged: totalTokensCharged,
     duration_minutes: duration.duration_minutes,
     duration_label: duration.duration_label,
     sold_items_breakdown: soldItemsBreakdown,
@@ -569,6 +694,8 @@ const getSessionSummary = async (
     totals: {
       sales: invoiceStats.total_sales_amount,
       tokens_sold: totalTokensSold,
+      manual_tokens_charged: manualTokensCharged,
+      total_tokens_charged: totalTokensCharged,
       cash: paymentStats.cash,
       card: paymentStats.card,
       bank_transfer: paymentStats.transfer,
@@ -579,22 +706,28 @@ const getSessionSummary = async (
 
 const getAggregateSessionSummary = async (db, { from, to }) => {
   const range = validateSummaryRange({ from, to });
-  const [sessionMeta, invoiceStats, paymentStats, soldItemsBreakdown] = await Promise.all([
-    getRangeSessionMeta(db, range),
-    getRangeInvoiceStats(db, range),
-    getRangePaymentStats(db, range),
-    getRangeSoldItemsBreakdown(db, range),
-  ]);
+  const manualTokenChargesEnabled = await hasManualTokenChargeTable(db);
+  const [sessionMeta, invoiceStats, paymentStats, soldItemsBreakdown, manualTokenStats] =
+    await Promise.all([
+      getRangeSessionMeta(db, range),
+      getRangeInvoiceStats(db, range),
+      getRangePaymentStats(db, range),
+      getRangeSoldItemsBreakdown(db, range),
+      getRangeManualTokenStats(db, range),
+    ]);
 
   const totalTokensSold = soldItemsBreakdown.reduce(
     (sum, item) => sum + toNumber(item.total_tokens),
     0,
   );
+  const manualTokensCharged = manualTokenStats.total_tokens;
+  const totalTokensCharged = totalTokensSold + manualTokensCharged;
   const duration = getSummaryDuration(range.from, range.to);
 
   return {
     id: null,
     summary_kind: "aggregate",
+    manual_token_charges_enabled: manualTokenChargesEnabled,
     timeframe_start: range.from,
     timeframe_end: range.to,
     started_at: range.from,
@@ -605,6 +738,8 @@ const getAggregateSessionSummary = async (db, { from, to }) => {
     total_sales: invoiceStats.total_sales_amount,
     total_sales_amount: invoiceStats.total_sales_amount,
     total_tokens_sold: totalTokensSold,
+    manual_tokens_charged: manualTokensCharged,
+    total_tokens_charged: totalTokensCharged,
     duration_minutes: duration.duration_minutes,
     duration_label: duration.duration_label,
     session_count: sessionMeta.session_count,
@@ -626,12 +761,100 @@ const getAggregateSessionSummary = async (db, { from, to }) => {
     totals: {
       sales: invoiceStats.total_sales_amount,
       tokens_sold: totalTokensSold,
+      manual_tokens_charged: manualTokensCharged,
+      total_tokens_charged: totalTokensCharged,
       cash: paymentStats.cash,
       card: paymentStats.card,
       bank_transfer: paymentStats.transfer,
     },
     invoices: [],
   };
+};
+
+const createManualTokenCharge = async (db, { sessionId, userId, tokenAmount }) => {
+  const parsedTokenAmount = parsePositiveTokenAmount(tokenAmount);
+
+  if (parsedTokenAmount == null) {
+    throw createPosSessionError(
+      "Token amount must be a whole number greater than zero",
+      400,
+      "POS_MANUAL_TOKEN_AMOUNT_INVALID",
+    );
+  }
+
+  if (!(await hasManualTokenChargeTable(db))) {
+    throw createPosSessionError(
+      "Manual token charging is not enabled for this tenant",
+      409,
+      "POS_MANUAL_TOKEN_CHARGES_UNAVAILABLE",
+    );
+  }
+
+  await assertUserHasModulePermission(db, userId, "refunds", "add");
+
+  try {
+    await db.query("BEGIN");
+
+    const session = await getOwnedSessionById(db, sessionId, userId, {
+      forUpdate: true,
+    });
+    ensureSessionIsActive(session);
+
+    const insertResult = await db.query(
+      `
+        INSERT INTO pos_manual_token_charges (
+          session_id,
+          pos_point_id,
+          user_id,
+          token_amount,
+          charged_at,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          timezone('Asia/Amman', NOW()),
+          timezone('Asia/Amman', NOW()),
+          timezone('Asia/Amman', NOW())
+        )
+        RETURNING
+          id,
+          session_id,
+          pos_point_id,
+          user_id,
+          token_amount,
+          charged_at,
+          created_at,
+          updated_at
+      `,
+      [
+        session.id,
+        session.pos_point_id || null,
+        userId,
+        parsedTokenAmount,
+      ],
+    );
+
+    await db.query("COMMIT");
+
+    const row = insertResult.rows[0] || {};
+    return {
+      id: row.id,
+      session_id: row.session_id,
+      pos_point_id: row.pos_point_id,
+      user_id: row.user_id,
+      token_amount: toNumber(row.token_amount),
+      charged_at: formatTimestampWithoutTimezone(row.charged_at),
+      created_at: formatTimestampWithoutTimezone(row.created_at),
+      updated_at: formatTimestampWithoutTimezone(row.updated_at),
+    };
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  }
 };
 
 const startSession = async (db, { userId, posPointId, openingNote, startedAt }) => {
@@ -652,7 +875,7 @@ const startSession = async (db, { userId, posPointId, openingNote, startedAt }) 
     if (existingSession) {
       await db.query("COMMIT");
       return {
-        session: existingSession,
+        session: await attachManualTokenChargeSupport(db, existingSession),
         already_active: true,
       };
     }
@@ -722,7 +945,10 @@ const startSession = async (db, { userId, posPointId, openingNote, startedAt }) 
 
     await db.query("COMMIT");
 
-    const session = await getSessionById(db, insertResult.rows[0].id);
+    const session = await attachManualTokenChargeSupport(
+      db,
+      await getSessionById(db, insertResult.rows[0].id),
+    );
     return {
       session,
       already_active: false,
@@ -734,7 +960,7 @@ const startSession = async (db, { userId, posPointId, openingNote, startedAt }) 
       const existingSession = await getActiveSessionForUser(db, userId);
       if (existingSession) {
         return {
-          session: existingSession,
+          session: await attachManualTokenChargeSupport(db, existingSession),
           already_active: true,
         };
       }
@@ -803,7 +1029,7 @@ const getActiveSessionStatusForUser = async (db, { userId, lastSessionId = null 
   const session = await getActiveSessionForUser(db, userId);
   if (session) {
     return {
-      session,
+      session: await attachManualTokenChargeSupport(db, session),
       closure_notice: null,
     };
   }
@@ -996,6 +1222,7 @@ const autoCloseOpenSessions = async (
 module.exports = {
   assertUserHasPosPermission,
   autoCloseOpenSessions,
+  createManualTokenCharge,
   endSession,
   forceCloseSession,
   getActiveSessionForPosPoint,

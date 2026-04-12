@@ -2,6 +2,7 @@ const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const userService = require("../services/userService");
+const { setTenantSearchPath } = require("../utils/sqlIdentifiers");
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
@@ -51,7 +52,7 @@ exports.login = async (req, res) => {
     // ==================================================
     // 2. SET TENANT SCHEMA (CRITICAL)
     // ==================================================
-    await client.query(`SET search_path TO ${schema_name}`);
+    await setTenantSearchPath(client, schema_name);
 
     // ==================================================
     // 3. Fetch user

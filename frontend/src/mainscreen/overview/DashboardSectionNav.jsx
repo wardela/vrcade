@@ -15,6 +15,13 @@ const OverviewIcon = ({ className }) => (
 </svg>
 );
 
+const PosIcon = () => (
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
+  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75A2.25 2.25 0 0 1 6 4.5h12A2.25 2.25 0 0 1 20.25 6.75v10.5A2.25 2.25 0 0 1 18 19.5H6a2.25 2.25 0 0 1-2.25-2.25V6.75Z" />
+  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9M7.5 12h3m-3 3.75h4.5" />
+</svg>
+);
+
 const SalesIcon = ({ className }) => (
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-banknote-arrow-up-icon lucide-banknote-arrow-up"><path d="M12 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5"/><path d="M18 12h.01"/><path d="M19 22v-6"/><path d="m22 19-3-3-3 3"/><path d="M6 12h.01"/><circle cx="12" cy="12" r="2"/></svg>
 );
@@ -40,6 +47,7 @@ const ReceiptsIcon = () => (
 const SECTIONS = [
   { id: "kpis", label: "KPIs", icon: KpiIcon },
   { id: "overview", label: "Overview", icon: OverviewIcon },
+  { id: "pos-analytics", label: "POS", icon: PosIcon },
   { id: "sales", label: "Sales", icon: SalesIcon },
   { id: "receipts", label: "Receipts", icon: ReceiptsIcon }, // 👈 ADD THIS
   { id: "inventory", label: "Inventory", icon: InventoryIcon },

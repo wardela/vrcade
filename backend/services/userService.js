@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const PERMISSION_MODULES = [
   "dashboard",
   "sales",
+  "events",
   "pos",                // ✅ ADD
   "refunds",
   "items",
