@@ -11,10 +11,34 @@ if (require("electron-squirrel-startup")) {
 const DEFAULT_ZOOM_FACTOR = 0.9;
 const ZOOM_STEP_PERCENT = 5;
 const PRINT_WINDOW_READY_TIMEOUT_MS = 30000;
+const CASH_DRAWER_ONLY_TIMEOUT_MS = 8000;
 const PRINT_TEMP_DIR_PREFIX = "fawtartak-print-";
 const CASH_DRAWER_DEFAULT_PORT = 9100;
 const CASH_DRAWER_DEFAULT_TIMEOUT_MS = 3000;
 const CASH_DRAWER_DEFAULT_PULSE_HEX = "1B700019FA";
+const CASH_DRAWER_ONLY_HTML = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Cash Drawer</title>
+  <style>
+    @page { margin: 0; }
+    html,
+    body {
+      width: 2mm;
+      height: 2mm;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #fff;
+      color: #fff;
+      font-size: 1px;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body>.</body>
+</html>`;
 
 let mainWindow;
 
@@ -364,6 +388,124 @@ const openCashDrawerDirectly = async () => {
   });
 };
 
+const openCashDrawerOnlyThroughPrinter = async ({
+  printerName,
+  jobTitle,
+} = {}) => {
+  const printWindow = createHiddenPrintWindow();
+  let loadTimeoutId;
+  let printTimeoutId;
+
+  try {
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(CASH_DRAWER_ONLY_HTML)}`;
+
+    await Promise.race([
+      printWindow.loadURL(dataUrl),
+      new Promise((_, reject) => {
+        loadTimeoutId = setTimeout(() => {
+          reject(new Error("Timed out while preparing the cash drawer command."));
+        }, CASH_DRAWER_ONLY_TIMEOUT_MS);
+      }),
+    ]);
+    clearTimeout(loadTimeoutId);
+
+    const printers = (await printWindow.webContents.getPrintersAsync()).map(
+      normalizePrinter,
+    );
+
+    if (printers.length === 0) {
+      return {
+        success: false,
+        error: "No receipt printers are available on this machine.",
+      };
+    }
+
+    const requestedPrinter = isNonEmptyString(printerName)
+      ? printers.find((printer) => printer.name === printerName.trim())
+      : null;
+    const defaultPrinter = printers.find((printer) => printer.isDefault) || null;
+    const targetPrinter = requestedPrinter || defaultPrinter || null;
+
+    if (isNonEmptyString(printerName) && !requestedPrinter) {
+      return {
+        success: false,
+        error: `Printer "${printerName.trim()}" is not available.`,
+        availablePrinters: printers,
+      };
+    }
+
+    if (!targetPrinter) {
+      return {
+        success: false,
+        error: "No receipt printer is selected. Choose a receipt printer and try again.",
+        availablePrinters: printers,
+      };
+    }
+
+    const printResult = await new Promise((resolve) => {
+      printTimeoutId = setTimeout(() => {
+        resolve({
+          success: false,
+          failureReason: "Timed out while sending the cash drawer command.",
+        });
+      }, CASH_DRAWER_ONLY_TIMEOUT_MS);
+
+      printWindow.webContents.print(
+        {
+          silent: true,
+          printBackground: false,
+          deviceName: targetPrinter.name,
+          margins: {
+            marginType: "none",
+          },
+        },
+        (success, failureReason) => {
+          clearTimeout(printTimeoutId);
+          resolve({
+            success,
+            failureReason: failureReason || "",
+          });
+        },
+      );
+    });
+
+    if (!printResult.success) {
+      return {
+        success: false,
+        error:
+          printResult.failureReason ||
+          "The printer rejected the cash drawer command.",
+      };
+    }
+
+    return {
+      success: true,
+      supported: true,
+      mode: "selected-printer-minimal-print",
+      printerName: targetPrinter.name,
+      requestedPrinterName: isNonEmptyString(printerName)
+        ? printerName.trim()
+        : null,
+      usedDefaultPrinter: !requestedPrinter,
+      jobTitle: isNonEmptyString(jobTitle)
+        ? jobTitle.trim()
+        : "POS Cash Drawer",
+    };
+  } catch (error) {
+    console.error("Cash drawer-only print job failed", error);
+    return {
+      success: false,
+      error:
+        error?.message ||
+        "Failed to send the cash drawer command to the receipt printer.",
+    };
+  } finally {
+    clearTimeout(loadTimeoutId);
+    clearTimeout(printTimeoutId);
+    destroyWindowSafely(printWindow);
+  }
+};
+
 const printReceiptSilently = async ({
   html,
   printerName,
@@ -372,7 +514,7 @@ const printReceiptSilently = async ({
   openCashDrawerOnly = false,
 }) => {
   if (openCashDrawerOnly) {
-    return openCashDrawerDirectly();
+    return openCashDrawerOnlyThroughPrinter({ printerName, jobTitle });
   }
 
   if (!isNonEmptyString(html)) {
@@ -585,6 +727,10 @@ ipcMain.handle("receipt:print", async (_event, payload = {}) =>
 );
 
 ipcMain.handle("receipt:open-drawer", async () => openCashDrawerDirectly());
+
+ipcMain.handle("receipt:open-cash-drawer-only", async (_event, payload = {}) =>
+  openCashDrawerOnlyThroughPrinter(payload)
+);
 
 ipcMain.handle("document-print:preview", async (event, payload = {}) =>
   openDocumentPrintPreview({
