@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("api", {
     getCapabilities: () => ipcRenderer.invoke("receipt:get-capabilities"),
     getPrinters: () => ipcRenderer.invoke("receipt:get-printers"),
     openDrawer: () => ipcRenderer.invoke("receipt:open-drawer"),
+    openCashDrawerOnly: (payload) =>
+      ipcRenderer.invoke("receipt:open-cash-drawer-only", payload),
     print: (payload) => ipcRenderer.invoke("receipt:print", payload),
   },
   zoom: {

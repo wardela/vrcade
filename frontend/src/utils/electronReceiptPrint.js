@@ -55,6 +55,18 @@ export async function printReceipt(payload) {
   return window.api.receipt.print(payload);
 }
 
+export async function openCashDrawerOnly(payload = {}) {
+  if (!window.api?.receipt?.openCashDrawerOnly) {
+    return {
+      success: false,
+      supported: false,
+      error: "Opening the cash drawer without printing is not available in this desktop app.",
+    };
+  }
+
+  return window.api.receipt.openCashDrawerOnly(payload);
+}
+
 export async function openCashDrawer() {
   if (!window.api?.receipt?.openDrawer) {
     return {

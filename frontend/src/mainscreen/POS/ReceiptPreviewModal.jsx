@@ -10,6 +10,7 @@ import {
   getReceiptPrinters,
   getStoredReceiptPrinterName,
   isElectronReceiptPrintingAvailable,
+  openCashDrawerOnly,
   printReceipt,
   setStoredReceiptPrinterName,
 } from "../../utils/electronReceiptPrint";
@@ -55,8 +56,10 @@ const RECEIPT_TEXT = {
   submitSuccess: (printer) => `Receipt submitted successfully to ${printer}.`,
   printerTarget: (printer) => `"${printer}"`,
   printerTargetDefault: "the system default printer",
-  openDrawer: "Close and Open Cash Drawer",
+  openDrawer: "Open cash drawer without printing",
+  openingDrawer: "Opening drawer...",
   openDrawerFailed: "Failed to open the cash drawer.",
+  noPrinterSelected: "Select a receipt printer before opening the cash drawer.",
   print: "Print",
   printing: "Sending...",
   close: "Close",
@@ -114,6 +117,22 @@ const getReceiptTotals = (invoice) => {
 };
 
 const desktopReceiptPrintingEnabled = isElectronReceiptPrintingAvailable();
+const DRAWER_ONLY_TIMEOUT_MS = 10000;
+
+const withTimeout = async (promise, timeoutMs, message) => {
+  let timeoutId;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 const resolveCompanyForPrint = async ({
   company,
@@ -152,6 +171,7 @@ export default function ReceiptPreviewModal({
   const [printError, setPrintError] = useState("");
   const [printSuccess, setPrintSuccess] = useState("");
   const [isSubmittingPrint, setIsSubmittingPrint] = useState(false);
+  const [isOpeningDrawerOnly, setIsOpeningDrawerOnly] = useState(false);
   const [isPreparingCompany, setIsPreparingCompany] = useState(false);
   const [isClosingForAction, setIsClosingForAction] = useState(false);
   const [cashDrawerSupported, setCashDrawerSupported] = useState(false);
@@ -233,6 +253,7 @@ export default function ReceiptPreviewModal({
       setPrinters([]);
       setCashDrawerSupported(false);
       setIsClosingForAction(false);
+      setIsOpeningDrawerOnly(false);
       actionInFlightRef.current = false;
       return;
     }
@@ -330,24 +351,44 @@ export default function ReceiptPreviewModal({
     ? formatInvoiceDate(invoice.header.date)
     : "";
   const defaultPrinter = printers.find((printer) => printer.isDefault) || null;
+  const isCashPaymentPreview = Boolean(allowCashDrawerWithoutPrint);
 
   const closeModalAfterAction = () => {
     setIsClosingForAction(false);
     onClose?.();
   };
 
-  const runBackgroundReceiptAction = async (action, fallbackMessage) => {
+  const runBackgroundReceiptAction = async (
+    action,
+    fallbackMessage,
+    { closeOnFailure = true, hideDuringAction = true } = {},
+  ) => {
     actionInFlightRef.current = true;
-    setIsClosingForAction(true);
+    if (hideDuringAction) {
+      setIsClosingForAction(true);
+    }
+    let succeeded = false;
 
     try {
       await action();
+      succeeded = true;
     } catch (error) {
       console.error("POS receipt action failed", error);
-      window.alert(error?.message || fallbackMessage);
+      const message = error?.message || fallbackMessage;
+
+      if (closeOnFailure) {
+        window.alert(message);
+      } else {
+        setPrintError(message);
+      }
     } finally {
       actionInFlightRef.current = false;
-      closeModalAfterAction();
+
+      if (succeeded || closeOnFailure) {
+        closeModalAfterAction();
+      } else if (hideDuringAction) {
+        setIsClosingForAction(false);
+      }
     }
   };
 
@@ -416,24 +457,50 @@ export default function ReceiptPreviewModal({
   const submitDrawerOnly = async () => {
     if (
       !allowCashDrawerWithoutPrint ||
-      !cashDrawerSupported ||
-      loading ||
       actionInFlightRef.current
     ) {
       return;
     }
 
-    await runBackgroundReceiptAction(async () => {
-      const result = await printReceipt({
-        printerName: selectedPrinterName || undefined,
-        jobTitle: "POS Cash Drawer Pulse",
-        openCashDrawerOnly: true,
-      });
+    setPrintError("");
+    setPrintSuccess("");
+
+    if (!desktopReceiptPrintingEnabled) {
+      setPrintError(RECEIPT_TEXT.printerDesktopOnly);
+      return;
+    }
+
+    if (!selectedPrinterName && !defaultPrinter?.name) {
+      setPrintError(RECEIPT_TEXT.noPrinterSelected);
+      return;
+    }
+
+    setIsOpeningDrawerOnly(true);
+    actionInFlightRef.current = true;
+
+    try {
+      const result = await withTimeout(
+        openCashDrawerOnly({
+          printerName: selectedPrinterName || undefined,
+          jobTitle: "POS Cash Drawer Pulse",
+        }),
+        DRAWER_ONLY_TIMEOUT_MS,
+        "Timed out while opening the cash drawer.",
+      );
 
       if (!result?.success) {
         throw new Error(result?.error || RECEIPT_TEXT.openDrawerFailed);
       }
-    }, RECEIPT_TEXT.openDrawerFailed);
+
+      setStoredReceiptPrinterName(selectedPrinterName);
+      onClose?.();
+    } catch (error) {
+      console.error("Failed to open cash drawer without printing", error);
+      setPrintError(error?.message || RECEIPT_TEXT.openDrawerFailed);
+    } finally {
+      actionInFlightRef.current = false;
+      setIsOpeningDrawerOnly(false);
+    }
   };
 
   return (
@@ -681,30 +748,48 @@ export default function ReceiptPreviewModal({
             </div>
           )}
 
-          <div className="flex gap-2">
-            {allowCashDrawerWithoutPrint && cashDrawerSupported && (
-              <button
-                onClick={submitDrawerOnly}
-                disabled={loading || isSubmittingPrint || isPreparingCompany}
-                className="btn btn-outline flex-1"
-              >
-                {RECEIPT_TEXT.openDrawer}
-              </button>
-            )}
-
+          <div
+            className={isCashPaymentPreview ? "flex flex-col gap-2" : "flex gap-2"}
+          >
             <button
               onClick={submitPrint}
-              disabled={!invoice || loading || isSubmittingPrint || isPreparingCompany}
-              className="btn btn-primary flex-1"
+              disabled={
+                !invoice ||
+                loading ||
+                isSubmittingPrint ||
+                isOpeningDrawerOnly ||
+                isPreparingCompany
+              }
+              className={
+                isCashPaymentPreview
+                  ? "btn btn-primary w-full"
+                  : "btn btn-primary flex-1"
+              }
             >
               {isSubmittingPrint
                 ? RECEIPT_TEXT.printing
                 : RECEIPT_TEXT.print}
             </button>
 
-            <button onClick={onClose} className="btn btn-outline flex-1">
-              {RECEIPT_TEXT.close}
-            </button>
+            {isCashPaymentPreview ? (
+              <button
+                onClick={submitDrawerOnly}
+                disabled={
+                  printersLoading ||
+                  isSubmittingPrint ||
+                  isOpeningDrawerOnly
+                }
+                className="btn btn-outline w-full whitespace-normal text-center"
+              >
+                {isOpeningDrawerOnly
+                  ? RECEIPT_TEXT.openingDrawer
+                  : RECEIPT_TEXT.openDrawer}
+              </button>
+            ) : (
+              <button onClick={onClose} className="btn btn-outline flex-1">
+                {RECEIPT_TEXT.close}
+              </button>
+            )}
           </div>
         </div>
       </div>
