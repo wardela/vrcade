@@ -8,8 +8,11 @@ export function buildReceiptHtml({
   paperWidthMm = 80,
   labels = {},
 }) {
-  const w = `${paperWidthMm}mm`;
-  const contentWidthMm = `${Math.max(Number(paperWidthMm) - 6, 58)}mm`;
+  const numericPaperWidthMm = Number(paperWidthMm) || 80;
+  const maxPaperWidthMm = Math.max(Math.min(numericPaperWidthMm, 80), 58);
+  const safeContentWidthMm = Math.max(maxPaperWidthMm - 14, 44);
+  const w = `${maxPaperWidthMm}mm`;
+  const contentWidthMm = `${safeContentWidthMm}mm`;
   const text = {
     invoiceNumber: labels.invoiceNumber || "Invoice #",
     date: labels.date || "Date",
@@ -41,9 +44,9 @@ export function buildReceiptHtml({
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Receipt</title>
   <style>
-    @page { size: ${w} auto; margin: 0; }
+    @page { size: auto; margin: 0; }
     html, body {
-      width: ${w};
+      width: 100%;
       max-width: ${w};
       margin: 0;
       padding: 0;
@@ -52,11 +55,16 @@ export function buildReceiptHtml({
     }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
+    body {
+      display: flex;
+      justify-content: center;
+    }
+
     .receipt {
-      width: ${contentWidthMm};
+      width: 100%;
       max-width: ${contentWidthMm};
       margin: 0 auto;
-      padding: 4mm 1.5mm 5mm;
+      padding: 4mm 3.5mm 5mm 2.5mm;
       font-family: Arial, Tahoma, sans-serif;
       font-size: 10px;
       line-height: 1.25;
@@ -70,7 +78,7 @@ export function buildReceiptHtml({
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       align-items: flex-start;
-      column-gap: 2mm;
+      column-gap: 1.5mm;
       width: 100%;
     }
     .hr { border-top: 1px dashed #000; margin: 3mm 0; }
@@ -83,10 +91,12 @@ export function buildReceiptHtml({
       word-break: break-word;
     }
     .nums {
-      min-width: 16mm;
+      min-width: 12mm;
+      padding-left: 1mm;
       text-align: right;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
+      justify-self: end;
     }
 
     .totals .row { margin: 1.2mm 0; }
