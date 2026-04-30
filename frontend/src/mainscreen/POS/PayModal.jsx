@@ -103,6 +103,7 @@ export default function PayModal({
   const [splitAmountTwo, setSplitAmountTwo] = useState("");
   const [splitCashPaidOne, setSplitCashPaidOne] = useState("");
   const [splitCashPaidTwo, setSplitCashPaidTwo] = useState("");
+  const [sendCardToEcr, setSendCardToEcr] = useState(true);
 
   useEffect(() => {
     if (!open) {
@@ -115,12 +116,19 @@ export default function PayModal({
       setSplitAmountTwo("");
       setSplitCashPaidOne("");
       setSplitCashPaidTwo("");
+      setSendCardToEcr(true);
       return;
     }
 
+    setSendCardToEcr(true);
     setSplitAmountOne(Number(grandTotal || 0).toFixed(3));
     setSplitAmountTwo("0.000");
   }, [open, grandTotal]);
+
+  const hasCardPayment =
+    paymentMode === "single"
+      ? singleMethod === "card"
+      : splitMethodOne === "card" || splitMethodTwo === "card";
 
   const splitValidation = useMemo(() => {
     if (paymentMode !== "split") return { valid: true, message: "" };
@@ -194,6 +202,7 @@ export default function PayModal({
 
       onConfirm({
         paymentMode,
+        sendCardToEcr,
         payments: [
           {
             payment_method: singleMethod,
@@ -208,6 +217,7 @@ export default function PayModal({
 
     onConfirm({
       paymentMode,
+      sendCardToEcr,
       payments: [
         {
           payment_method: splitMethodOne,
@@ -356,6 +366,19 @@ export default function PayModal({
                 )}
               </div>
             </div>
+          )}
+
+          {hasCardPayment && (
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-gray-700">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-info"
+                checked={sendCardToEcr}
+                disabled={submitting}
+                onChange={(e) => setSendCardToEcr(e.target.checked)}
+              />
+              <span>{t("PayModal.fields.send_to_visa_machine")}</span>
+            </label>
           )}
 
           {validationMessage && (
