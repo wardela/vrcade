@@ -6,7 +6,7 @@ import { normalizeApiUrl } from './src/config.js';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const devApiTarget =
-    normalizeApiUrl(env.VITE_SERVER_IP) || "http://localhost:3004";
+    normalizeApiUrl(env.VITE_SERVER_IP) || "http://localhost:3002";
 
   return {
     plugins: [react()],

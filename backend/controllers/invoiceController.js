@@ -1571,6 +1571,57 @@ const getItemsSoldForClientTotals = async (req, res) => {
   }
 };
 
+const getPaymentTypeTotalsReport = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "from and to are required" });
+    }
+
+    const data = await invoiceService.getPaymentTypeTotalsReport(req.db, {
+      from,
+      to
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error("Payment type totals report error:", err);
+    res.status(500).json({
+      message: "Failed to fetch payment type totals report"
+    });
+  }
+};
+
+const getPaymentTypeDetailedReport = async (req, res) => {
+  try {
+    const {
+      from,
+      to,
+      limit = 100,
+      offset = 0
+    } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "from and to are required" });
+    }
+
+    const data = await invoiceService.getPaymentTypeDetailedReport(req.db, {
+      from,
+      to,
+      limit: Number(limit),
+      offset: Number(offset)
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error("Payment type detailed report error:", err);
+    res.status(500).json({
+      message: "Failed to fetch payment type detailed report"
+    });
+  }
+};
+
 
 const getSalesByClientReport = async (req, res) => {
   try {
@@ -2842,6 +2893,8 @@ module.exports = {
   getGeneralSalesReport,
   getSalesByAreaReport,
   getSalesByClientDetailedReport,
+  getPaymentTypeTotalsReport,
+  getPaymentTypeDetailedReport,
   getSalesByClientReport,
   getEinvoicingReport,
   getTaxDeclarationReport,

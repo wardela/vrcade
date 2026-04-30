@@ -2802,6 +2802,113 @@ const getItemsSoldForClientTotals = async (
   }
 };
 
+const getPaymentTypeTotalsReport = async (db, { from, to }) => {
+  const totalsRes = await db.query(
+    `
+      SELECT
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.amount ELSE 0 END), 0) AS cash,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'card' THEN ip.amount ELSE 0 END), 0) AS card,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'transfer' THEN ip.amount ELSE 0 END), 0) AS transfer,
+        COALESCE(SUM(ip.amount), 0) AS overall_total
+      FROM invoice_payments ip
+      JOIN invoice_header ih
+        ON ih.id = ip.invoice_id
+      WHERE ip.created_at::date BETWEEN $1 AND $2
+    `,
+    [from, to],
+  );
+
+  const totalsRow = totalsRes.rows[0] || {};
+  const totals = {
+    cash: Number(totalsRow.cash || 0),
+    card: Number(totalsRow.card || 0),
+    transfer: Number(totalsRow.transfer || 0),
+    overall_total: Number(totalsRow.overall_total || 0),
+  };
+
+  return {
+    rows: [
+      { payment_method: "cash", amount: totals.cash },
+      { payment_method: "card", amount: totals.card },
+      { payment_method: "transfer", amount: totals.transfer },
+    ],
+    totals,
+  };
+};
+
+const getPaymentTypeDetailedReport = async (
+  db,
+  { from, to, limit, offset },
+) => {
+  const rowsRes = await db.query(
+    `
+      SELECT
+        ih.invoice_number,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.amount ELSE 0 END), 0) AS cash,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'card' THEN ip.amount ELSE 0 END), 0) AS card,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'transfer' THEN ip.amount ELSE 0 END), 0) AS transfer,
+        COALESCE(SUM(ip.amount), 0) AS total
+      FROM invoice_payments ip
+      JOIN invoice_header ih
+        ON ih.id = ip.invoice_id
+      WHERE ip.created_at::date BETWEEN $1 AND $2
+      GROUP BY ih.id, ih.invoice_number
+      ORDER BY ih.invoice_number ASC
+      LIMIT $3 OFFSET $4
+    `,
+    [from, to, limit, offset],
+  );
+
+  const countRes = await db.query(
+    `
+      SELECT COUNT(*) AS total_count
+      FROM (
+        SELECT ih.id
+        FROM invoice_payments ip
+        JOIN invoice_header ih
+          ON ih.id = ip.invoice_id
+        WHERE ip.created_at::date BETWEEN $1 AND $2
+        GROUP BY ih.id
+      ) grouped_invoices
+    `,
+    [from, to],
+  );
+
+  const totalsRes = await db.query(
+    `
+      SELECT
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.amount ELSE 0 END), 0) AS cash,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'card' THEN ip.amount ELSE 0 END), 0) AS card,
+        COALESCE(SUM(CASE WHEN ip.payment_method = 'transfer' THEN ip.amount ELSE 0 END), 0) AS transfer,
+        COALESCE(SUM(ip.amount), 0) AS overall_total
+      FROM invoice_payments ip
+      JOIN invoice_header ih
+        ON ih.id = ip.invoice_id
+      WHERE ip.created_at::date BETWEEN $1 AND $2
+    `,
+    [from, to],
+  );
+
+  const totalsRow = totalsRes.rows[0] || {};
+
+  return {
+    rows: rowsRes.rows.map((row) => ({
+      ...row,
+      cash: Number(row.cash || 0),
+      card: Number(row.card || 0),
+      transfer: Number(row.transfer || 0),
+      total: Number(row.total || 0),
+    })),
+    total_count: Number(countRes.rows[0]?.total_count || 0),
+    totals: {
+      cash: Number(totalsRow.cash || 0),
+      card: Number(totalsRow.card || 0),
+      transfer: Number(totalsRow.transfer || 0),
+      overall_total: Number(totalsRow.overall_total || 0),
+    },
+  };
+};
+
 const getEinvoicingReport = async (db, { from, to, status, limit, offset }) => {
   try {
     const whereStatus =
@@ -5130,6 +5237,8 @@ module.exports = {
   getSalesByClientReport,
   getSalesByAreaReport,
   getSalesByClientDetailedReport,
+  getPaymentTypeTotalsReport,
+  getPaymentTypeDetailedReport,
   getEinvoicingReport,
   getTaxDeclarationReport,
   getInvoiceTaxSummaryReport,
