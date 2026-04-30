@@ -849,6 +849,7 @@ const saveCompanyConfig = async (
     company_location,
     email,
     invoice_terms,
+    ecr_integrator_name,
     auto_pos_einvoicing, // ✅ NEW
   },
 ) => {
@@ -875,8 +876,9 @@ const saveCompanyConfig = async (
         email               = $9,
         invoice_terms       = $10,
         auto_pos_einvoicing = COALESCE($11, auto_pos_einvoicing),
+        ecr_integrator_name = $12,
         updated_at          = NOW()
-      WHERE id = $12
+      WHERE id = $13
       RETURNING *;
       `,
       [
@@ -891,6 +893,7 @@ const saveCompanyConfig = async (
         email || null,
         invoice_terms || null,
         auto_pos_einvoicing ?? null,
+        ecr_integrator_name || null,
         id,
       ],
     );
@@ -915,9 +918,10 @@ const saveCompanyConfig = async (
         company_location,
         email,
         invoice_terms,
-        auto_pos_einvoicing
+        auto_pos_einvoicing,
+        ecr_integrator_name
       )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
     RETURNING *;
     `,
     [
@@ -932,6 +936,7 @@ const saveCompanyConfig = async (
       email || null,
       invoice_terms || null,
       auto_pos_einvoicing ?? true, // ✅ default ON
+      ecr_integrator_name || null,
     ],
   );
 

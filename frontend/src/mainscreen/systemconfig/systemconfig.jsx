@@ -19,6 +19,7 @@ const {t} = useTranslation();
 const [popupMessage, setPopupMessage] = useState(null);
 const [invoiceTerms, setInvoiceTerms] = useState("");
 const [autoPosEinvoicing, setAutoPosEinvoicing] = useState(false);
+const [ecrIntegratorName, setEcrIntegratorName] = useState("");
 
 const showPopup = (message) => {
   setPopupMessage(message);
@@ -46,6 +47,7 @@ const fetchCompany = async () => {
       setLocation(data.company_location || "");
       setEmail(data.email || "");
       setInvoiceTerms(data.invoice_terms || "");
+      setEcrIntegratorName(data.ecr_integrator_name || "");
 
       // ✅ ADD THIS
       setAutoPosEinvoicing(
@@ -76,7 +78,8 @@ const payload = {
   company_location: location,
   email,
   invoice_terms: invoiceTerms,
-  auto_pos_einvoicing: autoPosEinvoicing
+  auto_pos_einvoicing: autoPosEinvoicing,
+  ecr_integrator_name: ecrIntegratorName
 };
 
 await api.post(`/api/invoices/company`, payload);
@@ -405,6 +408,20 @@ const isReadOnly = !canEditCompanyConfig;
               disabled={isReadOnly}
               className="w-full border rounded-md p-2 text-gray-700 focus:ring-2 focus:ring-[#2f788a] outline-none"
               placeholder="Enter secret key"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm text-gray-600 mb-1">
+              {t("SystemConfig.fields.ecr_integrator_name")}
+            </label>
+            <input
+              type="text"
+              value={ecrIntegratorName}
+              onChange={(e) => setEcrIntegratorName(e.target.value)}
+              disabled={isReadOnly}
+              className="w-full border rounded-md p-2 text-gray-700 focus:ring-2 focus:ring-[#2f788a] outline-none"
+              placeholder={t("SystemConfig.placeholders.ecr_integrator_name")}
             />
           </div>
 

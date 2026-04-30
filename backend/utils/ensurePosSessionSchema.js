@@ -27,6 +27,8 @@ const applyPosSessionSchema = async (db, schemaName) => {
   const posSessionsTable = tableRef(schemaName, "pos_sessions");
   const invoiceHeaderTable = tableRef(schemaName, "invoice_header");
   const usersTable = tableRef(schemaName, "users");
+  const posPointsTable = tableRef(schemaName, "pos_points");
+  const companyConfigTable = tableRef(schemaName, "company_config");
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS ${posSessionsTable} (
@@ -180,6 +182,31 @@ const applyPosSessionSchema = async (db, schemaName) => {
   await db.query(`
     CREATE INDEX IF NOT EXISTS invoice_header_user_id_idx
     ON ${invoiceHeaderTable} (user_id)
+  `);
+
+  await db.query(`
+    ALTER TABLE IF EXISTS ${posPointsTable}
+    ADD COLUMN IF NOT EXISTS has_ecr BOOLEAN NOT NULL DEFAULT false
+  `);
+
+  await db.query(`
+    ALTER TABLE IF EXISTS ${posPointsTable}
+    ADD COLUMN IF NOT EXISTS ecr_mid CHARACTER VARYING(120)
+  `);
+
+  await db.query(`
+    ALTER TABLE IF EXISTS ${posPointsTable}
+    ADD COLUMN IF NOT EXISTS ecr_tid CHARACTER VARYING(120)
+  `);
+
+  await db.query(`
+    ALTER TABLE IF EXISTS ${posPointsTable}
+    ADD COLUMN IF NOT EXISTS ecr_secure_key CHARACTER VARYING(255)
+  `);
+
+  await db.query(`
+    ALTER TABLE IF EXISTS ${companyConfigTable}
+    ADD COLUMN IF NOT EXISTS ecr_integrator_name CHARACTER VARYING(120)
   `);
 };
 

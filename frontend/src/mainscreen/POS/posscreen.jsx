@@ -11,6 +11,10 @@ import ManualTokenChargeModal from "./ManualTokenChargeModal";
 import { fetchCompanyWithLogo } from "../../utils/companyLogo";
 import { logoutToLogin } from "../../utils/logout";
 
+const ECR_PAYMENT_TIMEOUT_MS = 120000;
+const ECR_MODAL_SUCCESS_CLOSE_MS = 900;
+const ECR_MODAL_FAILURE_CLOSE_MS = 1200;
+
 const decodeTokenPayload = () => {
   try {
     const token = localStorage.getItem("token");
@@ -57,6 +61,16 @@ const formatSessionDateTime = (value) => {
 
 const getApiMessage = (error, fallbackMessage) =>
   error?.response?.data?.message || fallbackMessage;
+
+const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const formatEcrReferenceNote = (payment) => {
+  const parts = [];
+  if (payment?.rrn) parts.push(`RRN ${payment.rrn}`);
+  if (payment?.authCode) parts.push(`Auth ${payment.authCode}`);
+  if (payment?.responseCode) parts.push(`Resp ${payment.responseCode}`);
+  return parts.length > 0 ? `ECR ${parts.join(" | ")}` : "ECR approved";
+};
 
 const formatNumber = (value) =>
   Number(value || 0).toLocaleString(undefined, {
@@ -132,6 +146,9 @@ export default function POSScreen() {
     const [showManualTokenChargeModal, setShowManualTokenChargeModal] = useState(false);
     const [isSubmittingManualTokenCharge, setIsSubmittingManualTokenCharge] = useState(false);
     const [manualTokenChargeFeedback, setManualTokenChargeFeedback] = useState(null);
+    const [paymentError, setPaymentError] = useState("");
+    const [terminalPaymentState, setTerminalPaymentState] = useState(null);
+    const [posFeedback, setPosFeedback] = useState(null);
 
     const [showRecentInvoices, setShowRecentInvoices] = useState(false);
     const [showReceiptPreview, setShowReceiptPreview] = useState(false);
@@ -160,6 +177,7 @@ export default function POSScreen() {
 const companyFetchedRef = useRef(false);
 const currentUser = getCurrentPosUser();
 const paymentSubmitLockRef = useRef(false);
+const ecrPaymentApprovalsRef = useRef(new Map());
 const sessionActionLockRef = useRef(false);
 const manualTokenChargeLockRef = useRef(false);
 const quantityInputRef = useRef(null);
@@ -233,6 +251,9 @@ useEffect(() => {
     setShowManualTokenChargeModal(false);
     setIsSubmittingManualTokenCharge(false);
     setManualTokenChargeFeedback(null);
+    setPaymentError("");
+    setTerminalPaymentState(null);
+    setPosFeedback(null);
     };
 
     const loadActiveSession = async ({ lastSessionId = null } = {}) => {
@@ -480,10 +501,16 @@ useEffect(() => {
 useEffect(() => {
   if (showPayModal) {
     setPaymentRequestKey(crypto.randomUUID());
+    ecrPaymentApprovalsRef.current.clear();
+    setPaymentError("");
+    setTerminalPaymentState(null);
   } else {
     setPaymentRequestKey("");
     setIsProcessingPayment(false);
+    setPaymentError("");
+    setTerminalPaymentState(null);
     paymentSubmitLockRef.current = false;
+    ecrPaymentApprovalsRef.current.clear();
   }
 }, [showPayModal]);
 
@@ -577,7 +604,11 @@ const handleBarcodeScan = (barcode) => {
 
   if (!item) {
     beep("error");
-    alert(t("POS.states.item_not_found", { barcode }));
+    setPosFeedback({
+      type: "error",
+      title: t("POS.feedback.error_title"),
+      message: t("POS.states.item_not_found", { barcode }),
+    });
     return;
   }
 
@@ -748,7 +779,11 @@ const handleInvoiceClick = async (inv) => {
     setQuantityEditError("");
   } catch (err) {
     console.error("Failed to load invoice into POS", err);
-    alert(t("POS.states.load_failed"));
+    setPosFeedback({
+      type: "error",
+      title: t("POS.feedback.error_title"),
+      message: t("POS.states.load_failed"),
+    });
   } finally {
     setLoading(false);
   }
@@ -912,6 +947,84 @@ const totalTokens = cartItems.reduce(
   0,
 );
 
+const processEcrCardPayments = async (payments) => {
+  if (!activeSession?.pos_point_id) {
+    throw new Error(t("POS.payment.no_active_terminal"));
+  }
+
+  const requestKey = paymentRequestKey || crypto.randomUUID();
+  const baseReference = requestKey.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24);
+
+  const processedPayments = [];
+
+  for (const [index, payment] of payments.entries()) {
+    if (payment.payment_method !== "card") {
+      processedPayments.push(payment);
+      continue;
+    }
+
+    const referenceNumber = `POS-${baseReference}-${index + 1}`;
+    const approvalKey = `${referenceNumber}:${Number(payment.amount || 0).toFixed(3)}`;
+    let ecrPayment = ecrPaymentApprovalsRef.current.get(approvalKey);
+
+    if (!ecrPayment) {
+      setTerminalPaymentState({
+        status: "waiting",
+        title: t("POS.payment.terminal_waiting_title"),
+        message: t("POS.payment.terminal_waiting_message"),
+      });
+
+      try {
+        const res = await api.post("/api/ecr-payments/sale", {
+          amount: payment.amount,
+          reference_number: referenceNumber,
+          invoice_number: referenceNumber,
+          session_id: activeSession.id,
+          pos_point_id: activeSession.pos_point_id,
+          tiller_username: currentUser.username || currentUser.userId || "POS",
+          tiller_full_name: currentUser.fullName || currentUser.username || "POS",
+        }, {
+          timeout: ECR_PAYMENT_TIMEOUT_MS,
+        });
+
+        ecrPayment = res.data?.payment || {};
+        ecrPaymentApprovalsRef.current.set(approvalKey, ecrPayment);
+
+        setTerminalPaymentState({
+          status: "success",
+          title: t("POS.payment.terminal_success_title"),
+          message: t("POS.payment.terminal_success_message"),
+        });
+        await wait(ECR_MODAL_SUCCESS_CLOSE_MS);
+        setTerminalPaymentState(null);
+      } catch (error) {
+        const isCancelled = error?.response?.data?.code === "ECR_PAYMENT_CANCELLED";
+        setTerminalPaymentState({
+          status: isCancelled ? "cancelled" : "error",
+          title: isCancelled
+            ? t("POS.payment.terminal_cancelled_title")
+            : t("POS.payment.terminal_failed_title"),
+          message: isCancelled
+            ? t("POS.payment.terminal_cancelled_message")
+            : getApiMessage(error, t("POS.payment.terminal_failed_message")),
+        });
+        await wait(ECR_MODAL_FAILURE_CLOSE_MS);
+        setTerminalPaymentState(null);
+        throw error;
+      }
+    }
+
+    processedPayments.push({
+      ...payment,
+      reference_note: [payment.reference_note, formatEcrReferenceNote(ecrPayment)]
+        .filter(Boolean)
+        .join(" | "),
+    });
+  }
+
+  return processedPayments;
+};
+
 const savePosInvoice = async ({ payments }) => {
   if (!activeSession) {
     throw new Error("No active POS session");
@@ -959,7 +1072,11 @@ const updatePosInvoice = async () => {
   if (!selectedInvoice) return;
 
   if (cartItems.length === 0) {
-    alert(t("POS.states.no_items"));
+    setPosFeedback({
+      type: "error",
+      title: t("POS.feedback.error_title"),
+      message: t("POS.states.no_items"),
+    });
     return;
   }
 
@@ -1002,7 +1119,11 @@ const updatePosInvoice = async () => {
     },
   );
 
-  alert(t("POS.states.save_success"));
+  setPosFeedback({
+    type: "success",
+    title: t("POS.feedback.success_title"),
+    message: t("POS.states.save_success"),
+  });
 };
 
 const beep = (type = "success") => {
@@ -1765,7 +1886,11 @@ const beep = (type = "success") => {
             fetchInvoices({ reset: true }); // refresh recent list
             } catch (err) {
             console.error(err);
-            alert(t("POS.states.save_failed"));
+            setPosFeedback({
+              type: "error",
+              title: t("POS.feedback.error_title"),
+              message: t("POS.states.save_failed"),
+            });
             }
         }}
         >
@@ -1802,19 +1927,23 @@ const beep = (type = "success") => {
     }}
   />
 )}
+<TerminalPaymentModal state={terminalPaymentState} />
 <PayModal
   open={showPayModal}
   onClose={() => setShowPayModal(false)}
   grandTotal={grandTotal}
   submitting={isProcessingPayment}
+  errorMessage={paymentError}
 onConfirm={async ({ payments }) => {
   if (paymentSubmitLockRef.current || isProcessingPayment) return;
 
   paymentSubmitLockRef.current = true;
   setIsProcessingPayment(true);
+  setPaymentError("");
 
   try {
-    const saved = await savePosInvoice({ payments });
+    const paymentsWithEcr = await processEcrCardPayments(payments);
+    const saved = await savePosInvoice({ payments: paymentsWithEcr });
 
     if (!saved?.header?.invoice_number) {
       throw new Error("Invoice number missing");
@@ -1823,7 +1952,7 @@ onConfirm={async ({ payments }) => {
     // ✅ store invoice number
     setLastInvoiceNumber(saved.header.invoice_number);
     setReceiptPreviewOptions({
-      allowCashDrawerWithoutPrint: payments.some(
+      allowCashDrawerWithoutPrint: paymentsWithEcr.some(
         (payment) => payment.payment_method === "cash" && Number(payment.amount || 0) > 0,
       ),
     });
@@ -1845,7 +1974,18 @@ onConfirm={async ({ payments }) => {
   } catch (err) {
     console.error("POS save failed:", err);
     await handleSessionProtectedError(err);
-    alert(getApiMessage(err, t("POS.states.complete_payment_failed")));
+    const hasApprovedEcrPayment = ecrPaymentApprovalsRef.current.size > 0;
+    const isTerminalCancel = err?.response?.data?.code === "ECR_PAYMENT_CANCELLED";
+    setPaymentError(
+      isTerminalCancel
+        ? t("POS.payment.terminal_cancelled_message")
+        : getApiMessage(
+            err,
+            hasApprovedEcrPayment
+              ? t("POS.payment.ecr_invoice_save_failed")
+              : t("POS.states.complete_payment_failed"),
+          ),
+    );
   } finally {
     paymentSubmitLockRef.current = false;
     setIsProcessingPayment(false);
@@ -1871,6 +2011,13 @@ onConfirm={async ({ payments }) => {
   message={manualTokenChargeFeedback?.message}
   tone={manualTokenChargeFeedback?.type}
   onClose={() => setManualTokenChargeFeedback(null)}
+/>
+<ActionFeedbackModal
+  open={Boolean(posFeedback)}
+  title={posFeedback?.title}
+  message={posFeedback?.message}
+  tone={posFeedback?.type}
+  onClose={() => setPosFeedback(null)}
 />
 <ReceiptPreviewModal
   open={showReceiptPreview}
@@ -2213,6 +2360,64 @@ function ActionFeedbackModal({ open, title, message, tone = "success", onClose }
             {t("POS.actions.ok")}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TerminalPaymentModal({ state }) {
+  if (!state) return null;
+
+  const isWaiting = state.status === "waiting";
+  const isSuccess = state.status === "success";
+  const toneClass = isSuccess
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : state.status === "cancelled" || state.status === "error"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : "border-sky-200 bg-sky-50 text-sky-700";
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-base-300 bg-white px-6 py-7 text-center shadow-2xl">
+        <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full border ${toneClass}`}>
+          {isWaiting ? (
+            <span className="loading loading-spinner loading-lg"></span>
+          ) : isSuccess ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="34"
+              height="34"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="34"
+              height="34"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          )}
+        </div>
+
+        <h2 className="mt-5 text-xl font-bold text-gray-900">{state.title}</h2>
+        {state.message && (
+          <p className="mt-2 text-sm leading-6 text-gray-600">{state.message}</p>
+        )}
       </div>
     </div>
   );

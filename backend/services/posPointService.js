@@ -15,6 +15,12 @@ const normalizePosPoint = (row) => ({
   code: row.code,
   is_active: row.is_active,
   description: row.description,
+  has_ecr: row.has_ecr === true,
+  ...(Object.prototype.hasOwnProperty.call(row, "ecr_mid") ? { ecr_mid: row.ecr_mid } : {}),
+  ...(Object.prototype.hasOwnProperty.call(row, "ecr_tid") ? { ecr_tid: row.ecr_tid } : {}),
+  ...(Object.prototype.hasOwnProperty.call(row, "ecr_secure_key")
+    ? { ecr_secure_key: row.ecr_secure_key }
+    : {}),
   created_at: formatTimestampWithoutTimezone(row.created_at),
   updated_at: formatTimestampWithoutTimezone(row.updated_at),
 });
@@ -48,6 +54,37 @@ const normalizeOptionalText = (value) => {
   return normalized ? normalized : null;
 };
 
+const normalizeEcrCredentials = ({ hasEcr, ecrMid, ecrTid, ecrSecureKey }) => {
+  const enabled = Boolean(hasEcr);
+  const normalizedMid = normalizeOptionalText(ecrMid);
+  const normalizedTid = normalizeOptionalText(ecrTid);
+  const normalizedSecureKey = normalizeOptionalText(ecrSecureKey);
+
+  if (!enabled) {
+    return {
+      hasEcr: false,
+      ecrMid: null,
+      ecrTid: null,
+      ecrSecureKey: null,
+    };
+  }
+
+  if (!normalizedMid || !normalizedTid || !normalizedSecureKey) {
+    throw createPosPointError(
+      "Merchant ID, Terminal ID, and Secure Key are required when ECR is enabled",
+      400,
+      "POS_POINT_ECR_CONFIG_REQUIRED",
+    );
+  }
+
+  return {
+    hasEcr: true,
+    ecrMid: normalizedMid,
+    ecrTid: normalizedTid,
+    ecrSecureKey: normalizedSecureKey,
+  };
+};
+
 const getPosPointById = async (db, id) => {
   const result = await db.query(
     `
@@ -57,6 +94,10 @@ const getPosPointById = async (db, id) => {
         code,
         is_active,
         description,
+        has_ecr,
+        ecr_mid,
+        ecr_tid,
+        ecr_secure_key,
         created_at,
         updated_at
       FROM pos_points
@@ -94,6 +135,7 @@ const listPosPoints = async (db, { activeOnly = false } = {}) => {
         code,
         is_active,
         description,
+        has_ecr,
         created_at,
         updated_at
       FROM pos_points
@@ -115,6 +157,7 @@ const getPosPointMonitoringList = async (db) => {
         pp.code,
         pp.is_active,
         pp.description,
+        pp.has_ecr,
         pp.created_at,
         pp.updated_at,
         COALESCE(hist.session_count, 0)::int AS session_count,
@@ -152,26 +195,57 @@ const getPosPointMonitoringList = async (db) => {
   return result.rows.map(normalizeMonitoringRow);
 };
 
-const createPosPoint = async (db, { name, description, isActive, code }) => {
+const createPosPoint = async (
+  db,
+  { name, description, isActive, code, hasEcr, ecrMid, ecrTid, ecrSecureKey },
+) => {
   const normalizedName = validateName(name);
   const normalizedDescription = normalizeOptionalText(description);
   const normalizedCode = normalizeOptionalText(code);
+  const ecrConfig = normalizeEcrCredentials({
+    hasEcr,
+    ecrMid,
+    ecrTid,
+    ecrSecureKey,
+  });
 
   try {
     const result = await db.query(
       `
-        INSERT INTO pos_points (name, code, is_active, description)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO pos_points (
+          name,
+          code,
+          is_active,
+          description,
+          has_ecr,
+          ecr_mid,
+          ecr_tid,
+          ecr_secure_key
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING
           id,
           name,
           code,
           is_active,
           description,
+          has_ecr,
+          ecr_mid,
+          ecr_tid,
+          ecr_secure_key,
           created_at,
           updated_at
       `,
-      [normalizedName, normalizedCode, isActive !== false, normalizedDescription],
+      [
+        normalizedName,
+        normalizedCode,
+        isActive !== false,
+        normalizedDescription,
+        ecrConfig.hasEcr,
+        ecrConfig.ecrMid,
+        ecrConfig.ecrTid,
+        ecrConfig.ecrSecureKey,
+      ],
     );
 
     return normalizePosPoint(result.rows[0]);
@@ -188,7 +262,11 @@ const createPosPoint = async (db, { name, description, isActive, code }) => {
   }
 };
 
-const updatePosPoint = async (db, id, { name, description, isActive, code }) => {
+const updatePosPoint = async (
+  db,
+  id,
+  { name, description, isActive, code, hasEcr, ecrMid, ecrTid, ecrSecureKey },
+) => {
   const current = await assertPosPointExists(db, id);
   const nextIsActive = isActive == null ? current.is_active : Boolean(isActive);
 
@@ -218,6 +296,20 @@ const updatePosPoint = async (db, id, { name, description, isActive, code }) => 
   const normalizedDescription =
     description == null ? current.description : normalizeOptionalText(description);
   const normalizedCode = code == null ? current.code : normalizeOptionalText(code);
+  const nextHasEcr = hasEcr == null ? current.has_ecr : Boolean(hasEcr);
+  const ecrConfig = nextHasEcr
+    ? normalizeEcrCredentials({
+        hasEcr: true,
+        ecrMid: ecrMid == null ? current.ecr_mid : ecrMid,
+        ecrTid: ecrTid == null ? current.ecr_tid : ecrTid,
+        ecrSecureKey: ecrSecureKey == null ? current.ecr_secure_key : ecrSecureKey,
+      })
+    : {
+        hasEcr: false,
+        ecrMid: current.ecr_mid || null,
+        ecrTid: current.ecr_tid || null,
+        ecrSecureKey: current.ecr_secure_key || null,
+      };
 
   try {
     const result = await db.query(
@@ -228,18 +320,36 @@ const updatePosPoint = async (db, id, { name, description, isActive, code }) => 
           code = $2,
           is_active = $3,
           description = $4,
+          has_ecr = $5,
+          ecr_mid = $6,
+          ecr_tid = $7,
+          ecr_secure_key = $8,
           updated_at = NOW()
-        WHERE id = $5
+        WHERE id = $9
         RETURNING
           id,
           name,
           code,
           is_active,
           description,
+          has_ecr,
+          ecr_mid,
+          ecr_tid,
+          ecr_secure_key,
           created_at,
           updated_at
       `,
-      [normalizedName, normalizedCode, nextIsActive, normalizedDescription, id],
+      [
+        normalizedName,
+        normalizedCode,
+        nextIsActive,
+        normalizedDescription,
+        ecrConfig.hasEcr,
+        ecrConfig.ecrMid,
+        ecrConfig.ecrTid,
+        ecrConfig.ecrSecureKey,
+        id,
+      ],
     );
 
     return normalizePosPoint(result.rows[0]);

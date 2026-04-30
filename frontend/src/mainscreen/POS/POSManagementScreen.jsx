@@ -93,6 +93,10 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [hasEcr, setHasEcr] = useState(false);
+  const [ecrMid, setEcrMid] = useState("");
+  const [ecrTid, setEcrTid] = useState("");
+  const [ecrSecureKey, setEcrSecureKey] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -101,6 +105,10 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
     setName(initialData?.name || "");
     setDescription(initialData?.description || "");
     setIsActive(initialData?.is_active ?? true);
+    setHasEcr(initialData?.has_ecr === true);
+    setEcrMid(initialData?.ecr_mid || "");
+    setEcrTid(initialData?.ecr_tid || "");
+    setEcrSecureKey(initialData?.ecr_secure_key || "");
     setError("");
   }, [initialData, open]);
 
@@ -114,17 +122,30 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
       return;
     }
 
+    if (hasEcr && (!ecrMid.trim() || !ecrTid.trim() || !ecrSecureKey.trim())) {
+      setError(t("POSMonitor.messages.ecr_config_required"));
+      return;
+    }
+
     setError("");
-    await onSubmit({
-      name: name.trim(),
-      description: description.trim(),
-      is_active: isActive,
-    });
+    try {
+      await onSubmit({
+        name: name.trim(),
+        description: description.trim(),
+        is_active: isActive,
+        has_ecr: hasEcr,
+        ecr_mid: hasEcr ? ecrMid.trim() : "",
+        ecr_tid: hasEcr ? ecrTid.trim() : "",
+        ecr_secure_key: hasEcr ? ecrSecureKey.trim() : "",
+      });
+    } catch (err) {
+      setError(getApiMessage(err, t("POSMonitor.messages.save_failed")));
+    }
   };
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
-      <div className="w-full max-w-lg rounded-3xl border border-base-300 bg-white shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-base-300 bg-white shadow-2xl">
         <div className="border-b border-base-300 px-6 py-5">
           <h2 className="text-xl font-semibold text-gray-900">
             {initialData ? t("POSMonitor.actions.edit_pos") : t("POSMonitor.actions.create_pos")}
@@ -185,6 +206,71 @@ function POSPointModal({ open, onClose, onSubmit, submitting, initialData, canEd
               disabled={submitting || !canEdit}
             />
           </label>
+
+          <label className="flex items-center justify-between rounded-2xl border border-base-300 bg-base-100 px-4 py-3">
+            <div>
+              <div className="text-sm font-medium text-gray-800">
+                {t("POSMonitor.fields.has_ecr")}
+              </div>
+              <div className="text-xs text-gray-500">
+                {t("POSMonitor.modal.ecr_status_hint")}
+              </div>
+            </div>
+
+            <input
+              type="checkbox"
+              className="toggle toggle-info"
+              checked={hasEcr}
+              onChange={(event) => setHasEcr(event.target.checked)}
+              disabled={submitting || !canEdit}
+            />
+          </label>
+
+          {hasEcr && (
+            <div className="grid gap-4 rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("POSMonitor.fields.ecr_mid")}
+                </label>
+                <input
+                  type="text"
+                  value={ecrMid}
+                  onChange={(event) => setEcrMid(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
+                  placeholder={t("POSMonitor.placeholders.ecr_mid")}
+                  disabled={submitting || !canEdit}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("POSMonitor.fields.ecr_tid")}
+                </label>
+                <input
+                  type="text"
+                  value={ecrTid}
+                  onChange={(event) => setEcrTid(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
+                  placeholder={t("POSMonitor.placeholders.ecr_tid")}
+                  disabled={submitting || !canEdit}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  {t("POSMonitor.fields.ecr_secure_key")}
+                </label>
+                <input
+                  type="password"
+                  value={ecrSecureKey}
+                  onChange={(event) => setEcrSecureKey(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
+                  placeholder={t("POSMonitor.placeholders.ecr_secure_key")}
+                  disabled={submitting || !canEdit}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -816,9 +902,16 @@ export default function POSManagementScreen() {
     setModalOpen(true);
   };
 
-  const handleOpenEdit = (posPoint) => {
+  const handleOpenEdit = async (posPoint) => {
     setEditingPoint(posPoint);
     setModalOpen(true);
+
+    try {
+      const res = await api.get(`/api/pos-points/${posPoint.id}`);
+      setEditingPoint(res.data?.pos_point || posPoint);
+    } catch (err) {
+      setError(getApiMessage(err, t("POSMonitor.messages.load_pos_failed")));
+    }
   };
 
   const handleSubmitPosPoint = async (payload) => {
@@ -835,7 +928,7 @@ export default function POSManagementScreen() {
       setEditingPoint(null);
       await loadMonitoring();
     } catch (err) {
-      alert(getApiMessage(err, t("POSMonitor.messages.save_failed")));
+      throw err;
     } finally {
       setSubmitting(false);
     }
@@ -854,7 +947,7 @@ export default function POSManagementScreen() {
     try {
       await loadSessionsForPosPoint(posPointId);
     } catch (err) {
-      alert(getApiMessage(err, t("POSMonitor.messages.load_history_failed")));
+      setError(getApiMessage(err, t("POSMonitor.messages.load_history_failed")));
     } finally {
       setHistoryLoadingFor(null);
     }
@@ -872,7 +965,7 @@ export default function POSManagementScreen() {
       setCompany(companyRes.data || null);
       setPendingPrint(true);
     } catch (err) {
-      alert(getApiMessage(err, t("POSMonitor.messages.load_print_summary_failed")));
+      setError(getApiMessage(err, t("POSMonitor.messages.load_print_summary_failed")));
       setPrintingSessionId(null);
     }
   };
@@ -891,7 +984,7 @@ export default function POSManagementScreen() {
         await loadSessionsForPosPoint(forceCloseTarget.posPointId);
       }
     } catch (err) {
-      alert(getApiMessage(err, t("POSMonitor.messages.force_close_failed")));
+      setError(getApiMessage(err, t("POSMonitor.messages.force_close_failed")));
     } finally {
       setForceClosing(false);
     }
@@ -918,7 +1011,7 @@ export default function POSManagementScreen() {
       setCompany(companyRes.data || null);
       setPendingPrint(true);
     } catch (err) {
-      alert(getApiMessage(err, t("POSMonitor.messages.load_aggregate_summary_failed")));
+      setError(getApiMessage(err, t("POSMonitor.messages.load_aggregate_summary_failed")));
     } finally {
       setPrintingAggregate(false);
     }
@@ -992,7 +1085,14 @@ export default function POSManagementScreen() {
                         </h2>
                       </div>
 
-                      <StatusBadge active={posPoint.is_active} />
+                      <div className="flex flex-col items-end gap-2">
+                        <StatusBadge active={posPoint.is_active} />
+                        {posPoint.has_ecr && (
+                          <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                            {t("POSMonitor.badges.ecr_connected")}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">

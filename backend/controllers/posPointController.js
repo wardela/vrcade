@@ -40,6 +40,30 @@ const listPosPoints = async (req, res) => {
   }
 };
 
+const getPosPoint = async (req, res) => {
+  const posPointId = parsePosPointId(req.params.id);
+  if (!posPointId) {
+    return res.status(400).json({
+      code: "POS_POINT_INVALID_ID",
+      message: "Invalid POS station id",
+    });
+  }
+
+  try {
+    const posPoint = await posPointService.getPosPointById(req.db, posPointId);
+    if (!posPoint) {
+      return res.status(404).json({
+        code: "POS_POINT_NOT_FOUND",
+        message: "POS station not found",
+      });
+    }
+
+    return res.status(200).json({ pos_point: posPoint });
+  } catch (error) {
+    return handleError(res, error, "Failed to load POS station");
+  }
+};
+
 const getMonitoringList = async (req, res) => {
   try {
     const posPoints = await posPointService.getPosPointMonitoringList(req.db);
@@ -56,6 +80,10 @@ const createPosPoint = async (req, res) => {
       description: req.body?.description,
       isActive: req.body?.is_active,
       code: req.body?.code,
+      hasEcr: req.body?.has_ecr,
+      ecrMid: req.body?.ecr_mid,
+      ecrTid: req.body?.ecr_tid,
+      ecrSecureKey: req.body?.ecr_secure_key,
     });
 
     return res.status(201).json({ pos_point: posPoint });
@@ -79,6 +107,10 @@ const updatePosPoint = async (req, res) => {
       description: req.body?.description,
       isActive: req.body?.is_active,
       code: req.body?.code,
+      hasEcr: req.body?.has_ecr,
+      ecrMid: req.body?.ecr_mid,
+      ecrTid: req.body?.ecr_tid,
+      ecrSecureKey: req.body?.ecr_secure_key,
     });
 
     return res.status(200).json({ pos_point: posPoint });
@@ -106,6 +138,7 @@ const getPosPointSessions = async (req, res) => {
 
 module.exports = {
   createPosPoint,
+  getPosPoint,
   getMonitoringList,
   getPosPointSessions,
   listPosPoints,
