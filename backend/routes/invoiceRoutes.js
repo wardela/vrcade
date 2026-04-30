@@ -130,6 +130,8 @@ router.get("/reports/sales/by-client", invoiceController.getSalesByClientReport)
 router.get("/reports/sales/by-area", invoiceController.getSalesByAreaReport);
 router.get("/reports/sales/by-client-detailed", invoiceController.getSalesByClientDetailedReport);
 router.get("/reports/sales/items-by-client-totals", invoiceController.getItemsSoldForClientTotals);
+router.get("/reports/payment-types/totals", invoiceController.getPaymentTypeTotalsReport);
+router.get("/reports/payment-types/detailed", invoiceController.getPaymentTypeDetailedReport);
 router.get("/reports/einvoicing", invoiceController.getEinvoicingReport);
 router.get("/reports/einvoicing/tax-declaration", invoiceController.getTaxDeclarationReport);
 router.get("/reports/einvoicing/invoice-tax-summary", invoiceController.getInvoiceTaxSummaryReport);

@@ -3,6 +3,7 @@ import SalesReports from "./SalesReports";
 import RefundReports from "./RefundReports";
 import EInvoicingReports from "./EInvoicingReports";
 import StorageItemReports from "./StorageItemReports";
+import PaymentTypeReports from "./PaymentTypeReports";
 import { useTranslation } from "react-i18next";
 export default function ReportsScreen() {
   const [tab, setTab] = useState("sales");
@@ -20,6 +21,7 @@ export default function ReportsScreen() {
       <div className="flex gap-1 border-b bg-white px-6">
         <TabButton label={t("ReportsScreen.tabs.sales")} value="sales" tab={tab} setTab={setTab} />
         <TabButton label={t("ReportsScreen.tabs.refunds")} value="refunds" tab={tab} setTab={setTab} />
+        <TabButton label={t("ReportsScreen.tabs.payment_types")} value="payment_types" tab={tab} setTab={setTab} />
         <TabButton label={t("ReportsScreen.tabs.tax")} value="einvoicing" tab={tab} setTab={setTab} />
         <TabButton label={t("ReportsScreen.tabs.storage")} value="storage" tab={tab} setTab={setTab} />
       </div>
@@ -28,6 +30,7 @@ export default function ReportsScreen() {
       <div className="p-2 flex-1 min-h-0">
         {tab === "sales" && <SalesReports />}
         {tab === "refunds" && <RefundReports />}
+        {tab === "payment_types" && <PaymentTypeReports />}
         {tab === "einvoicing" && <EInvoicingReports />}
         {tab === "storage" && <StorageItemReports />}
       </div>

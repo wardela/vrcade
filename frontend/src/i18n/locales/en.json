@@ -1195,6 +1195,7 @@
     "tabs": {
       "sales": "Sales",
       "refunds": "Refunds",
+      "payment_types": "Payment Types",
       "tax": "Tax",
       "storage": "Storage & Items"
     }
@@ -1258,6 +1259,54 @@
     "total_sales": "Total Sales"
   }
 },
+
+  "PaymentTypeReports": {
+    "filters": {
+      "report": "Report",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply"
+    },
+
+    "report_types": {
+      "totals": "Payment Type Totals",
+      "detailed": "Payment Type Detailed"
+    },
+
+    "payment_methods": {
+      "cash": "Cash",
+      "card": "Card",
+      "transfer": "Bank Transfer"
+    },
+
+    "actions": {
+      "print": "Print",
+      "previous": "Previous",
+      "next": "Next"
+    },
+
+    "table": {
+      "payment_method": "Payment Method",
+      "amount": "Amount",
+      "invoice": "Invoice #",
+      "cash": "Cash",
+      "card": "Card",
+      "bank_transfer": "Bank Transfer",
+      "total": "Total",
+      "totals": "Totals",
+      "overall_total": "Overall Total"
+    },
+
+    "states": {
+      "loading": "Loading...",
+      "empty": "No records found"
+    },
+
+    "summary": {
+      "showing": "Showing ",
+      "overall_total": "Overall Total"
+    }
+  },
 
 
   "RefundReports": {

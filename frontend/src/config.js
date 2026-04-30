@@ -1,6 +1,6 @@
 // src/config.js
 // Shared API host helpers used by both the frontend runtime and Vite dev proxy.
-const DEFAULT_SERVER_IP = "localhost:3004";
+const DEFAULT_SERVER_IP = "localhost:3002";
 
 export const normalizeApiUrl = (value) =>
   String(value || "").trim().replace(/\/+$/, "");
