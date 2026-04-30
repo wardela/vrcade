@@ -7,6 +7,7 @@ router.get("/monitoring", posPointController.getMonitoringList);
 router.get("/", posPointController.listPosPoints);
 router.post("/", posPointController.createPosPoint);
 router.put("/:id", posPointController.updatePosPoint);
+router.get("/:id", posPointController.getPosPoint);
 router.get("/:id/sessions", posPointController.getPosPointSessions);
 
 module.exports = router;

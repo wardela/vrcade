@@ -85,6 +85,7 @@ export default function PayModal({
   grandTotal,
   onConfirm,
   submitting = false,
+  errorMessage = "",
 }) {
   const { t } = useTranslation();
   const PAYMENT_METHODS = [
@@ -360,6 +361,12 @@ export default function PayModal({
           {validationMessage && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               {validationMessage}
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMessage}
             </div>
           )}
         </div>

@@ -103,6 +103,7 @@ const normalizeSession = (row) => {
           code: row.pos_point_code,
           is_active: row.pos_point_is_active,
           description: row.pos_point_description,
+          has_ecr: row.pos_point_has_ecr === true,
         };
 
   const user = {
@@ -121,6 +122,7 @@ const normalizeSession = (row) => {
     pos_point_id: row.pos_point_id,
     pos_point_name: row.pos_point_name,
     pos_point_code: row.pos_point_code,
+    pos_point_has_ecr: row.pos_point_has_ecr === true,
     pos_point: posPoint,
     started_at: formatTimestampWithoutTimezone(row.started_at),
     ended_at: formatTimestampWithoutTimezone(row.ended_at),
@@ -145,6 +147,7 @@ const getPosPointById = async (db, posPointId, { forUpdate = false } = {}) => {
         code,
         is_active,
         description,
+        has_ecr,
         created_at,
         updated_at
       FROM pos_points
@@ -168,7 +171,8 @@ const getSessionQuery = (forUpdate) => `
     pp.name AS pos_point_name,
     pp.code AS pos_point_code,
     pp.is_active AS pos_point_is_active,
-    pp.description AS pos_point_description
+    pp.description AS pos_point_description,
+    pp.has_ecr AS pos_point_has_ecr
   FROM pos_sessions ps
   JOIN users u
     ON u.id = ps.user_id

@@ -36,6 +36,7 @@ const posSessionRoutes = require("./routes/posSessionRoutes");
 const posPointRoutes = require("./routes/posPointRoutes");
 const userRoutes = require("./routes/userRoutes");
 const sessionRoutes = require("./routes/userRoutes");
+const ecrPaymentRoutes = require("./routes/ecrPaymentRoutes");
 
 // =============================
 // TENANT ROUTES
@@ -44,6 +45,7 @@ app.use("/api/invoices", auth, tenantDb, invoiceRoutes);
 app.use("/api/events", auth, tenantDb, eventRoutes);
 app.use("/api/pos-sessions", auth, tenantDb, posSessionRoutes);
 app.use("/api/pos-points", auth, tenantDb, posPointRoutes);
+app.use("/api/ecr-payments", auth, tenantDb, ecrPaymentRoutes);
 app.use("/api/users", userRoutes);
 
 // =============================
