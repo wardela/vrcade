@@ -2172,7 +2172,7 @@
       "subtitle": "Configure the POS station details and availability.",
       "station_status_hint": "Disable the station if it should be hidden from POS users.",
       "ecr_status_hint": "Connect this POS station to its own Visa terminal.",
-      "summary_timeframe_hint": "Choose the time frame to print an aggregated POS summary across all terminals."
+      "summary_timeframe_hint": "Choose the time frame and optional POS station filter to print an aggregated POS summary."
     },
     "fields": {
       "name": "Name",
@@ -2310,6 +2310,11 @@
       "tax_number": "Tax Number",
       "session_info": "Session Information",
       "financial_summary": "Financial Summary",
+      "pos_station_filter": "POS Station Filter",
+      "sessions_list": "Sessions",
+      "pos_breakdown_title": "POS-by-POS Breakdown",
+      "no_matching_sessions": "No overlapping POS sessions were found for the selected filters.",
+      "pos_station_fallback": "POS #{{id}}",
       "no_sold_items": "No sold items were recorded in this session.",
       "item_fallback": "Item #{{id}}",
       "powered_by": "Powered by"

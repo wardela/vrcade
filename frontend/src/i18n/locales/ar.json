@@ -2172,7 +2172,7 @@
     "modal": {
       "subtitle": "إعداد تفاصيل نقطة البيع وحالة توفرها.",
       "station_status_hint": "قم بتعطيل النقطة إذا أردت إخفاءها عن مستخدمي نقطة البيع.",
-      "summary_timeframe_hint": "اختر الفترة الزمنية لطباعة ملخص مجمع لجميع نقاط البيع."
+      "summary_timeframe_hint": "اختر الفترة الزمنية وفلتر نقطة البيع الاختياري لطباعة ملخص مجمع."
     },
     "fields": {
       "name": "الاسم",
@@ -2300,6 +2300,11 @@
       "tax_number": "الرقم الضريبي",
       "session_info": "معلومات الجلسة",
       "financial_summary": "الملخص المالي",
+      "pos_station_filter": "فلتر نقطة البيع",
+      "sessions_list": "الجلسات",
+      "pos_breakdown_title": "تفصيل حسب نقطة البيع",
+      "no_matching_sessions": "لم يتم العثور على جلسات نقطة بيع متداخلة مع الفلاتر المحددة.",
+      "pos_station_fallback": "نقطة البيع #{{id}}",
       "no_sold_items": "لا توجد أصناف مباعة ضمن هذه الجلسة.",
       "item_fallback": "الصنف #{{id}}",
       "powered_by": "مشغّل بواسطة"

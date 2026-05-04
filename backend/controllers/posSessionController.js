@@ -9,6 +9,19 @@ const parseSessionId = (value) => {
   return parsed;
 };
 
+const parseOptionalId = (value) => {
+  if (value == null || value === "") {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return parsed;
+};
+
 const handleError = (res, error, fallbackMessage) => {
   if (error?.statusCode) {
     return res.status(error.statusCode).json({
@@ -169,11 +182,20 @@ const forceCloseSession = async (req, res) => {
 };
 
 const getAggregateSummary = async (req, res) => {
+  const posPointId = parseOptionalId(req.query?.pos_point_id);
+  if (posPointId === undefined) {
+    return res.status(400).json({
+      code: "POS_POINT_INVALID_ID",
+      message: "Invalid POS station id",
+    });
+  }
+
   try {
     await posSessionService.assertUserHasPosPermission(req.db, req.user.user_id, "view");
     const summary = await posSessionService.getAggregateSessionSummary(req.db, {
       from: req.query?.from,
       to: req.query?.to,
+      posPointId,
     });
 
     return res.status(200).json(summary);
