@@ -51,12 +51,35 @@ const hasManualTokenChargeTable = async (db) => {
   return result.rows[0]?.supported === true;
 };
 
-const attachManualTokenChargeSupport = async (db, session) => {
+const hasPosSessionPosPointSupport = async (db) => {
+  const result = await db.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'pos_sessions'
+          AND column_name = 'pos_point_id'
+      ) AS supported
+    `,
+  );
+
+  return result.rows[0]?.supported === true;
+};
+
+const attachManualTokenChargeSupport = async (
+  db,
+  session,
+  manualTokenChargesEnabled = null,
+) => {
   if (!session) return session;
 
   return {
     ...session,
-    manual_token_charges_enabled: await hasManualTokenChargeTable(db),
+    manual_token_charges_enabled:
+      manualTokenChargesEnabled == null
+        ? await hasManualTokenChargeTable(db)
+        : manualTokenChargesEnabled,
   };
 };
 
@@ -89,6 +112,13 @@ const getSessionDuration = (startedAt, endedAt) => {
     duration_minutes: durationMinutes,
     duration_label: `${hours}h ${minutes}m`,
   };
+};
+
+const formatDurationLabelFromMinutes = (value) => {
+  const durationMinutes = Math.max(0, Math.floor(toNumber(value)));
+  const hours = Math.floor(durationMinutes / 60);
+  const minutes = durationMinutes % 60;
+  return `${hours}h ${minutes}m`;
 };
 
 const normalizeSession = (row) => {
@@ -316,14 +346,6 @@ const assertUserHasPosPermission = async (db, userId, permission = "view") => {
   }
 };
 
-const getSummaryDuration = (startedAt, endedAt) => {
-  const duration = getSessionDuration(startedAt, endedAt);
-  return {
-    duration_minutes: duration.duration_minutes,
-    duration_label: duration.duration_label,
-  };
-};
-
 const getSessionPaymentStats = async (db, sessionId) => {
   const result = await db.query(
     `
@@ -368,8 +390,17 @@ const getSessionInvoiceStats = async (db, sessionId) => {
   };
 };
 
-const getSessionManualTokenStats = async (db, sessionId) => {
-  if (!(await hasManualTokenChargeTable(db))) {
+const getSessionManualTokenStats = async (
+  db,
+  sessionId,
+  { manualTokenChargesEnabled = null } = {},
+) => {
+  const supported =
+    manualTokenChargesEnabled == null
+      ? await hasManualTokenChargeTable(db)
+      : manualTokenChargesEnabled;
+
+  if (!supported) {
     return ZERO_MANUAL_TOKEN_STATS;
   }
 
@@ -464,152 +495,87 @@ const getSessionInvoices = async (db, sessionId) => {
   }));
 };
 
-const getRangeInvoiceStats = async (db, { from, to }) => {
-  const result = await db.query(
-    `
-      SELECT
-        COUNT(*)::int AS invoice_count,
-        COALESCE(SUM(total), 0) AS total_sales_amount
-      FROM invoice_header ih
-      JOIN pos_sessions ps
-        ON ps.id = ih.session_id
-      WHERE ps.started_at <= $2
-        AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
-    `,
-    [from, to],
-  );
+const getOverlappingSessions = async (
+  db,
+  { from, to, posPointId = null, posPointName = null },
+) => {
+  const posPointSupport = await hasPosSessionPosPointSupport(db);
+  const params = [from, to];
+  let posPointClause = "";
 
-  return {
-    invoice_count: Number(result.rows[0]?.invoice_count || 0),
-    total_sales_amount: toNumber(result.rows[0]?.total_sales_amount),
-  };
-};
+  if (posPointSupport) {
+    if (posPointId != null) {
+      params.push(posPointId);
+      const idParamIndex = params.length;
 
-const getRangeManualTokenStats = async (db, { from, to }) => {
-  if (!(await hasManualTokenChargeTable(db))) {
-    return ZERO_MANUAL_TOKEN_STATS;
+      if (posPointName) {
+        params.push(posPointName);
+        posPointClause = `
+          AND (
+            ps.pos_point_id = $${idParamIndex}
+            OR LOWER(COALESCE(NULLIF(pp.name, ''), NULLIF(ps.pos, ''))) = LOWER($${params.length})
+          )
+        `;
+      } else {
+        posPointClause = `AND ps.pos_point_id = $${idParamIndex}`;
+      }
+    }
+
+    const result = await db.query(
+      `
+        ${getSessionQuery(false)}
+        WHERE ps.started_at <= $2
+          AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
+          ${posPointClause}
+        ORDER BY
+          COALESCE(pp.name, ps.pos) ASC,
+          ps.started_at ASC,
+          ps.id ASC
+      `,
+      params,
+    );
+
+    return result.rows.map(normalizeSession);
+  }
+
+  if (posPointId != null && posPointName) {
+    params.push(posPointName);
+    posPointClause = `
+      AND LOWER(COALESCE(NULLIF(BTRIM(ps.pos), ''), 'POS-1')) = LOWER($${params.length})
+    `;
   }
 
   const result = await db.query(
     `
       SELECT
-        COUNT(*)::int AS charge_count,
-        COALESCE(SUM(pmct.token_amount), 0) AS total_tokens
-      FROM pos_manual_token_charges pmct
-      JOIN pos_sessions ps
-        ON ps.id = pmct.session_id
+        ps.*,
+        u.username,
+        u.full_name,
+        closed_by_user.username AS closed_by_username,
+        closed_by_user.full_name AS closed_by_full_name,
+        NULL::integer AS pos_point_id,
+        COALESCE(NULLIF(BTRIM(ps.pos), ''), 'POS-1') AS pos_point_name,
+        NULL::text AS pos_point_code,
+        NULL::boolean AS pos_point_is_active,
+        NULL::text AS pos_point_description,
+        NULL::boolean AS pos_point_has_ecr
+      FROM pos_sessions ps
+      JOIN users u
+        ON u.id = ps.user_id
+      LEFT JOIN users closed_by_user
+        ON closed_by_user.id = ps.closed_by_user_id
       WHERE ps.started_at <= $2
         AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
+        ${posPointClause}
+      ORDER BY
+        COALESCE(NULLIF(BTRIM(ps.pos), ''), 'POS-1') ASC,
+        ps.started_at ASC,
+        ps.id ASC
     `,
-    [from, to],
+    params,
   );
 
-  return {
-    charge_count: Number(result.rows[0]?.charge_count || 0),
-    total_tokens: toNumber(result.rows[0]?.total_tokens),
-  };
-};
-
-const getRangePaymentStats = async (db, { from, to }) => {
-  const result = await db.query(
-    `
-      SELECT
-        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.amount ELSE 0 END), 0) AS total_cash,
-        COALESCE(SUM(CASE WHEN ip.payment_method = 'card' THEN ip.amount ELSE 0 END), 0) AS total_card,
-        COALESCE(SUM(CASE WHEN ip.payment_method = 'transfer' THEN ip.amount ELSE 0 END), 0) AS total_transfer,
-        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.amount_paid ELSE 0 END), 0) AS total_cash_received,
-        COALESCE(SUM(CASE WHEN ip.payment_method = 'cash' THEN ip.change_amount ELSE 0 END), 0) AS total_change_given
-      FROM invoice_payments ip
-      JOIN pos_sessions ps
-        ON ps.id = ip.session_id
-      WHERE ps.started_at <= $2
-        AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
-    `,
-    [from, to],
-  );
-
-  const row = result.rows[0] || {};
-
-  return {
-    cash: toNumber(row.total_cash),
-    card: toNumber(row.total_card),
-    transfer: toNumber(row.total_transfer),
-    total_cash_received: toNumber(row.total_cash_received),
-    total_change_given: toNumber(row.total_change_given),
-  };
-};
-
-const getRangeSoldItemsBreakdown = async (db, { from, to }) => {
-  const result = await db.query(
-    `
-      SELECT
-        il.item_id,
-        COALESCE(
-          NULLIF(MAX(i.name), ''),
-          NULLIF(MAX(il.description), ''),
-          CONCAT('Item #', il.item_id::text)
-        ) AS item_name,
-        COALESCE(SUM(il.qty), 0) AS quantity_sold,
-        COALESCE(SUM(il.total), 0) AS total_amount,
-        CASE
-          WHEN COALESCE(BOOL_OR(COALESCE(i.has_tokens, false)), false)
-            THEN COALESCE(MAX(i.token_count), 0)
-          ELSE 0
-        END AS tokens_per_item,
-        COALESCE(
-          SUM(
-            il.qty * CASE
-              WHEN COALESCE(i.has_tokens, false) THEN COALESCE(i.token_count, 0)
-              ELSE 0
-            END
-          ),
-          0
-        ) AS total_tokens,
-        MAX(ih.date) AS last_sold_at
-      FROM invoice_header ih
-      JOIN pos_sessions ps
-        ON ps.id = ih.session_id
-      JOIN invoice_lines il
-        ON il.invoice_number = ih.invoice_number
-      LEFT JOIN items i
-        ON i.id = il.item_id
-      WHERE ps.started_at <= $2
-        AND COALESCE(ps.ended_at, timezone('Asia/Amman', NOW())) >= $1
-        AND il.item_id IS NOT NULL
-      GROUP BY il.item_id
-      ORDER BY quantity_sold DESC, last_sold_at DESC, item_name ASC
-    `,
-    [from, to],
-  );
-
-  return result.rows.map((row) => ({
-    item_id: row.item_id,
-    item_name: row.item_name,
-    quantity_sold: toNumber(row.quantity_sold),
-    total_amount: toNumber(row.total_amount),
-    tokens_per_item: toNumber(row.tokens_per_item),
-    total_tokens: toNumber(row.total_tokens),
-    last_sold_at: formatTimestampWithoutTimezone(row.last_sold_at),
-  }));
-};
-
-const getRangeSessionMeta = async (db, { from, to }) => {
-  const result = await db.query(
-    `
-      SELECT
-        COUNT(*)::int AS session_count,
-        COUNT(DISTINCT pos_point_id)::int AS pos_point_count
-      FROM pos_sessions
-      WHERE started_at <= $2
-        AND COALESCE(ended_at, timezone('Asia/Amman', NOW())) >= $1
-    `,
-    [from, to],
-  );
-
-  return {
-    session_count: Number(result.rows[0]?.session_count || 0),
-    pos_point_count: Number(result.rows[0]?.pos_point_count || 0),
-  };
+  return result.rows.map(normalizeSession);
 };
 
 const validateSummaryRange = ({ from, to }) => {
@@ -641,29 +607,32 @@ const validateSummaryRange = ({ from, to }) => {
   };
 };
 
-const getSessionSummary = async (
+const buildSessionSummary = async (
   db,
-  sessionId,
-  { userId = null, requireOwner = true, includeInvoices = true } = {},
+  rawSession,
+  {
+    includeInvoices = true,
+    manualTokenChargesEnabled = null,
+  } = {},
 ) => {
-  const rawSession = requireOwner
-    ? await getOwnedSessionById(db, sessionId, userId)
-    : await getSessionById(db, sessionId);
-
-  if (!rawSession) {
-    throw createPosSessionError("POS session not found", 404, "POS_SESSION_NOT_FOUND");
-  }
-
-  const session = await attachManualTokenChargeSupport(db, rawSession);
+  const session = await attachManualTokenChargeSupport(
+    db,
+    rawSession,
+    manualTokenChargesEnabled,
+  );
+  const sessionId = session.id;
 
   const [invoiceStats, paymentStats, soldItemsBreakdown, manualTokenStats, invoices] =
     await Promise.all([
       getSessionInvoiceStats(db, sessionId),
       getSessionPaymentStats(db, sessionId),
       getSessionSoldItemsBreakdown(db, sessionId),
-      getSessionManualTokenStats(db, sessionId),
+      getSessionManualTokenStats(db, sessionId, {
+        manualTokenChargesEnabled: session.manual_token_charges_enabled,
+      }),
       includeInvoices ? getSessionInvoices(db, sessionId) : Promise.resolve([]),
     ]);
+
   const totalTokensSold = soldItemsBreakdown.reduce(
     (sum, item) => sum + toNumber(item.total_tokens),
     0,
@@ -708,70 +677,293 @@ const getSessionSummary = async (
   };
 };
 
-const getAggregateSessionSummary = async (db, { from, to }) => {
-  const range = validateSummaryRange({ from, to });
-  const manualTokenChargesEnabled = await hasManualTokenChargeTable(db);
-  const [sessionMeta, invoiceStats, paymentStats, soldItemsBreakdown, manualTokenStats] =
-    await Promise.all([
-      getRangeSessionMeta(db, range),
-      getRangeInvoiceStats(db, range),
-      getRangePaymentStats(db, range),
-      getRangeSoldItemsBreakdown(db, range),
-      getRangeManualTokenStats(db, range),
-    ]);
+const getAggregateItemKey = (item) =>
+  item?.item_id != null ? `id:${item.item_id}` : `name:${item?.item_name || ""}`;
 
-  const totalTokensSold = soldItemsBreakdown.reduce(
-    (sum, item) => sum + toNumber(item.total_tokens),
+const mergeSoldItemsBreakdown = (sessionSummaries) => {
+  const soldItemsMap = new Map();
+
+  for (const sessionSummary of sessionSummaries) {
+    for (const item of sessionSummary.sold_items_breakdown || []) {
+      const key = getAggregateItemKey(item);
+      const existing = soldItemsMap.get(key);
+
+      if (!existing) {
+        soldItemsMap.set(key, {
+          item_id: item.item_id ?? null,
+          item_name: item.item_name || null,
+          quantity_sold: toNumber(item.quantity_sold),
+          total_amount: toNumber(item.total_amount),
+          total_tokens: toNumber(item.total_tokens),
+          last_sold_at: item.last_sold_at || null,
+        });
+        continue;
+      }
+
+      existing.item_name = existing.item_name || item.item_name || null;
+      existing.quantity_sold += toNumber(item.quantity_sold);
+      existing.total_amount += toNumber(item.total_amount);
+      existing.total_tokens += toNumber(item.total_tokens);
+
+      if (item.last_sold_at && (!existing.last_sold_at || item.last_sold_at > existing.last_sold_at)) {
+        existing.last_sold_at = item.last_sold_at;
+      }
+    }
+  }
+
+  return Array.from(soldItemsMap.values())
+    .map((item) => ({
+      ...item,
+      tokens_per_item:
+        item.quantity_sold > 0
+          ? Number((item.total_tokens / item.quantity_sold).toFixed(3))
+          : 0,
+    }))
+    .sort((a, b) => {
+      if (b.quantity_sold !== a.quantity_sold) {
+        return b.quantity_sold - a.quantity_sold;
+      }
+
+      const aTime = a.last_sold_at ? new Date(a.last_sold_at).getTime() : 0;
+      const bTime = b.last_sold_at ? new Date(b.last_sold_at).getTime() : 0;
+      if (bTime !== aTime) {
+        return bTime - aTime;
+      }
+
+      return String(a.item_name || "").localeCompare(String(b.item_name || ""));
+    });
+};
+
+const getSessionGroupKey = (sessionSummary) =>
+  sessionSummary.pos_point_id != null
+    ? `pos:${sessionSummary.pos_point_id}`
+    : `name:${sessionSummary.pos_point_name || sessionSummary.pos || "unassigned"}`;
+
+const buildCombinedSessionSummary = ({
+  sessionSummaries,
+  summaryKind,
+  timeframeStart,
+  timeframeEnd,
+  filterPosPoint = null,
+  filterPosLabel,
+  manualTokenChargesEnabled,
+}) => {
+  const soldItemsBreakdown = mergeSoldItemsBreakdown(sessionSummaries);
+  const invoiceCount = sessionSummaries.reduce(
+    (sum, session) => sum + Number(session.invoice_count || 0),
     0,
   );
-  const manualTokensCharged = manualTokenStats.total_tokens;
-  const totalTokensCharged = totalTokensSold + manualTokensCharged;
-  const duration = getSummaryDuration(range.from, range.to);
+  const totalSales = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.total_sales_amount),
+    0,
+  );
+  const totalTokensSold = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.total_tokens_sold),
+    0,
+  );
+  const manualTokensCharged = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.manual_tokens_charged),
+    0,
+  );
+  const totalTokensCharged = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.total_tokens_charged),
+    0,
+  );
+  const durationMinutes = sessionSummaries.reduce(
+    (sum, session) => sum + Number(session.duration_minutes || 0),
+    0,
+  );
+  const totalCash = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.total_cash),
+    0,
+  );
+  const totalCard = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.total_card),
+    0,
+  );
+  const totalBankTransfer = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.total_bank_transfer),
+    0,
+  );
+  const totalCashReceived = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.total_cash_received),
+    0,
+  );
+  const totalChangeGiven = sessionSummaries.reduce(
+    (sum, session) => sum + toNumber(session.total_change_given),
+    0,
+  );
+  const sessionIds = sessionSummaries.map((session) => session.id).filter(Number.isInteger);
+  const posPointCount = new Set(sessionSummaries.map(getSessionGroupKey)).size;
+  const posPointId = filterPosPoint?.id ?? null;
+  const posPointName = filterPosLabel || filterPosPoint?.name || "All POS Stations";
 
   return {
     id: null,
-    summary_kind: "aggregate",
+    summary_kind: summaryKind,
     manual_token_charges_enabled: manualTokenChargesEnabled,
-    timeframe_start: range.from,
-    timeframe_end: range.to,
-    started_at: range.from,
-    ended_at: range.to,
+    timeframe_start: timeframeStart,
+    timeframe_end: timeframeEnd,
+    started_at: timeframeStart,
+    ended_at: timeframeEnd,
     status: ENDED_STATUS,
     employee_full_name: null,
-    invoice_count: invoiceStats.invoice_count,
-    total_sales: invoiceStats.total_sales_amount,
-    total_sales_amount: invoiceStats.total_sales_amount,
+    invoice_count: invoiceCount,
+    total_sales: totalSales,
+    total_sales_amount: totalSales,
     total_tokens_sold: totalTokensSold,
     manual_tokens_charged: manualTokensCharged,
     total_tokens_charged: totalTokensCharged,
-    duration_minutes: duration.duration_minutes,
-    duration_label: duration.duration_label,
-    session_count: sessionMeta.session_count,
-    pos_point_count: sessionMeta.pos_point_count,
-    pos: "All POS Stations",
-    pos_point_name: "All POS Stations",
+    duration_minutes: durationMinutes,
+    duration_label: formatDurationLabelFromMinutes(durationMinutes),
+    session_count: sessionSummaries.length,
+    session_ids: sessionIds,
+    pos_point_count: posPointCount,
+    pos: posPointName,
+    pos_point_id: posPointId,
+    pos_point_name: posPointName,
+    pos_station_filter: posPointName,
     sold_items_breakdown: soldItemsBreakdown,
     payment_totals: {
-      cash: paymentStats.cash,
-      card: paymentStats.card,
-      transfer: paymentStats.transfer,
-      bank_transfer: paymentStats.transfer,
+      cash: totalCash,
+      card: totalCard,
+      transfer: totalBankTransfer,
+      bank_transfer: totalBankTransfer,
     },
-    total_cash: paymentStats.cash,
-    total_card: paymentStats.card,
-    total_bank_transfer: paymentStats.transfer,
-    total_cash_received: paymentStats.total_cash_received,
-    total_change_given: paymentStats.total_change_given,
+    total_cash: totalCash,
+    total_card: totalCard,
+    total_bank_transfer: totalBankTransfer,
+    total_cash_received: totalCashReceived,
+    total_change_given: totalChangeGiven,
     totals: {
-      sales: invoiceStats.total_sales_amount,
+      sales: totalSales,
       tokens_sold: totalTokensSold,
       manual_tokens_charged: manualTokensCharged,
       total_tokens_charged: totalTokensCharged,
-      cash: paymentStats.cash,
-      card: paymentStats.card,
-      bank_transfer: paymentStats.transfer,
+      cash: totalCash,
+      card: totalCard,
+      bank_transfer: totalBankTransfer,
     },
     invoices: [],
+  };
+};
+
+const getSessionSummary = async (
+  db,
+  sessionId,
+  { userId = null, requireOwner = true, includeInvoices = true } = {},
+) => {
+  const rawSession = requireOwner
+    ? await getOwnedSessionById(db, sessionId, userId)
+    : await getSessionById(db, sessionId);
+
+  if (!rawSession) {
+    throw createPosSessionError("POS session not found", 404, "POS_SESSION_NOT_FOUND");
+  }
+
+  return buildSessionSummary(db, rawSession, { includeInvoices });
+};
+
+const getAggregateSessionSummary = async (db, { from, to, posPointId = null }) => {
+  const range = validateSummaryRange({ from, to });
+  const normalizedPosPointId =
+    posPointId == null || posPointId === "" ? null : Number.parseInt(posPointId, 10);
+
+  if (normalizedPosPointId != null && (!Number.isInteger(normalizedPosPointId) || normalizedPosPointId <= 0)) {
+    throw createPosSessionError(
+      "Invalid POS station id",
+      400,
+      "POS_POINT_INVALID_ID",
+    );
+  }
+
+  const [manualTokenChargesEnabled, filteredPosPoint] = await Promise.all([
+    hasManualTokenChargeTable(db),
+    normalizedPosPointId == null ? Promise.resolve(null) : getPosPointById(db, normalizedPosPointId),
+  ]);
+
+  if (normalizedPosPointId != null && !filteredPosPoint) {
+    throw createPosSessionError("POS station not found", 404, "POS_POINT_NOT_FOUND");
+  }
+
+  const overlappingSessions = await getOverlappingSessions(db, {
+    ...range,
+    posPointId: normalizedPosPointId,
+    posPointName: filteredPosPoint?.name || null,
+  });
+
+  const sessionSummaries = await Promise.all(
+    overlappingSessions.map((session) =>
+      buildSessionSummary(db, session, {
+        includeInvoices: false,
+        manualTokenChargesEnabled,
+      }),
+    ),
+  );
+
+  const groupedSessions = new Map();
+  for (const sessionSummary of sessionSummaries) {
+    const key = getSessionGroupKey(sessionSummary);
+    const existing = groupedSessions.get(key);
+
+    if (existing) {
+      existing.sessions.push(sessionSummary);
+      continue;
+    }
+
+    groupedSessions.set(key, {
+      pos_point_id: sessionSummary.pos_point_id ?? null,
+      pos_point_name:
+        sessionSummary.pos_point_name || sessionSummary.pos || "Unassigned POS",
+      sessions: [sessionSummary],
+    });
+  }
+
+  const posSummaries = Array.from(groupedSessions.values())
+    .map((group) =>
+      buildCombinedSessionSummary({
+        sessionSummaries: group.sessions,
+        summaryKind: "aggregate-pos",
+        timeframeStart: range.from,
+        timeframeEnd: range.to,
+        filterPosPoint: {
+          id: group.pos_point_id,
+          name: group.pos_point_name,
+        },
+        filterPosLabel: group.pos_point_name,
+        manualTokenChargesEnabled,
+      }),
+    )
+    .sort((a, b) => {
+      const nameCompare = String(a.pos_point_name || "").localeCompare(
+        String(b.pos_point_name || ""),
+      );
+      if (nameCompare !== 0) {
+        return nameCompare;
+      }
+
+      return toNumber(a.pos_point_id) - toNumber(b.pos_point_id);
+    });
+
+  const filterLabel = filteredPosPoint?.name || "All POS Stations";
+  const summary = buildCombinedSessionSummary({
+    sessionSummaries,
+    summaryKind: "aggregate",
+    timeframeStart: range.from,
+    timeframeEnd: range.to,
+    filterPosPoint: filteredPosPoint
+      ? {
+          id: filteredPosPoint.id,
+          name: filteredPosPoint.name,
+        }
+      : null,
+    filterPosLabel: filterLabel,
+    manualTokenChargesEnabled,
+  });
+
+  return {
+    ...summary,
+    pos_summaries: posSummaries,
   };
 };
 

@@ -301,16 +301,19 @@ function SummaryTimeFrameModal({
   onSubmit,
   submitting,
   initialRange,
+  posPoints,
 }) {
   const { t } = useTranslation();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [posPointId, setPosPointId] = useState("");
 
   useEffect(() => {
     if (!open) return;
 
     setFrom(initialRange?.from || "");
     setTo(initialRange?.to || "");
+    setPosPointId(initialRange?.posPointId || "");
   }, [initialRange, open]);
 
   if (!open) return null;
@@ -342,6 +345,7 @@ function SummaryTimeFrameModal({
     onSubmit({
       from,
       to,
+      posPointId,
     });
   };
 
@@ -412,6 +416,25 @@ function SummaryTimeFrameModal({
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              {t("POSMonitor.labels.pos_station")}
+            </label>
+            <select
+              value={posPointId}
+              onChange={(event) => setPosPointId(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:border-[#2f788a] focus:outline-none focus:ring-2 focus:ring-[#2f788a]/20"
+              disabled={submitting}
+            >
+              <option value="">{t("POSMonitor.labels.all_pos_stations")}</option>
+              {posPoints.map((posPoint) => (
+                <option key={posPoint.id} value={String(posPoint.id)}>
+                  {posPoint.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
@@ -846,6 +869,7 @@ export default function POSManagementScreen() {
     return {
       from: toDateTimeLocalValue(getStartOfDay(now)),
       to: toDateTimeLocalValue(getEndOfDay(now)),
+      posPointId: "",
     };
   });
   const printRef = useRef(null);
@@ -853,8 +877,16 @@ export default function POSManagementScreen() {
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
     pageStyle: `
-      @page { size: A4; margin: 6mm; }
-      body { -webkit-print-color-adjust: exact; }
+      @page { size: A4 portrait; margin: 0; }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
     `,
   });
 
@@ -990,16 +1022,17 @@ export default function POSManagementScreen() {
     }
   };
 
-  const handlePrintAggregateSummary = async ({ from, to }) => {
+  const handlePrintAggregateSummary = async ({ from, to, posPointId }) => {
     setPrintingAggregate(true);
 
     try {
-      const normalizedRange = { from, to };
+      const normalizedRange = { from, to, posPointId: posPointId || "" };
       const [summaryRes, companyRes] = await Promise.all([
         api.get("/api/pos-sessions/aggregate-summary", {
           params: {
             from: toSqlDateTimeValue(from),
             to: toSqlDateTimeValue(to),
+            ...(posPointId ? { pos_point_id: posPointId } : {}),
           },
         }),
         company ? Promise.resolve({ data: company }) : api.get("/api/invoices/company"),
@@ -1297,6 +1330,7 @@ export default function POSManagementScreen() {
         onSubmit={handlePrintAggregateSummary}
         submitting={printingAggregate}
         initialRange={summaryRange}
+        posPoints={posPoints}
       />
 
       <ForceCloseSessionModal
