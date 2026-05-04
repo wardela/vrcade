@@ -947,7 +947,11 @@ const totalTokens = cartItems.reduce(
   0,
 );
 
-const processEcrCardPayments = async (payments) => {
+const processEcrCardPayments = async (payments, { sendCardToEcr = true } = {}) => {
+  if (!sendCardToEcr) {
+    return payments;
+  }
+
   if (!activeSession?.pos_point_id) {
     throw new Error(t("POS.payment.no_active_terminal"));
   }
@@ -1934,7 +1938,7 @@ const beep = (type = "success") => {
   grandTotal={grandTotal}
   submitting={isProcessingPayment}
   errorMessage={paymentError}
-onConfirm={async ({ payments }) => {
+onConfirm={async ({ payments, sendCardToEcr }) => {
   if (paymentSubmitLockRef.current || isProcessingPayment) return;
 
   paymentSubmitLockRef.current = true;
@@ -1942,7 +1946,7 @@ onConfirm={async ({ payments }) => {
   setPaymentError("");
 
   try {
-    const paymentsWithEcr = await processEcrCardPayments(payments);
+    const paymentsWithEcr = await processEcrCardPayments(payments, { sendCardToEcr });
     const saved = await savePosInvoice({ payments: paymentsWithEcr });
 
     if (!saved?.header?.invoice_number) {

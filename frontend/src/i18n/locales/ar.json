@@ -2518,7 +2518,8 @@
     },
 
     "fields": {
-      "amount": "المبلغ"
+      "amount": "المبلغ",
+      "send_to_visa_machine": "إرسال إلى جهاز الفيزا"
     },
 
     "validation": {

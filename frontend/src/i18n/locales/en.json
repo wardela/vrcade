@@ -2546,7 +2546,8 @@
     },
 
     "fields": {
-      "amount": "Amount"
+      "amount": "Amount",
+      "send_to_visa_machine": "Send to Visa machine"
     },
 
     "validation": {
