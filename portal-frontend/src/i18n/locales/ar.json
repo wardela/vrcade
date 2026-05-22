@@ -2189,16 +2189,24 @@
     "modal": {
       "subtitle": "إعداد تفاصيل نقطة البيع وحالة توفرها.",
       "station_status_hint": "قم بتعطيل النقطة إذا أردت إخفاءها عن مستخدمي نقطة البيع.",
+      "ecr_status_hint": "اربط نقطة البيع هذه بجهاز فيزا خاص بها.",
       "summary_timeframe_hint": "اختر الفترة الزمنية وفلتر نقطة البيع الاختياري لطباعة ملخص مجمع."
     },
     "fields": {
       "name": "الاسم",
       "description": "الوصف",
-      "station_status": "حالة النقطة"
+      "station_status": "حالة النقطة",
+      "has_ecr": "ربط جهاز فيزا",
+      "ecr_mid": "رقم التاجر",
+      "ecr_tid": "رقم الجهاز",
+      "ecr_secure_key": "المفتاح الآمن"
     },
     "placeholders": {
       "pos_name": "اسم نقطة البيع",
-      "description": "وصف مختصر للنقطة"
+      "description": "وصف مختصر للنقطة",
+      "ecr_mid": "أدخل رقم التاجر",
+      "ecr_tid": "أدخل رقم الجهاز",
+      "ecr_secure_key": "أدخل المفتاح الآمن"
     },
     "actions": {
       "edit_pos": "تعديل نقطة البيع",
@@ -2226,12 +2234,14 @@
     "messages": {
       "pos_name_required": "اسم نقطة البيع مطلوب",
       "load_session_details_failed": "فشل تحميل تفاصيل الجلسة",
+      "load_pos_failed": "فشل تحميل نقطة البيع",
       "load_monitoring_failed": "فشل تحميل مراقبة نقاط البيع",
       "save_failed": "فشل حفظ نقطة البيع",
       "load_history_failed": "فشل تحميل سجل الجلسات",
       "load_print_summary_failed": "فشل تحميل ملخص الجلسة للطباعة",
       "load_aggregate_summary_failed": "فشل تحميل الملخص المجمع للطباعة",
       "force_close_failed": "فشل إغلاق الجلسة إجباريًا",
+      "ecr_config_required": "رقم التاجر ورقم الجهاز والمفتاح الآمن مطلوبة عند ربط جهاز فيزا.",
       "force_close_confirm": "أنت على وشك إغلاق الجلسة #{{id}} إجباريًا."
     },
     "labels": {
@@ -2260,7 +2270,8 @@
       "ended_session": "جلسة منتهية",
       "active": "نشطة",
       "ended": "منتهية",
-      "inactive": "غير نشطة"
+      "inactive": "غير نشطة",
+      "ecr_connected": "جهاز فيزا"
     },
     "summary": {
       "overview": "نظرة عامة",
@@ -2307,6 +2318,7 @@
       "total_sessions_recorded": "إجمالي الجلسات المسجلة",
       "loading": "جاري التحميل...",
       "loading_sessions": "جاري تحميل الجلسات...",
+      "no_pos_stations": "لا توجد نقاط بيع",
       "no_sessions": "لا توجد جلسات",
       "unknown_user": "مستخدم غير معروف"
     },
@@ -2623,5 +2635,419 @@
       "printing": "جاري الإرسال...",
       "close": "إغلاق"
     }
+  },
+  "portalBrand": {
+    "portal_name": "بوابة فوترتك"
+  },
+  "portalAuth": {
+    "login": {
+      "title": "بوابة الإدارة",
+      "subtitle": "أدر الفواتير والمبيعات ورؤى الأعمال من أي مكان.",
+      "trust_line": "الفوترة الإلكترونية • نقاط البيع • التحليلات • بوابة المالك",
+      "fields": {
+        "company_code": "رمز الشركة",
+        "username": "اسم المستخدم",
+        "password": "كلمة المرور"
+      }
+    },
+    "actions": {
+      "sign_in": "تسجيل الدخول",
+      "sign_up_cta": "لست مالكًا بعد؟ أنشئ حساب الشركة",
+      "show_password": "إظهار كلمة المرور",
+      "hide_password": "إخفاء كلمة المرور"
+    },
+    "states": {
+      "signing_in": "جارٍ تسجيل الدخول...",
+      "restoring_session": "جارٍ استعادة جلسة البوابة..."
+    },
+    "errors": {
+      "sign_in_failed": "تعذر تسجيل الدخول.",
+      "session_expired": "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى."
+    }
+  },
+  "portalShell": {
+    "modules": {
+      "dashboard": "لوحة التحكم",
+      "statistics": "الإحصائيات",
+      "monitoring": "مراقبة نقاط البيع",
+      "create_invoice": "إنشاء فاتورة",
+      "invoices": "الفواتير",
+      "reports": "التقارير"
+    },
+    "actions": {
+      "open_menu": "فتح القائمة",
+      "close_menu": "إغلاق القائمة",
+      "log_out": "تسجيل الخروج",
+      "cancel": "إلغاء",
+      "refresh_module": "تحديث {{module}}"
+    },
+    "logout": {
+      "title": "تسجيل الخروج",
+      "message": "هل أنت متأكد أنك تريد تسجيل الخروج؟"
+    },
+    "language": {
+      "label": "اللغة",
+      "english": "English",
+      "arabic": "العربية"
+    },
+    "signed_in": "تم تسجيل الدخول",
+    "fallback_user": "مستخدم البوابة",
+    "coming_soon": "وحدة {{module}} قيد التجهيز"
+  },
+  "portalCommon": {
+    "currency_code": "د.أ",
+    "actions": {
+      "show_earlier": "عرض {{label}} الأقدم",
+      "show_later": "عرض {{label}} الأحدث",
+      "search": "بحث",
+      "reset": "إعادة ضبط",
+      "view": "عرض",
+      "load_more": "تحميل المزيد",
+      "print": "طباعة",
+      "save": "حفظ",
+      "save_and_share": "حفظ ومشاركة",
+      "save_and_print": "حفظ وطباعة",
+      "apply": "تطبيق",
+      "choose": "اختيار",
+      "select": "تحديد",
+      "cancel": "إلغاء",
+      "close": "إغلاق",
+      "done": "تم",
+      "no": "لا"
+    },
+    "states": {
+      "loading": "جارٍ التحميل...",
+      "saving": "جارٍ الحفظ...",
+      "preparing_print": "جارٍ تجهيز الطباعة..."
+    },
+    "fields": {
+      "date": "التاريخ",
+      "from_date": "من تاريخ",
+      "to_date": "إلى تاريخ",
+      "reference": "المرجع",
+      "notes": "ملاحظات",
+      "currency": "العملة",
+      "invoice_type": "نوع الفاتورة",
+      "client_phone": "هاتف العميل",
+      "quantity": "الكمية"
+    },
+    "table": {
+      "invoice": "الفاتورة",
+      "client": "العميل",
+      "total": "الإجمالي"
+    },
+    "totals": {
+      "total_before_tax": "الإجمالي قبل الضريبة",
+      "total_tax": "إجمالي الضريبة",
+      "grand_total": "الإجمالي النهائي"
+    },
+    "payment_methods": {
+      "cash": "نقدي",
+      "credit": "ذمم",
+      "card": "بطاقة",
+      "bank_transfer": "حوالة بنكية"
+    },
+    "invoice_types": {
+      "local": "محلي",
+      "export": "تصدير",
+      "development": "منطقة تنموية"
+    },
+    "client_details": {
+      "tax_number": "الرقم الضريبي",
+      "national_id": "الرقم الوطني",
+      "personal_number": "الرقم الشخصي"
+    },
+    "empty": {
+      "value": "—",
+      "walk_in_client": "عميل نقدي",
+      "unknown": "غير معروف"
+    }
+  },
+  "portalDashboard": {
+    "errors": {
+      "load_failed": "حدث خطأ أثناء تحميل لوحة التحكم."
+    },
+    "kpis": {
+      "invoice_count": "عدد الفواتير",
+      "average_invoice_value": "متوسط قيمة الفاتورة",
+      "total_sales_for_day": "إجمالي مبيعات اليوم المحدد",
+      "month_to_date_sales": "مبيعات الشهر حتى التاريخ المحدد"
+    },
+    "charts": {
+      "today_sales_by_hour": "مبيعات اليوم حسب الساعة",
+      "week_sales_by_day": "مبيعات الأسبوع حسب اليوم",
+      "year_sales_by_month": "مبيعات السنة حسب الشهر",
+      "payment_types": "طرق الدفع"
+    },
+    "sections": {
+      "active_pos": "نقاط البيع النشطة",
+      "recent_invoices": "أحدث الفواتير"
+    },
+    "metrics": {
+      "sales": "المبيعات",
+      "invoices": "الفواتير"
+    },
+    "empty": {
+      "no_pos_activity": "لا توجد حركة نقاط بيع لهذا التاريخ.",
+      "no_recent_invoices": "لا توجد فواتير لهذا التاريخ."
+    },
+    "status": {
+      "active": "نشطة",
+      "inactive": "غير نشطة",
+      "ended": "منتهية"
+    }
+  },
+  "portalStatistics": {
+    "title": "تحليلات الأعمال",
+    "errors": {
+      "load_failed": "حدث خطأ أثناء تحميل الإحصائيات."
+    },
+    "actions": {
+      "show_less": "عرض أقل",
+      "show_last_ten": "عرض آخر 10"
+    },
+    "tokens_label": "توكنز",
+    "series": {
+      "sales": "المبيعات",
+      "tokens": "التوكنز"
+    },
+    "kpis": {
+      "total_sales": "إجمالي المبيعات",
+      "total_refunds": "إجمالي المرتجعات",
+      "net_profit": "صافي الربح",
+      "invoices": "الفواتير"
+    },
+    "sections": {
+      "overview": {
+        "eyebrow": "نظرة عامة",
+        "title": "ملخص أداء الأعمال"
+      },
+      "sales": {
+        "eyebrow": "المبيعات",
+        "title": "أداء المبيعات"
+      },
+      "pos_analytics": {
+        "eyebrow": "تحليلات نقاط البيع",
+        "title": "أداء الأجهزة والكاشير"
+      },
+      "inventory": {
+        "eyebrow": "المخزون",
+        "title": "الأصناف الأعلى مبيعًا"
+      },
+      "clients": {
+        "eyebrow": "العملاء",
+        "title": "مساهمة العملاء"
+      }
+    },
+    "cards": {
+      "monthly_net": {
+        "title": "الصافي الشهري"
+      },
+      "average_invoice": {
+        "title": "متوسط الفاتورة",
+        "subtitle": "حسب الشهر"
+      },
+      "recent_invoices": {
+        "title": "أحدث الفواتير",
+        "subtitle": "آخر النشاطات ضمن الفترة"
+      },
+      "sales_total_amount": {
+        "title": "إجمالي قيمة المبيعات"
+      },
+      "sales_count": {
+        "title": "عدد المبيعات",
+        "subtitle": "الفواتير حسب الشهر"
+      },
+      "sales_by_type": {
+        "title": "المبيعات حسب النوع",
+        "subtitle": "توزيع حسب المنطقة"
+      },
+      "refund_totals": {
+        "title": "إجمالي المرتجعات"
+      },
+      "sales_vs_tokens": {
+        "title": "المبيعات مقابل التوكنز",
+        "subtitle": "مقارنة شهرية لنقاط البيع"
+      },
+      "pos_performance": {
+        "title": "أداء نقاط البيع",
+        "subtitle": "حصة المبيعات حسب النقطة"
+      },
+      "top_pos_users": {
+        "title": "أفضل مستخدمي نقاط البيع",
+        "subtitle": "أعلى المبيعات ضمن الفترة"
+      },
+      "top_pos_users_by_month": {
+        "title": "أفضل مستخدمي نقاط البيع شهريًا",
+        "subtitle": "قادة الأداء شهريًا"
+      },
+      "top_sold_items_by_month": {
+        "title": "الأصناف الأعلى مبيعًا شهريًا",
+        "subtitle": "أفضل 3 أصناف كل شهر"
+      },
+      "top_spending_clients": {
+        "title": "أعلى العملاء إنفاقًا",
+        "subtitle": "أعلى إيراد ضمن الفترة"
+      },
+      "client_spending_by_month": {
+        "title": "إنفاق العملاء حسب الشهر",
+        "subtitle": "أفضل 3 شهريًا"
+      },
+      "top_clients_by_sales_count": {
+        "title": "أعلى العملاء بعدد الفواتير",
+        "subtitle": "أكبر عدد فواتير"
+      },
+      "sales_count_by_month": {
+        "title": "عدد المبيعات حسب الشهر",
+        "subtitle": "أفضل 3 شهريًا"
+      }
+    },
+    "empty": {
+      "no_recent_invoices": "لا توجد فواتير حديثة ضمن هذه الفترة.",
+      "no_pos_sales": "لا توجد مبيعات لنقاط البيع ضمن هذه الفترة.",
+      "no_pos_user_sales": "لا توجد مبيعات لمستخدمي نقاط البيع ضمن هذه الفترة.",
+      "no_client_spending": "لا يوجد إنفاق للعملاء ضمن هذه الفترة.",
+      "no_client_sales_count": "لا يوجد عدد مبيعات للعملاء ضمن هذه الفترة."
+    }
+  },
+  "portalInvoices": {
+    "title": "أحدث الفواتير",
+    "no_access": "ليس لديك صلاحية لعرض الفواتير.",
+    "list_label": "قائمة الفواتير",
+    "issued_by": "تم الإصدار بواسطة",
+    "empty": "لا توجد فواتير مطابقة للفلاتر المحددة.",
+    "summary_card_label": "ملخص الفاتورة",
+    "line_total": "إجمالي السطر",
+    "not_found": "الفاتورة غير موجودة.",
+    "placeholders": {
+      "search": "رقم الفاتورة أو العميل أو التاريخ"
+    },
+    "summary": {
+      "matching_invoices": "{{count}} فاتورة مطابقة",
+      "recent_invoices": "{{count}} فاتورة حديثة"
+    },
+    "errors": {
+      "load_failed": "حدث خطأ أثناء تحميل الفواتير.",
+      "detail_load_failed": "حدث خطأ أثناء تحميل الفاتورة."
+    }
+  },
+  "portalCreateInvoice": {
+    "title": "إنشاء فاتورة",
+    "invoice_number": "رقم الفاتورة",
+    "no_access": "ليس لديك صلاحية لإنشاء الفواتير.",
+    "actions": {
+      "add_item": "إضافة صنف",
+      "add_to_invoice": "إضافة إلى الفاتورة"
+    },
+    "messages": {
+      "saved": "تم حفظ الفاتورة {{invoiceNumber}} بنجاح.",
+      "already_shared": "تمت مشاركة الفاتورة {{invoiceNumber}} مسبقًا.",
+      "shared": "تمت مشاركة الفاتورة {{invoiceNumber}} بنجاح.",
+      "share_failed": "تم حفظ الفاتورة {{invoiceNumber}} لكن تعذرت المشاركة.",
+      "share_failed_with_reason": "تم حفظ الفاتورة {{invoiceNumber}} لكن تعذرت المشاركة: {{reason}}",
+      "saved_and_ready_to_print": "تم حفظ الفاتورة {{invoiceNumber}} وتجهيزها للطباعة.",
+      "print_prep_failed": "تم حفظ الفاتورة {{invoiceNumber}} لكن تعذر تجهيز الطباعة.",
+      "print_prep_failed_with_reason": "تم حفظ الفاتورة {{invoiceNumber}} لكن تعذر تجهيز الطباعة: {{reason}}"
+    },
+    "errors": {
+      "load_failed": "حدث خطأ أثناء تحميل شاشة إنشاء الفاتورة.",
+      "save_failed": "حدث خطأ أثناء حفظ الفاتورة.",
+      "client_required_for_credit": "فواتير الذمم تتطلب اختيار عميل.",
+      "exempt_requires_client_detail": "الأصناف المعفاة تتطلب أن يكون نوع بيانات العميل رقمًا ضريبيًا مع قيمة مدخلة.",
+      "add_item_before_save": "أضف صنفًا واحدًا على الأقل قبل الحفظ.",
+      "invalid_items": "يوجد صنف واحد أو أكثر غير صالح داخل الفاتورة.",
+      "missing_storage": "يوجد صنف مخزّن بدون مستودع محدد."
+    },
+    "header": {
+      "title": "بيانات الرأس",
+      "select_client": "اختيار عميل",
+      "invoice_date": "تاريخ الفاتورة",
+      "payment_type": "طريقة الدفع",
+      "advanced_data": "بيانات إضافية",
+      "notes_placeholder": "ملاحظات الفاتورة"
+    },
+    "advanced": {
+      "title": "بيانات إضافية",
+      "subtitle": "هذه الحقول تطابق بيانات رأس الفاتورة غير الأساسية المستخدمة في مسار الفاتورة الرئيسي.",
+      "client_detail_type": "نوع بيانات العميل",
+      "client_detail_value": "رقم العميل / الرقم الضريبي",
+      "client_detail_placeholder": "أدخل قيمة بيانات العميل",
+      "reference_placeholder": "مرجع اختياري",
+      "create_due_balance": "إنشاء ذمة مستحقة",
+      "create_due_balance_hint": "يطابق خيار إنشاء الذمة لفواتير الذمم في شاشة الفاتورة الرئيسية."
+    },
+    "items": {
+      "eyebrow": "الأصناف",
+      "title": "سلة الفاتورة",
+      "empty": "لا توجد أصناف",
+      "unnamed_item": "صنف بدون اسم",
+      "quantity_short": "كمية",
+      "remove_item": "إزالة {{item}}"
+    },
+    "client_picker": {
+      "title": "اختيار عميل",
+      "subtitle": "ابحث باسم العميل أو رقمه أو هاتفه أو قيمة بياناته.",
+      "search_placeholder": "بحث عن عميل",
+      "loading_title": "جارٍ تحميل العملاء",
+      "loading_copy": "جارٍ جلب أحدث قائمة عملاء لهذه الشركة.",
+      "empty_title": "لا يوجد عملاء",
+      "empty_copy": "جرّب اسمًا مختلفًا أو رقم عميل أو رقم هاتف.",
+      "client_label": "العميل #{{id}}",
+      "no_phone": "لا يوجد هاتف مسجل",
+      "detail_label": "البيان",
+      "errors": {
+        "load_failed": "حدث خطأ أثناء تحميل العملاء."
+      }
+    },
+    "item_browser": {
+      "title": "إضافة صنف",
+      "search_placeholder": "بحث عن صنف",
+      "all_categories": "جميع الفئات",
+      "favorites": "المفضلة",
+      "favorite_badge": "مفضل",
+      "loading_title": "جارٍ تحميل الأصناف",
+      "empty_title": "لا توجد أصناف",
+      "errors": {
+        "load_failed": "حدث خطأ أثناء تحميل الأصناف."
+      }
+    },
+    "quantity": {
+      "title": "اختيار الكمية",
+      "subtitle": "سيتم إضافة {{item}} إلى سلة الفاتورة بعد تأكيد الكمية.",
+      "errors": {
+        "invalid": "يجب أن تكون الكمية أكبر من صفر."
+      }
+    },
+    "line_edit": {
+      "title": "تعديل الصنف #{{id}}",
+      "subtitle": "تعتمد هذه النافذة نفس معادلات مستوى السطر المستخدمة في شاشة الفاتورة الرئيسية.",
+      "item_id": "رقم الصنف",
+      "item_code": "كود الصنف",
+      "item_name": "اسم الصنف",
+      "replace_item": "استبدال الصنف",
+      "line_notes": "ملاحظات السطر",
+      "unit_price_included": "سعر الوحدة شامل الضريبة",
+      "tax_percent": "نسبة الضريبة",
+      "unit_price_excluded": "سعر الوحدة بدون ضريبة",
+      "unit": "الوحدة",
+      "storage": "المستودع",
+      "select_storage": "اختيار مستودع",
+      "discount_percent": "نسبة الخصم",
+      "discount_value": "قيمة الخصم",
+      "tax_value": "قيمة الضريبة",
+      "total_included": "الإجمالي شامل الضريبة",
+      "exempt": "معفى",
+      "exempt_hint": "الأسطر المعفاة تُلغي الضريبة تمامًا كما في منطق الفاتورة الرئيسي.",
+      "save_changes": "حفظ تعديلات السطر"
+    },
+    "share": {
+      "title": "مشاركة الفاتورة",
+      "subtitle": "سيتم حفظ الفاتورة أولًا عند الحاجة، ثم إرسالها إلى فوترة / ISTD.",
+      "message": "هل أنت متأكد أنك تريد مشاركة هذه الفاتورة الآن؟",
+      "confirm": "نعم، مشاركة"
+    }
+  },
+  "portalPOSMonitor": {
+    "live_status": "الحالة المباشرة"
   }
 }

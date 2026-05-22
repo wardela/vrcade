@@ -36,6 +36,11 @@ export default function UserModal({ close, refresh, editData }) {
   const [full_name, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [portalAccess, setPortalAccess] = useState(false);
+  const [portalUsername, setPortalUsername] = useState("");
+  const [portalPassword, setPortalPassword] = useState("");
+  const [portalNotificationEmail, setPortalNotificationEmail] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [permissions, setPermissions] = useState(buildEmptyPermissions);
   const {t} = useTranslation();
   let currentPermissions = {};
@@ -59,9 +64,23 @@ const isReadOnly =
     if (editData) {
       setFullName(editData.full_name || "");
       setUsername(editData.username || "");
+      setPassword("");
+      setPortalAccess(editData.portal_access === true);
+      setPortalUsername(editData.portal_username || "");
+      setPortalPassword("");
+      setPortalNotificationEmail(editData.portal_notification_email || "");
+      setSubmitError("");
       setPermissions(mergePermissionsWithDefaults(editData.permissions));
       return;
     }
+    setFullName("");
+    setUsername("");
+    setPassword("");
+    setPortalAccess(false);
+    setPortalUsername("");
+    setPortalPassword("");
+    setPortalNotificationEmail("");
+    setSubmitError("");
     setPermissions(buildEmptyPermissions());
   }, [editData]);
 
@@ -147,23 +166,65 @@ const toggleRow = (module, actions, value) => {
 };
 
   const submit = async () => {
+    const trimmedPortalUsername = portalUsername.trim();
+    const trimmedPortalNotificationEmail = portalNotificationEmail.trim();
+    const portalPasswordRequired =
+      portalAccess &&
+      (!editData || editData.portal_access !== true || editData.portal_password_configured !== true);
+
+    if (portalAccess && !trimmedPortalUsername) {
+      setSubmitError(t("UserModal.validation.portal_username_required"));
+      return;
+    }
+
+    if (portalAccess && portalPasswordRequired && portalPassword.length < 6) {
+      setSubmitError(t("UserModal.validation.portal_password_min"));
+      return;
+    }
+
+    if (portalAccess && portalPassword && portalPassword.length < 6) {
+      setSubmitError(t("UserModal.validation.portal_password_min"));
+      return;
+    }
+
+    if (
+      portalAccess &&
+      trimmedPortalNotificationEmail &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedPortalNotificationEmail)
+    ) {
+      setSubmitError(t("UserModal.validation.portal_email_invalid"));
+      return;
+    }
+
+    setSubmitError("");
+
     const payload = {
       full_name,
       username,
+      portal_access: portalAccess,
+      portal_username: portalAccess ? trimmedPortalUsername : null,
+      portal_password: portalAccess ? portalPassword : "",
+      portal_notification_email: portalAccess ? trimmedPortalNotificationEmail : null,
       permissions,
     };
 
     if (!editData) payload.password = password;
     if (editData && password) payload.password = password;
 
-    if (editData) {
-      await api.put(`/api/users/update/${editData.id}`, payload);
-    } else {
-      await api.post(`/api/users/register`, payload);
-    }
+    try {
+      if (editData) {
+        await api.put(`/api/users/update/${editData.id}`, payload);
+      } else {
+        await api.post(`/api/users/register`, payload);
+      }
 
-    refresh();
-    close();
+      refresh();
+      close();
+    } catch (error) {
+      setSubmitError(
+        error?.response?.data?.message || t("UserModal.validation.save_failed")
+      );
+    }
   };
 
 const PermissionRow = ({ label, module, actions }) => {
@@ -229,22 +290,22 @@ const PermissionRow = ({ label, module, actions }) => {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[999]">
-      <div className="bg-white rounded-lg shadow-2xl w-[1300px] max-h-xl overflow-y-auto animate-scaleIn">
+      <div className="bg-white rounded-lg shadow-2xl w-[1300px] h-[90vh] max-h-[90vh] overflow-hidden animate-scaleIn flex flex-col">
 
         {/* HEADER */}
-        <div className="px-8 py-6 border-b">
+        <div className="px-8 py-6 border-b shrink-0 bg-white">
           <h2 className="text-2xl font-semibold text-[#2f788a]">
             {editData ? t("UserModal.title.edit") : t("UserModal.title.add")}
           </h2>
         </div>
 
         <div
-          className={`grid grid-cols-[380px_1fr] h-[calc(90vh-140px)]
+          className={`grid grid-cols-[380px_1fr] flex-1 min-h-0
             ${isReadOnly ? "opacity-70" : ""}
           `}
         >
           {/* LEFT — USER INFO */}
-          <div className="p-8 border-r bg-gray-50">
+          <div className="p-8 border-r bg-gray-50 overflow-y-auto min-h-0">
             <h2 className="justify-start items-center text-lg font-semibold mb-4 text-gray-600">
               {t("UserModal.sections.personal")}
             </h2>
@@ -281,11 +342,78 @@ const PermissionRow = ({ label, module, actions }) => {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                <label className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-gray-700">
+                      {t("UserModal.portal.access_label")}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t("UserModal.portal.access_hint")}
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-sm"
+                    checked={portalAccess}
+                    disabled={isReadOnly}
+                    onChange={(e) => setPortalAccess(e.target.checked)}
+                  />
+                </label>
+
+                {portalAccess && (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="text-sm text-gray-500">
+                        {t("UserModal.portal.username")}
+                      </label>
+                      <input
+                        className="input input-bordered w-full mt-1"
+                        value={portalUsername}
+                        disabled={isReadOnly}
+                        onChange={(e) => setPortalUsername(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-gray-500">
+                        {editData && editData.portal_access
+                          ? t("UserModal.portal.password_optional")
+                          : t("UserModal.portal.password")}
+                      </label>
+                      <input
+                        type="password"
+                        className="input input-bordered w-full mt-1"
+                        value={portalPassword}
+                        disabled={isReadOnly}
+                        onChange={(e) => setPortalPassword(e.target.value)}
+                      />
+                      <p className="mt-1 text-xs text-gray-400">
+                        {t("UserModal.portal.password_hint")}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-gray-500">
+                        {t("UserModal.portal.notification_email")}
+                      </label>
+                      <input
+                        type="email"
+                        className="input input-bordered w-full mt-1"
+                        value={portalNotificationEmail}
+                        disabled={isReadOnly}
+                        onChange={(e) => setPortalNotificationEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* RIGHT — PERMISSIONS */}
-          <div className="p-6 overflow-y-auto space-y-4">
+          <div className="p-6 overflow-y-auto space-y-4 min-h-0 pb-10">
             <h2 className="justify-start items-center text-lg font-semibold  text-gray-600">
               {t("UserModal.sections.permissions")}
             </h2>
@@ -376,7 +504,12 @@ const PermissionRow = ({ label, module, actions }) => {
         </div>
 
         {/* FOOTER */}
-        <div className="px-8 py-5 border-t flex justify-end gap-3">
+        <div className="px-8 py-5 border-t flex justify-end gap-3 shrink-0 bg-white relative z-10">
+          {submitError && (
+            <div className="mr-auto self-center rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              {submitError}
+            </div>
+          )}
           <button onClick={close} className="btn btn-ghost">
             {t("UserModal.actions.cancel")}
           </button>
