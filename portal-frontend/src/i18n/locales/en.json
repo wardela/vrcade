@@ -2317,6 +2317,7 @@
       "total_sessions_recorded": "Total sessions recorded",
       "loading": "Loading...",
       "loading_sessions": "Loading sessions...",
+      "no_pos_stations": "No POS stations found",
       "no_sessions": "No sessions found",
       "unknown_user": "Unknown user"
     },
@@ -2651,5 +2652,419 @@
       "printing": "Sending...",
       "close": "Close"
     }
+  },
+  "portalBrand": {
+    "portal_name": "Fawtartak Portal"
+  },
+  "portalAuth": {
+    "login": {
+      "title": "Management Portal",
+      "subtitle": "Manage invoices, sales, and business insights anywhere.",
+      "trust_line": "E-invoicing • POS • Analytics • Owner Portal",
+      "fields": {
+        "company_code": "Company Code",
+        "username": "Username",
+        "password": "Password"
+      }
+    },
+    "actions": {
+      "sign_in": "Log In",
+      "sign_up_cta": "Not an owner yet? Create company account",
+      "show_password": "Show password",
+      "hide_password": "Hide password"
+    },
+    "states": {
+      "signing_in": "Signing in...",
+      "restoring_session": "Restoring your portal session..."
+    },
+    "errors": {
+      "sign_in_failed": "Unable to sign in.",
+      "session_expired": "Session expired. Please sign in again."
+    }
+  },
+  "portalShell": {
+    "modules": {
+      "dashboard": "Dashboard",
+      "statistics": "Statistics",
+      "monitoring": "POS Monitor",
+      "create_invoice": "Create Invoice",
+      "invoices": "Invoices",
+      "reports": "Reports"
+    },
+    "actions": {
+      "open_menu": "Open menu",
+      "close_menu": "Close menu",
+      "log_out": "Log Out",
+      "cancel": "Cancel",
+      "refresh_module": "Refresh {{module}}"
+    },
+    "logout": {
+      "title": "Log Out",
+      "message": "Are you sure you want to log out?"
+    },
+    "language": {
+      "label": "Language",
+      "english": "English",
+      "arabic": "العربية"
+    },
+    "signed_in": "Signed In",
+    "fallback_user": "Portal User",
+    "coming_soon": "{{module}} module placeholder"
+  },
+  "portalCommon": {
+    "currency_code": "JOD",
+    "actions": {
+      "show_earlier": "Show earlier {{label}}",
+      "show_later": "Show later {{label}}",
+      "search": "Search",
+      "reset": "Reset",
+      "view": "View",
+      "load_more": "Load More",
+      "print": "Print",
+      "save": "Save",
+      "save_and_share": "Save & Share",
+      "save_and_print": "Save & Print",
+      "apply": "Apply",
+      "choose": "Choose",
+      "select": "Select",
+      "cancel": "Cancel",
+      "close": "Close",
+      "done": "Done",
+      "no": "No"
+    },
+    "states": {
+      "loading": "Loading...",
+      "saving": "Saving...",
+      "preparing_print": "Preparing print..."
+    },
+    "fields": {
+      "date": "Date",
+      "from_date": "From Date",
+      "to_date": "To Date",
+      "reference": "Reference",
+      "notes": "Notes",
+      "currency": "Currency",
+      "invoice_type": "Invoice Type",
+      "client_phone": "Client Phone",
+      "quantity": "Quantity"
+    },
+    "table": {
+      "invoice": "Invoice",
+      "client": "Client",
+      "total": "Total"
+    },
+    "totals": {
+      "total_before_tax": "Total Before Tax",
+      "total_tax": "Total Tax",
+      "grand_total": "Grand Total"
+    },
+    "payment_methods": {
+      "cash": "Cash",
+      "credit": "Credit",
+      "card": "Card",
+      "bank_transfer": "Bank Transfer"
+    },
+    "invoice_types": {
+      "local": "Local",
+      "export": "Export",
+      "development": "Development Area"
+    },
+    "client_details": {
+      "tax_number": "Tax Number",
+      "national_id": "National ID",
+      "personal_number": "Personal Number"
+    },
+    "empty": {
+      "value": "—",
+      "walk_in_client": "Walk-in Client",
+      "unknown": "Unknown"
+    }
+  },
+  "portalDashboard": {
+    "errors": {
+      "load_failed": "Failed to load dashboard."
+    },
+    "kpis": {
+      "invoice_count": "Invoice Count",
+      "average_invoice_value": "Average Invoice Value",
+      "total_sales_for_day": "Total Sales for Selected Day",
+      "month_to_date_sales": "Sales from Month Start Until Selected Date"
+    },
+    "charts": {
+      "today_sales_by_hour": "Today Sales by Hour",
+      "week_sales_by_day": "Week Sales by Day",
+      "year_sales_by_month": "Year Sales by Month",
+      "payment_types": "Payment Types"
+    },
+    "sections": {
+      "active_pos": "Active POS",
+      "recent_invoices": "Recent Invoices"
+    },
+    "metrics": {
+      "sales": "Sales",
+      "invoices": "Invoices"
+    },
+    "empty": {
+      "no_pos_activity": "No POS activity found for this date.",
+      "no_recent_invoices": "No invoices found for this date."
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "ended": "Ended"
+    }
+  },
+  "portalStatistics": {
+    "title": "Business analytics",
+    "errors": {
+      "load_failed": "Failed to load statistics."
+    },
+    "actions": {
+      "show_less": "Show less",
+      "show_last_ten": "Show last 10"
+    },
+    "tokens_label": "Tokens",
+    "series": {
+      "sales": "Sales",
+      "tokens": "Tokens"
+    },
+    "kpis": {
+      "total_sales": "Total Sales",
+      "total_refunds": "Total Refunds",
+      "net_profit": "Net Profit",
+      "invoices": "Invoices"
+    },
+    "sections": {
+      "overview": {
+        "eyebrow": "Overview",
+        "title": "Core business snapshot"
+      },
+      "sales": {
+        "eyebrow": "Sales",
+        "title": "Sales performance"
+      },
+      "pos_analytics": {
+        "eyebrow": "POS Analytics",
+        "title": "Terminal and cashier performance"
+      },
+      "inventory": {
+        "eyebrow": "Inventory",
+        "title": "Top selling items"
+      },
+      "clients": {
+        "eyebrow": "Clients",
+        "title": "Customer contribution"
+      }
+    },
+    "cards": {
+      "monthly_net": {
+        "title": "Monthly Net"
+      },
+      "average_invoice": {
+        "title": "Average Invoice",
+        "subtitle": "By month"
+      },
+      "recent_invoices": {
+        "title": "Recent Invoices",
+        "subtitle": "Latest activity in range"
+      },
+      "sales_total_amount": {
+        "title": "Sales Total Amount"
+      },
+      "sales_count": {
+        "title": "Sales Count",
+        "subtitle": "Invoices by month"
+      },
+      "sales_by_type": {
+        "title": "Sales by Type",
+        "subtitle": "Area split"
+      },
+      "refund_totals": {
+        "title": "Refund Totals"
+      },
+      "sales_vs_tokens": {
+        "title": "Sales vs Tokens",
+        "subtitle": "POS monthly comparison"
+      },
+      "pos_performance": {
+        "title": "POS Performance",
+        "subtitle": "Sales share by POS"
+      },
+      "top_pos_users": {
+        "title": "Top POS Users",
+        "subtitle": "Highest sales in range"
+      },
+      "top_pos_users_by_month": {
+        "title": "Top POS Users by Month",
+        "subtitle": "Monthly leaders"
+      },
+      "top_sold_items_by_month": {
+        "title": "Top Sold Items by Month",
+        "subtitle": "Top 3 monthly sellers"
+      },
+      "top_spending_clients": {
+        "title": "Top Spending Clients",
+        "subtitle": "Highest revenue in range"
+      },
+      "client_spending_by_month": {
+        "title": "Client Spending by Month",
+        "subtitle": "Monthly top 3"
+      },
+      "top_clients_by_sales_count": {
+        "title": "Top Clients by Sales Count",
+        "subtitle": "Highest invoice count"
+      },
+      "sales_count_by_month": {
+        "title": "Sales Count by Month",
+        "subtitle": "Monthly top 3"
+      }
+    },
+    "empty": {
+      "no_recent_invoices": "No recent invoices in this range.",
+      "no_pos_sales": "No POS sales recorded in this range.",
+      "no_pos_user_sales": "No POS user sales recorded in this range.",
+      "no_client_spending": "No client spending in this range.",
+      "no_client_sales_count": "No client sales count in this range."
+    }
+  },
+  "portalInvoices": {
+    "title": "Recent invoices",
+    "no_access": "You do not have permission to view invoices.",
+    "list_label": "Invoice list",
+    "issued_by": "Issued By",
+    "empty": "No invoices found for the selected filters.",
+    "summary_card_label": "Invoice Summary",
+    "line_total": "Line Total",
+    "not_found": "Invoice not found.",
+    "placeholders": {
+      "search": "Invoice number, client, or date"
+    },
+    "summary": {
+      "matching_invoices": "{{count}} matching invoices",
+      "recent_invoices": "{{count}} recent invoices"
+    },
+    "errors": {
+      "load_failed": "Failed to load invoices.",
+      "detail_load_failed": "Failed to load invoice."
+    }
+  },
+  "portalCreateInvoice": {
+    "title": "Create Invoice",
+    "invoice_number": "Invoice Number",
+    "no_access": "You do not have permission to create invoices.",
+    "actions": {
+      "add_item": "Add Item",
+      "add_to_invoice": "Add to Invoice"
+    },
+    "messages": {
+      "saved": "Invoice {{invoiceNumber}} was saved successfully.",
+      "already_shared": "Invoice {{invoiceNumber}} was already shared.",
+      "shared": "Invoice {{invoiceNumber}} was shared successfully.",
+      "share_failed": "Invoice {{invoiceNumber}} was saved, but sharing failed.",
+      "share_failed_with_reason": "Invoice {{invoiceNumber}} was saved, but sharing failed: {{reason}}",
+      "saved_and_ready_to_print": "Invoice {{invoiceNumber}} was saved and prepared for printing.",
+      "print_prep_failed": "Invoice {{invoiceNumber}} was saved, but print preparation failed.",
+      "print_prep_failed_with_reason": "Invoice {{invoiceNumber}} was saved, but print preparation failed: {{reason}}"
+    },
+    "errors": {
+      "load_failed": "Failed to load create-invoice screen.",
+      "save_failed": "Failed to save invoice.",
+      "client_required_for_credit": "Credit invoices require a selected client.",
+      "exempt_requires_client_detail": "Exempt items require client detail type TN and a client detail value.",
+      "add_item_before_save": "Add at least one item before saving.",
+      "invalid_items": "One or more invoice items are invalid.",
+      "missing_storage": "A stocked item is missing its storage selection."
+    },
+    "header": {
+      "title": "Header details",
+      "select_client": "Select a client",
+      "invoice_date": "Invoice Date",
+      "payment_type": "Payment Type",
+      "advanced_data": "Advanced Data",
+      "notes_placeholder": "Invoice notes"
+    },
+    "advanced": {
+      "title": "Advanced Data",
+      "subtitle": "These fields mirror the non-core invoice header values used by the main invoice flow.",
+      "client_detail_type": "Client Detail Type",
+      "client_detail_value": "Client ID / Tax Number",
+      "client_detail_placeholder": "Client detail value",
+      "reference_placeholder": "Optional reference",
+      "create_due_balance": "Create Due Balance",
+      "create_due_balance_hint": "Mirrors the credit-invoice due-balance flag from the main invoice screen."
+    },
+    "items": {
+      "eyebrow": "Items",
+      "title": "Invoice cart",
+      "empty": "No items",
+      "unnamed_item": "Unnamed item",
+      "quantity_short": "Qty",
+      "remove_item": "Remove {{item}}"
+    },
+    "client_picker": {
+      "title": "Choose Client",
+      "subtitle": "Search by client name, number, phone, or detail value.",
+      "search_placeholder": "Search clients",
+      "loading_title": "Loading clients",
+      "loading_copy": "Pulling the latest client list for this tenant.",
+      "empty_title": "No clients found",
+      "empty_copy": "Try a different name, client number, or phone value.",
+      "client_label": "Client #{{id}}",
+      "no_phone": "No phone recorded",
+      "detail_label": "Detail",
+      "errors": {
+        "load_failed": "Failed to load clients."
+      }
+    },
+    "item_browser": {
+      "title": "Add Item",
+      "search_placeholder": "Search items",
+      "all_categories": "All Categories",
+      "favorites": "Favorites",
+      "favorite_badge": "Fav",
+      "loading_title": "Loading items",
+      "empty_title": "No items found",
+      "errors": {
+        "load_failed": "Failed to load items."
+      }
+    },
+    "quantity": {
+      "title": "Choose Quantity",
+      "subtitle": "{{item}} will be added to the invoice cart after you confirm the quantity.",
+      "errors": {
+        "invalid": "Quantity must be greater than zero."
+      }
+    },
+    "line_edit": {
+      "title": "Edit Item #{{id}}",
+      "subtitle": "This modal follows the same line-level invoice math as the main invoice screen.",
+      "item_id": "Item ID",
+      "item_code": "Item Code",
+      "item_name": "Item Name",
+      "replace_item": "Replace Item",
+      "line_notes": "Line Notes",
+      "unit_price_included": "Unit Price Included",
+      "tax_percent": "Tax %",
+      "unit_price_excluded": "Unit Price Excluded",
+      "unit": "Unit",
+      "storage": "Storage",
+      "select_storage": "Select storage",
+      "discount_percent": "Discount %",
+      "discount_value": "Discount Value",
+      "tax_value": "Tax Value",
+      "total_included": "Total Included",
+      "exempt": "Exempt",
+      "exempt_hint": "Exempt lines clear tax exactly like the main invoice logic.",
+      "save_changes": "Save Line Changes"
+    },
+    "share": {
+      "title": "Share Invoice",
+      "subtitle": "This will save the invoice first if needed, then send it to Fawtara / ISTD.",
+      "message": "Are you sure you want to share this invoice now?",
+      "confirm": "Yes, Share"
+    }
+  },
+  "portalPOSMonitor": {
+    "live_status": "Live Status"
   }
 }

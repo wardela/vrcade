@@ -1,5 +1,7 @@
 const bcrypt = require("bcryptjs");
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const PERMISSION_MODULES = [
   "dashboard",
   "sales",
@@ -48,18 +50,219 @@ const buildPermissionsRows = (userId, permissions) => {
   }));
 };
 
-exports.createUserWithPermissions = async (db,username, password, full_name, permissions) => {
+const buildServiceError = (message, statusCode = 400) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
+
+const normalizeBoolean = (value) => {
+  if (typeof value === "string") {
+    return value.trim().toLowerCase() === "true";
+  }
+
+  return Boolean(value);
+};
+
+const normalizeText = (value) => {
+  if (value == null) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  return normalized ? normalized : null;
+};
+
+const normalizePortalUsername = (value) => {
+  const normalized = normalizeText(value);
+  return normalized ? normalized.toLowerCase() : null;
+};
+
+const normalizePortalEmail = (value) => {
+  const normalized = normalizeText(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  const lowered = normalized.toLowerCase();
+  if (!EMAIL_PATTERN.test(lowered)) {
+    throw buildServiceError("Portal notification email is invalid");
+  }
+
+  return lowered;
+};
+
+const normalizePortalPassword = (value) =>
+  typeof value === "string" ? value : "";
+
+const ensureUniquePortalUsername = async (db, portalUsername, excludeUserId = null) => {
+  if (!portalUsername) {
+    return;
+  }
+
+  const params = [portalUsername];
+  let sql = `
+    SELECT id
+    FROM users
+    WHERE LOWER(portal_username) = LOWER($1)
+  `;
+
+  if (excludeUserId != null) {
+    params.push(excludeUserId);
+    sql += ` AND id <> $2`;
+  }
+
+  sql += ` LIMIT 1`;
+
+  const existing = await db.query(sql, params);
+  if (existing.rowCount > 0) {
+    throw buildServiceError("Portal username already exists");
+  }
+};
+
+const buildPortalCreateConfig = async (db, payload) => {
+  const portalAccess = normalizeBoolean(payload.portal_access);
+
+  if (!portalAccess) {
+    return {
+      portal_access: false,
+      portal_username: null,
+      portal_password_hash: null,
+      portal_notification_email: null,
+    };
+  }
+
+  const portalUsername = normalizePortalUsername(payload.portal_username);
+  const portalPassword = normalizePortalPassword(payload.portal_password);
+  const portalNotificationEmail = normalizePortalEmail(
+    payload.portal_notification_email
+  );
+
+  if (!portalUsername) {
+    throw buildServiceError("Portal username is required when portal access is enabled");
+  }
+
+  if (portalPassword.length < 6) {
+    throw buildServiceError("Portal password must be at least 6 characters");
+  }
+
+  await ensureUniquePortalUsername(db, portalUsername);
+
+  return {
+    portal_access: true,
+    portal_username: portalUsername,
+    portal_password_hash: await bcrypt.hash(portalPassword, 10),
+    portal_notification_email: portalNotificationEmail,
+  };
+};
+
+const getUserPortalState = async (db, id) => {
+  const result = await db.query(
+    `
+      SELECT id, portal_access, portal_username, portal_password_hash, portal_notification_email
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [id]
+  );
+
+  if (result.rowCount === 0) {
+    throw buildServiceError("User not found", 404);
+  }
+
+  return result.rows[0];
+};
+
+const buildPortalUpdateConfig = async (db, id, payload) => {
+  const currentUser = await getUserPortalState(db, id);
+  const portalAccess = normalizeBoolean(payload.portal_access);
+
+  if (!portalAccess) {
+    return {
+      portal_access: false,
+      portal_username: currentUser.portal_username,
+      portal_password_hash: currentUser.portal_password_hash,
+      portal_notification_email: currentUser.portal_notification_email,
+    };
+  }
+
+  const portalUsername =
+    normalizePortalUsername(payload.portal_username) ||
+    normalizePortalUsername(currentUser.portal_username);
+  const portalPassword = normalizePortalPassword(payload.portal_password);
+  const portalNotificationEmail = normalizePortalEmail(
+    payload.portal_notification_email
+  );
+
+  if (!portalUsername) {
+    throw buildServiceError("Portal username is required when portal access is enabled");
+  }
+
+  const mustSetPortalPassword =
+    !currentUser.portal_access || !currentUser.portal_password_hash;
+
+  if (mustSetPortalPassword && portalPassword.length < 6) {
+    throw buildServiceError("Portal password must be at least 6 characters");
+  }
+
+  if (portalPassword && portalPassword.length < 6) {
+    throw buildServiceError("Portal password must be at least 6 characters");
+  }
+
+  await ensureUniquePortalUsername(db, portalUsername, id);
+
+  return {
+    portal_access: true,
+    portal_username: portalUsername,
+    portal_password_hash: portalPassword
+      ? await bcrypt.hash(portalPassword, 10)
+      : currentUser.portal_password_hash,
+    portal_notification_email: portalNotificationEmail,
+  };
+};
+
+exports.createUserWithPermissions = async (db, payload) => {
   try {
     await db.query("BEGIN");
 
+    const { username, password, full_name, permissions } = payload;
+
     const hashed = await bcrypt.hash(password, 10);
+    const portalConfig = await buildPortalCreateConfig(db, payload);
 
     const createUserSql = `
-      INSERT INTO users (username, password, full_name)
-      VALUES ($1, $2, $3)
-      RETURNING id, username, full_name, created_at, last_login;
+      INSERT INTO users (
+        username,
+        password,
+        full_name,
+        portal_access,
+        portal_username,
+        portal_password_hash,
+        portal_notification_email
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING
+        id,
+        username,
+        full_name,
+        portal_access,
+        portal_username,
+        portal_notification_email,
+        (portal_password_hash IS NOT NULL) AS portal_password_configured,
+        created_at,
+        last_login;
     `;
-    const userRes = await db.query(createUserSql, [username, hashed, full_name]);
+    const userRes = await db.query(createUserSql, [
+      username,
+      hashed,
+      full_name,
+      portalConfig.portal_access,
+      portalConfig.portal_username,
+      portalConfig.portal_password_hash,
+      portalConfig.portal_notification_email,
+    ]);
     const user = userRes.rows[0];
 
     // insert permissions
@@ -104,6 +307,9 @@ exports.createUserWithPermissions = async (db,username, password, full_name, per
     return { ...user, permissions: permissionsMap };
   } catch (err) {
     await db.query("ROLLBACK");
+    if (err.code === "23505" && String(err.constraint || "").includes("portal_username")) {
+      throw buildServiceError("Portal username already exists");
+    }
     throw err;
   } finally {
     
@@ -122,7 +328,16 @@ exports.updateLastLogin = async (db,id) => {
 
 exports.getAllUsers = async (db) => {
   const sql = `
-    SELECT id, username, full_name, created_at, last_login
+    SELECT
+      id,
+      username,
+      full_name,
+      portal_access,
+      portal_username,
+      portal_notification_email,
+      (portal_password_hash IS NOT NULL) AS portal_password_configured,
+      created_at,
+      last_login
     FROM users
     ORDER BY id ASC
   `;
@@ -163,22 +378,46 @@ exports.getUserPermissionsMap = async (db,userId) => {
   return map;
 };
 
-exports.updateUserWithPermissions = async (db,id, username, password, full_name, permissions) => {
+exports.updateUserWithPermissions = async (db, id, payload) => {
   try {
     await db.query("BEGIN");
 
+    const { username, password, full_name, permissions } = payload;
     let hashed = null;
     if (password) hashed = await bcrypt.hash(password, 10);
+    const portalConfig = await buildPortalUpdateConfig(db, id, payload);
 
     const sql = `
       UPDATE users
       SET username = $1,
           full_name = $2,
-          password = COALESCE($3, password)
-      WHERE id = $4
-      RETURNING id, username, full_name, created_at, last_login;
+          password = COALESCE($3, password),
+          portal_access = $4,
+          portal_username = $5,
+          portal_password_hash = $6,
+          portal_notification_email = $7
+      WHERE id = $8
+      RETURNING
+        id,
+        username,
+        full_name,
+        portal_access,
+        portal_username,
+        portal_notification_email,
+        (portal_password_hash IS NOT NULL) AS portal_password_configured,
+        created_at,
+        last_login;
     `;
-    const userRes = await db.query(sql, [username, full_name, hashed, id]);
+    const userRes = await db.query(sql, [
+      username,
+      full_name,
+      hashed,
+      portalConfig.portal_access,
+      portalConfig.portal_username,
+      portalConfig.portal_password_hash,
+      portalConfig.portal_notification_email,
+      id,
+    ]);
 
     if (userRes.rows.length === 0) {
       throw new Error("User not found");
@@ -228,6 +467,9 @@ exports.updateUserWithPermissions = async (db,id, username, password, full_name,
     return { ...user, permissions: permissionsMap };
   } catch (err) {
     await db.query("ROLLBACK");
+    if (err.code === "23505" && String(err.constraint || "").includes("portal_username")) {
+      throw buildServiceError("Portal username already exists");
+    }
     throw err;
   } finally {
     

@@ -161,7 +161,7 @@ const token = jwt.sign(
 // ==================================================
 exports.register = async (req, res) => {
   try {
-    const { username, password, full_name, permissions } = req.body;
+    const { username, password } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({
@@ -171,10 +171,7 @@ exports.register = async (req, res) => {
 
     const user = await userService.createUserWithPermissions(
       req.db,
-      username,
-      password,
-      full_name,
-      permissions
+      req.body
     );
 
     res.status(201).json({
@@ -183,6 +180,11 @@ exports.register = async (req, res) => {
     });
   } catch (err) {
     console.error("Register error:", err);
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({
+        message: err.message
+      });
+    }
     res.status(500).json({
       message: "Error creating user"
     });
@@ -218,15 +220,11 @@ exports.getAll = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { username, password, full_name, permissions } = req.body;
 
     const updated = await userService.updateUserWithPermissions(
       req.db,
       id,
-      username,
-      password,
-      full_name,
-      permissions
+      req.body
     );
 
     res.status(200).json({
@@ -235,6 +233,11 @@ exports.update = async (req, res) => {
     });
   } catch (err) {
     console.error("Update user error:", err);
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({
+        message: err.message
+      });
+    }
     res.status(500).json({
       message: "Error updating user"
     });
