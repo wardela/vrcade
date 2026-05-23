@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { fetchPortalInvoiceDetail } from "../../api/portalApi";
 import { prepareCompanyWithLogo } from "../../utils/companyLogo";
+import { formatPortalDate } from "../../utils/portalFormatting";
 import { useReactToPrint } from "../reports/usePortalReactToPrint";
 import PrintableInvoice from "./PrintableInvoice";
 
@@ -19,13 +20,13 @@ const formatDateTime = (value, locale) => {
     return value;
   }
 
-  return new Intl.DateTimeFormat(locale, {
+  return formatPortalDate(parsed, {
     year: "numeric",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(parsed);
+  }, locale);
 };
 
 const calculateInvoiceTotals = (lines) =>
@@ -102,8 +103,7 @@ function MoneyRow({ label, value, strong = false }) {
 }
 
 export default function InvoiceDetailModal({ invoiceNumber, open, onClose }) {
-  const { t, i18n } = useTranslation();
-  const locale = i18n.resolvedLanguage === "ar" ? "ar-JO" : undefined;
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [invoice, setInvoice] = useState(null);
@@ -253,7 +253,7 @@ export default function InvoiceDetailModal({ invoiceNumber, open, onClose }) {
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <MetaBlock
                   label={t("InvoiceViewPopup.info.date")}
-                  value={formatDateTime(header.date_time || header.date, locale)}
+                  value={formatDateTime(header.date_time || header.date)}
                 />
                 <MetaBlock
                   label={t("InvoiceViewPopup.info.payment")}

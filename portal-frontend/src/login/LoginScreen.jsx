@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Building2, LockKeyhole, UserRound } from "lucide-react";
 import synergyLogo from "../components/synergybig.png";
@@ -15,6 +17,7 @@ const emptyForm = {
 export default function LoginScreen({ onLoginSuccess, initialError = "" }) {
   const { t } = useTranslation();
   const { isRTL } = usePortalLanguage();
+  const navigate = useNavigate();
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState(initialError);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +33,11 @@ export default function LoginScreen({ onLoginSuccess, initialError = "" }) {
       ...current,
       [field]: event.target.value,
     }));
+  };
+
+  const handleCreateCompanyAccount = () => {
+    sessionStorage.setItem("scrollTarget", "pricing");
+    navigate("/");
   };
 
   const handleSubmit = async (event) => {
@@ -141,7 +149,13 @@ export default function LoginScreen({ onLoginSuccess, initialError = "" }) {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.32),rgba(255,255,255,0))]" />
             <div className="flex flex-col gap-3 min-[390px]:gap-4">
               <div className="flex flex-col items-center text-center">
-                <img src={synergyLogo} alt="FAWTARTAK" className="h-auto w-[176px] object-contain min-[390px]:w-[186px]" />
+                <Link to="/" aria-label="Go to landing page" className="inline-flex rounded-[18px] outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent">
+                  <img
+                    src={synergyLogo}
+                    alt="FAWTARTAK"
+                    className="h-auto w-[176px] object-contain min-[390px]:w-[186px]"
+                  />
+                </Link>
               </div>
 
               <div className="space-y-0.5 text-center">
@@ -277,6 +291,7 @@ export default function LoginScreen({ onLoginSuccess, initialError = "" }) {
 
               <button
                 type="button"
+                onClick={handleCreateCompanyAccount}
                 className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded-[16px] px-3 py-3 text-[14px] font-medium text-[#5b7485] transition hover:bg-white/45 hover:text-[#245d86]"
               >
                 <span>{t("portalAuth.actions.sign_up_cta")}</span>

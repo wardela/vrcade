@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { money, formatStatusLabel } from "./utils";
+import { formatPortalNumber } from "../../utils/portalFormatting";
 
 export default function ActivePosSection({ items }) {
   const { t } = useTranslation();
@@ -42,7 +43,7 @@ export default function ActivePosSection({ items }) {
                 </div>
                 <div>
                   <span>{t("portalDashboard.metrics.invoices")}</span>
-                  <strong>{Number(item.invoice_count || 0).toLocaleString()}</strong>
+                  <strong>{formatPortalNumber(item.invoice_count)}</strong>
                 </div>
               </div>
             </button>

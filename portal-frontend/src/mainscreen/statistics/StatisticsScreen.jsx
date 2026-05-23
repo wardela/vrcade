@@ -18,6 +18,7 @@ import {
   YAxis,
 } from "recharts";
 import { fetchPortalStatistics } from "../../api/portalApi";
+import { formatPortalNumber } from "../../utils/portalFormatting";
 import KpiCard from "../dashboard/KpiCard";
 import {
   compactMoney,
@@ -267,6 +268,7 @@ export default function StatisticsScreen() {
             <span>{t("portalCommon.fields.from_date")}</span>
             <input
               type="date"
+              lang="en"
               dir="ltr"
               value={filters.from}
               onChange={(event) =>
@@ -278,6 +280,7 @@ export default function StatisticsScreen() {
             <span>{t("portalCommon.fields.to_date")}</span>
             <input
               type="date"
+              lang="en"
               dir="ltr"
               value={filters.to}
               onChange={(event) =>
@@ -421,7 +424,7 @@ export default function StatisticsScreen() {
                       <CartesianGrid strokeDasharray="4 4" stroke="rgba(47, 120, 138, 0.10)" vertical={false} />
                       <XAxis dataKey="month_start" tickFormatter={monthLabel} tick={{ fill: "#718894", fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: "#718894", fontSize: 11 }} axisLine={false} tickLine={false} width={32} allowDecimals={false} />
-                      <Tooltip formatter={(value) => Number(value || 0).toLocaleString()} labelFormatter={monthLabel} contentStyle={tooltipStyle} />
+                      <Tooltip formatter={(value) => formatPortalNumber(value)} labelFormatter={monthLabel} contentStyle={tooltipStyle} />
                       <Bar dataKey="count" fill={CHART_COLORS.secondary} radius={[10, 10, 4, 4]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -489,7 +492,7 @@ export default function StatisticsScreen() {
                         formatter={(value, _name, item) =>
                           item?.dataKey === "total_sales"
                             ? money(value)
-                            : `${Number(value || 0).toLocaleString()} ${t("portalStatistics.tokens_label")}`
+                            : `${formatPortalNumber(value)} ${t("portalStatistics.tokens_label")}`
                         }
                         labelFormatter={monthLabel}
                         contentStyle={tooltipStyle}
@@ -659,7 +662,7 @@ export default function StatisticsScreen() {
                 <RankList
                   items={data.clients.top_sales_clients}
                   valueKey="sales_count"
-                  formatter={(value) => Number(value || 0).toLocaleString()}
+                  formatter={(value) => formatPortalNumber(value)}
                   emptyMessage={t("portalStatistics.empty.no_client_sales_count")}
                 />
               </StatisticsCard>
@@ -677,10 +680,10 @@ export default function StatisticsScreen() {
                       <Tooltip
                         formatter={(value, name, item) => {
                           const row = item?.payload || {};
-                          if (name === "rank1_value") return [Number(value || 0).toLocaleString(), row.rank1_name || t("portalCommon.empty.value")];
-                          if (name === "rank2_value") return [Number(value || 0).toLocaleString(), row.rank2_name || t("portalCommon.empty.value")];
-                          if (name === "rank3_value") return [Number(value || 0).toLocaleString(), row.rank3_name || t("portalCommon.empty.value")];
-                          return [Number(value || 0).toLocaleString(), name];
+                          if (name === "rank1_value") return [formatPortalNumber(value), row.rank1_name || t("portalCommon.empty.value")];
+                          if (name === "rank2_value") return [formatPortalNumber(value), row.rank2_name || t("portalCommon.empty.value")];
+                          if (name === "rank3_value") return [formatPortalNumber(value), row.rank3_name || t("portalCommon.empty.value")];
+                          return [formatPortalNumber(value), name];
                         }}
                         labelFormatter={monthLabel}
                         contentStyle={tooltipStyle}

@@ -19,6 +19,12 @@ export default {
           faint: "rgb(var(--app-text-faint-rgb) / <alpha-value>)",
           accent: "rgb(var(--app-accent-rgb) / <alpha-value>)",
         },
+        dark: "#111928",
+        "dark-2": "#1f2a37",
+        "dark-3": "#374151",
+        "dark-6": "#9ca3af",
+        "dark-700": "#101828",
+        "body-color": "#637381",
       },
       boxShadow: {
         app: "var(--app-shadow)",

@@ -5,8 +5,13 @@ const dotenv = require("dotenv");
 const pool = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const portalRoutes = require("./routes/portalRoutes");
+const publicRoutes = require("./routes/publicRoutes");
 const { authMiddleware } = require("./middleware/authMiddleware");
 const tenantDb = require("./middleware/tenantDb");
+const {
+  ensureContactSubmissionsTable,
+} = require("./services/contactSubmissionService");
+const { ensureOfferRequestsTable } = require("./services/offerRequestService");
 
 dotenv.config({
   path: path.resolve(__dirname, "../.env"),
@@ -46,6 +51,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/public", publicRoutes);
 app.use("/api/portal", authMiddleware, tenantDb, portalRoutes);
 
 app.use((error, _req, res, _next) => {
@@ -58,6 +64,8 @@ app.use((error, _req, res, _next) => {
 const startServer = async () => {
   try {
     await pool.query("SELECT 1");
+    await ensureContactSubmissionsTable();
+    await ensureOfferRequestsTable();
     app.listen(port, () => {
       console.log(`portal-backend listening on http://localhost:${port}`);
     });

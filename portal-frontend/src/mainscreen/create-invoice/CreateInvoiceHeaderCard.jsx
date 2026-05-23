@@ -56,6 +56,8 @@ export default function CreateInvoiceHeaderCard({
           <span>{t("portalCreateInvoice.header.invoice_date")}</span>
           <FieldInput
             type="date"
+            lang="en"
+            dir="ltr"
             value={invoiceDate}
             onChange={(event) => onInvoiceDateChange(event.target.value)}
             disabled={!canEdit}

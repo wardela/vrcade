@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchPortalInvoices } from "../../api/portalApi";
+import { formatPortalDate } from "../../utils/portalFormatting";
 import InvoiceDetailModal from "./InvoiceDetailModal";
 
 const PAGE_SIZE = 20;
@@ -30,13 +31,13 @@ const formatDateTime = (value, locale) => {
     return value;
   }
 
-  return new Intl.DateTimeFormat(locale, {
+  return formatPortalDate(parsed, {
     year: "numeric",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(parsed);
+  }, locale);
 };
 
 function NoAccess() {
@@ -70,8 +71,7 @@ function SearchField({ label, children }) {
 }
 
 export default function InvoicesScreen({ session }) {
-  const { t, i18n } = useTranslation();
-  const locale = i18n.resolvedLanguage === "ar" ? "ar-JO" : undefined;
+  const { t } = useTranslation();
   const salesPerm = session?.permissions?.sales || {};
   const canView = salesPerm.view === true;
   const defaultDateFilters = getDefaultDateFilters();
@@ -192,6 +192,7 @@ export default function InvoicesScreen({ session }) {
             <SearchField label={t("portalCommon.fields.from_date")}>
               <input
                 type="date"
+                lang="en"
                 dir="ltr"
                 value={dateFromInput}
                 onChange={(event) => setDateFromInput(event.target.value)}
@@ -202,6 +203,7 @@ export default function InvoicesScreen({ session }) {
             <SearchField label={t("portalCommon.fields.to_date")}>
               <input
                 type="date"
+                lang="en"
                 dir="ltr"
                 value={dateToInput}
                 onChange={(event) => setDateToInput(event.target.value)}
@@ -276,7 +278,7 @@ export default function InvoicesScreen({ session }) {
                             {t("portalCommon.fields.date")}
                           </p>
                           <p className="mt-2 text-sm font-semibold text-slate-800">
-                            {formatDateTime(invoice.date_time, locale)}
+                            {formatDateTime(invoice.date_time)}
                           </p>
                         </div>
                         <div className="rounded-[18px] border border-[#e2ecef] bg-white px-4 py-3">
@@ -335,7 +337,7 @@ export default function InvoicesScreen({ session }) {
                             {invoice.client || t("portalCommon.empty.walk_in_client")}
                           </td>
                           <td className="px-4 py-4 text-slate-600">
-                            {formatDateTime(invoice.date_time, locale)}
+                            {formatDateTime(invoice.date_time)}
                           </td>
                           <td className="px-4 py-4 text-slate-600">
                             {invoice.issued_by || "—"}

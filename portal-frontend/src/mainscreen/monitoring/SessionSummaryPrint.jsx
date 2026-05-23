@@ -2,6 +2,7 @@ import { forwardRef } from "react";
 import BrandLogo from "../../components/BrandLogo";
 import { useTranslation } from "react-i18next";
 import { getCompanyLogoSrc } from "../../utils/companyLogo";
+import { formatPortalDate, formatPortalNumber } from "../../utils/portalFormatting";
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -9,19 +10,19 @@ const formatDateTime = (value) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "—";
 
-  return new Intl.DateTimeFormat(undefined, {
+  return formatPortalDate(parsed, {
     year: "numeric",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(parsed);
+  });
 };
 
 const formatCurrency = (value) => `${Number(value || 0).toFixed(3)} JOD`;
 
 const formatCount = (value) =>
-  Number(value || 0).toLocaleString(undefined, {
+  formatPortalNumber(value, {
     minimumFractionDigits: Number(value || 0) % 1 === 0 ? 0 : 3,
     maximumFractionDigits: 3,
   });

@@ -1,93 +1,31 @@
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import LoginScreen from "./login/LoginScreen";
-import MainScreen from "./mainscreen/mainscreen";
-import {
-  clearPortalToken,
-  fetchPortalSession,
-  getStoredPortalToken,
-} from "./login/auth";
+import { useEffect } from "react";
+import { I18nextProvider } from "react-i18next";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import LandingApp from "./landing/LandingApp";
+import PortalApp from "./PortalApp";
+import portalI18n, { applyLanguageToDocument } from "./i18n";
+
+function PortalRoute() {
+  useEffect(() => {
+    applyLanguageToDocument(portalI18n.resolvedLanguage || portalI18n.language);
+  }, []);
+
+  return (
+    <I18nextProvider i18n={portalI18n}>
+      <PortalApp />
+    </I18nextProvider>
+  );
+}
 
 function App() {
-  const { t } = useTranslation();
-  const [authToken, setAuthToken] = useState(() => getStoredPortalToken());
-  const [session, setSession] = useState(null);
-  const [isBootstrapping, setIsBootstrapping] = useState(Boolean(authToken));
-  const [bootError, setBootError] = useState("");
-
-  useEffect(() => {
-    if (!authToken) {
-      setSession(null);
-      setIsBootstrapping(false);
-      return;
-    }
-
-    let mounted = true;
-
-    const restoreSession = async () => {
-      setIsBootstrapping(true);
-      setBootError("");
-
-      try {
-        const payload = await fetchPortalSession(authToken);
-
-        if (!mounted) {
-          return;
-        }
-
-        setSession(payload);
-      } catch (error) {
-        if (!mounted) {
-          return;
-        }
-
-        clearPortalToken();
-        setAuthToken("");
-        setSession(null);
-        setBootError(error.message || t("portalAuth.errors.session_expired"));
-      } finally {
-        if (mounted) {
-          setIsBootstrapping(false);
-        }
-      }
-    };
-
-    restoreSession();
-
-    return () => {
-      mounted = false;
-    };
-  }, [authToken, t]);
-
-  const handleLoginSuccess = ({ token, session: nextSession }) => {
-    setAuthToken(token);
-    setSession(nextSession);
-    setBootError("");
-  };
-
-  const handleLogout = () => {
-    clearPortalToken();
-    setAuthToken("");
-    setSession(null);
-    setBootError("");
-  };
-
-  if (isBootstrapping) {
-    return (
-      <main className="portal-app portal-app--centered">
-        <section className="portal-panel portal-loader">
-          <div className="portal-loader__spinner" />
-          <p>{t("portalAuth.states.restoring_session")}</p>
-        </section>
-      </main>
-    );
-  }
-
-  if (!session) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} initialError={bootError} />;
-  }
-
-  return <MainScreen session={session} onLogout={handleLogout} />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/mgmt-portal/*" element={<PortalRoute />} />
+        <Route path="/*" element={<LandingApp />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;

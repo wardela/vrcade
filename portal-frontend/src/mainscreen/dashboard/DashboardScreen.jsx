@@ -102,7 +102,7 @@ export default function DashboardScreen() {
         <div className="owners-dashboard__date-row">
           <label className="owners-date-picker">
             <span>{t("portalCommon.fields.date")}</span>
-            <input type="date" value={selectedDate} onChange={handleDateChange} />
+            <input type="date" lang="en" dir="ltr" value={selectedDate} onChange={handleDateChange} />
           </label>
         </div>
         <div className="owners-error-state">{error}</div>
@@ -119,7 +119,7 @@ export default function DashboardScreen() {
       <div className="owners-dashboard__date-row">
         <label className="owners-date-picker">
           <span>{t("portalCommon.fields.date")}</span>
-          <input type="date" value={selectedDate} onChange={handleDateChange} />
+          <input type="date" lang="en" dir="ltr" value={selectedDate} onChange={handleDateChange} />
         </label>
       </div>
 
@@ -190,6 +190,7 @@ export default function DashboardScreen() {
             labelFormatter={(item) => formatHourLabel(item.hour_index)}
             valueFormatter={money}
             axisValueFormatter={compactMoney}
+            lineStyle="area"
           />
 
           <TrendChartCard
@@ -222,6 +223,7 @@ export default function DashboardScreen() {
             labelFormatter={(item) => formatDayMonthLabel(item.sales_date)}
             valueFormatter={money}
             axisValueFormatter={compactMoney}
+            lineStyle="area"
           />
         </div>
 

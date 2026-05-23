@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { usePortalLanguage } from "../../i18n/usePortalLanguage";
 import {
   ResponsiveContainer,
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   Cell,
@@ -40,9 +42,11 @@ export default function TrendChartCard({
   onShiftBackward,
   onShiftForward,
   chartType = "line",
+  lineStyle = "plain",
 }) {
   const { t } = useTranslation();
   const { isRTL } = usePortalLanguage();
+  const gradientId = useId().replace(/:/g, "");
   const startIndex = Math.max(0, endIndex - visibleCount + 1);
   const visibleData = data.slice(startIndex, endIndex + 1);
   const latestValue = visibleData[visibleData.length - 1]?.[valueKey] || 0;
@@ -132,43 +136,91 @@ export default function TrendChartCard({
           </ResponsiveContainer>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 10, right: 8, left: -14, bottom: 4 }}
-            >
-              <CartesianGrid
-                stroke="rgba(47, 120, 138, 0.10)"
-                strokeDasharray="4 4"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{ fill: "#718894", fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-                tickMargin={10}
-              />
-              <YAxis
-                tick={{ fill: "#718894", fontSize: 11 }}
-                tickFormatter={axisValueFormatter}
-                axisLine={false}
-                tickLine={false}
-                width={44}
-              />
-              <Tooltip
-                content={<ChartTooltip valueFormatter={valueFormatter} />}
-                cursor={{ stroke: "rgba(47, 120, 138, 0.18)", strokeWidth: 1 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#2f788a"
-                strokeWidth={3}
-                dot={false}
-                activeDot={{ r: 5, strokeWidth: 2, fill: "#ffffff" }}
-              />
-            </LineChart>
+            {lineStyle === "area" ? (
+              <AreaChart
+                data={chartData}
+                margin={{ top: 10, right: 8, left: -14, bottom: 4 }}
+              >
+                <defs>
+                  <linearGradient id={`ownersTrendArea-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2f788a" stopOpacity={0.22} />
+                    <stop offset="68%" stopColor="#2f788a" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#2f788a" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  stroke="rgba(47, 120, 138, 0.10)"
+                  strokeDasharray="4 4"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "#718894", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                  tickMargin={10}
+                />
+                <YAxis
+                  tick={{ fill: "#718894", fontSize: 11 }}
+                  tickFormatter={axisValueFormatter}
+                  axisLine={false}
+                  tickLine={false}
+                  width={44}
+                />
+                <Tooltip
+                  content={<ChartTooltip valueFormatter={valueFormatter} />}
+                  cursor={{ stroke: "rgba(47, 120, 138, 0.18)", strokeWidth: 1 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#2f788a"
+                  strokeWidth={2.5}
+                  fill={`url(#ownersTrendArea-${gradientId})`}
+                  dot={false}
+                  activeDot={{ r: 5, strokeWidth: 2, fill: "#ffffff" }}
+                />
+              </AreaChart>
+            ) : (
+              <LineChart
+                data={chartData}
+                margin={{ top: 10, right: 8, left: -14, bottom: 4 }}
+              >
+                <CartesianGrid
+                  stroke="rgba(47, 120, 138, 0.10)"
+                  strokeDasharray="4 4"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "#718894", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                  tickMargin={10}
+                />
+                <YAxis
+                  tick={{ fill: "#718894", fontSize: 11 }}
+                  tickFormatter={axisValueFormatter}
+                  axisLine={false}
+                  tickLine={false}
+                  width={44}
+                />
+                <Tooltip
+                  content={<ChartTooltip valueFormatter={valueFormatter} />}
+                  cursor={{ stroke: "rgba(47, 120, 138, 0.18)", strokeWidth: 1 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#2f788a"
+                  strokeWidth={3}
+                  dot={false}
+                  activeDot={{ r: 5, strokeWidth: 2, fill: "#ffffff" }}
+                />
+              </LineChart>
+            )}
           </ResponsiveContainer>
         )}
       </div>
