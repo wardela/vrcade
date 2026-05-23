@@ -5,10 +5,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { compactMoney, money } from "./utils";
+import { formatPortalNumber } from "../../utils/portalFormatting";
 
 const formatByVariant = (value, variant) => {
   if (variant === "count") {
-    return Number(value || 0).toLocaleString();
+    return formatPortalNumber(value);
   }
 
   if (variant === "currency-compact") {

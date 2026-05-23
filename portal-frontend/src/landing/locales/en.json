@@ -1,0 +1,988 @@
+{
+  "navbar": {
+    "home": "Home",
+    "features": "Features",
+    "about": "About",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "modules": "Modules",
+    "modules_items": {
+      "appointments": "Sales and Invoicing",
+      "patients": "Items and Inventory",
+      "financial": "Clients and Accounts",
+      "insights": "Reports and Analytics",
+      "operations": "Roles and Users",
+      "tools": "Point of Sale (POS)"
+    },
+    "cta": {
+      "start_trial": "Start 14-Day Free Trial",
+      "portal": "Fawtartak Portal"
+    }
+  },
+  "hero": {
+    "headline": {
+      "before_highlight": "Run sales and e-invoicing in",
+      "highlight": "one cloud platform"
+    },
+    "subheadline": "Fawtartak centralizes invoices, POS, inventory, clients, expenses, and reports while syncing with Jordan's Fawtara system.",
+    "cta": {
+      "try_now": "Start 14-Day Free Trial",
+      "portal": "Fawtartak Portal"
+    },
+    "tech": {
+      "title": "Secure, fast, and compliant by design"
+    },
+    "stats": {
+      "appointments": "Fawtara sync",
+      "appointments_value": "Real-time",
+      "active_patients": "Business ready",
+      "active_patients_value": "Jordan-wide"
+    }
+  },
+  "common": {
+    "trial_badge": "14-Day Free Trial"
+  },
+  "features": {
+    "badge": "Why Fawtartak",
+    "heading": {
+      "before_highlight": "Core tools for",
+      "highlight": "Jordanian sales teams"
+    },
+    "description": "Everything you need to run daily sales while staying compliant with Fawtara.",
+    "cards": {
+      "appointments": {
+        "title": "Sales and e-invoicing",
+        "items": [
+          "Local, export, and development zone invoices",
+          "Compliant with income tax, sales tax, and special tax"
+        ]
+      },
+      "billing": {
+        "title": "Point of sale (POS)",
+        "items": [
+          "Quick in-store sales, receipts, and refunds",
+          "Built for speed at the counter"
+        ]
+      },
+      "patients": {
+        "title": "Items and inventory",
+        "items": [
+          "Items, categories, and multiple storages",
+          "Low-stock alerts and easy top-ups"
+        ]
+      },
+      "cloud": {
+        "title": "Reports and analytics",
+        "items": [
+          "Statements of account and sales summaries",
+          "Export and share with clients instantly"
+        ]
+      }
+    },
+    "actions": {
+      "learn_more": "Explore Module",
+      "cta_title": "Ready to simplify sales in Jordan?",
+      "cta_subtitle": "Join businesses using Fawtartak to stay fast and compliant.",
+      "contact_sales": "Contact Sales"
+    }
+  },
+  "about": {
+    "badge": "About Fawtartak",
+    "heading": {
+      "before_highlight": "The complete",
+      "highlight": "sales and e-invoicing",
+      "after_highlight": "platform for Jordan"
+    },
+    "description": {
+      "p1": "Fawtartak brings invoices, receipts, POS, inventory, clients, expenses, and reporting into one cloud system built for Jordanian businesses.",
+      "p2": "Designed for speed and clarity, Fawtartak keeps you compliant with Fawtara while giving your team the tools they need to sell, track, and report with confidence."
+    },
+    "key_features": [
+      "Built for Jordan's Fawtara compliance",
+      "Cloud access for teams and branches",
+      "Lightweight, fast daily workflows",
+      "Unlimited users with role-based permissions"
+    ],
+    "floating_badges": {
+      "verified": "Fawtara Ready",
+      "support": "Jordan Focused"
+    },
+    "uptime_card": {
+      "title": "Reliability and Sync",
+      "subtitle": "For businesses that depend on daily sales",
+      "mini": {
+        "uptime": "Uptime",
+        "response": "Sync"
+      }
+    },
+    "stats": {
+      "active_clinics": "Core Modules",
+      "specialties": "Users and Roles",
+      "uptime": "Compliance"
+    },
+    "kpis": [
+      {
+        "number": "More than 200,000",
+        "label": "Invoices shared"
+      },
+      {
+        "number": "More than 100",
+        "label": "Active users"
+      },
+      {
+        "number": "100%",
+        "label": "Compliant with Jordanian regulations"
+      }
+    ]
+  },
+  "cta": {
+    "badge": "Get Started",
+    "heading": {
+      "line1": "Ready for compliant sales?",
+      "highlight": "Start with Fawtartak"
+    },
+    "description": {
+      "before_highlight": "Start a",
+      "highlight": "14-day free trial",
+      "after_highlight": "and get a guided setup tailored to your business in Jordan."
+    },
+    "button": {
+      "start_trial": "Start 14-Day Free Trial"
+    },
+    "trust": {
+      "no_card": "No credit card required",
+      "setup_time": "Guided onboarding",
+      "cancel": "Cancel anytime"
+    },
+    "social_proof": {
+      "features_count": "Fawtara-ready modules",
+      "product": "Built for Jordanian businesses"
+    }
+  },
+  "pricing": {
+    "badge": "Start now for free",
+    "heading": {
+      "before_highlight": "Start your",
+      "highlight": "business setup"
+    },
+    "description": {
+      "line1": "Fill in a few quick details and start your onboarding with Fawtartak.",
+      "line2": "14-day free trial available"
+    },
+    "form": {
+      "title": "Start now for free",
+      "subtitle": "Add a few quick details to begin your setup.",
+      "footer_note": "After you submit, our team will contact you within 24 hours to complete your setup.",
+      "fields": {
+        "full_name": {
+          "label": "Full name*",
+          "placeholder": "Ahmad Al-Khaldi"
+        },
+        "business_name": {
+          "label": "Business name*",
+          "placeholder": "Fawtartak Trading"
+        },
+        "phone_number": {
+          "label": "Phone number*",
+          "placeholder": "+962 7 9xxx xxxx"
+        },
+        "email": {
+          "label": "Email",
+          "placeholder": "name@company.com"
+        },
+        "city_location": {
+          "label": "City / location",
+          "placeholder": "Amman, Irbid, Aqaba..."
+        },
+        "branch_count": {
+          "label": "Number of branches"
+        },
+        "user_count": {
+          "label": "Number of users"
+        },
+        "business_type": {
+          "label": "Business type*",
+          "placeholder": "Select your business type"
+        },
+        "interested_modules": {
+          "label": "Interested modules"
+        },
+        "notes": {
+          "label": "Notes / special requirements",
+          "placeholder": "Anything important for your setup"
+        }
+      },
+      "business_types": {
+        "Retail": "Retail",
+        "Restaurant / Cafe": "Restaurant / Cafe",
+        "Services": "Services",
+        "Wholesale": "Wholesale",
+        "Other": "Other"
+      },
+      "modules": {
+        "Sales & E-Invoicing": "Sales & E-Invoicing",
+        "POS": "POS",
+        "Inventory": "Inventory",
+        "CRM": "CRM",
+        "Reports & Statistics": "Reports & Statistics",
+        "Owner Portal": "Owner Portal"
+      },
+      "submit": {
+        "default": "Start now",
+        "loading": "Starting"
+      },
+      "success": {
+        "title": "Thank you. Our team will contact you within 24 hours.",
+        "detail": "We've received your request and will help you complete the next step.",
+        "reset": "Start another request"
+      },
+      "errors": {
+        "full_name": "Full name is required.",
+        "business_name": "Business name is required.",
+        "phone_number": "Phone number is required.",
+        "email": "Please enter a valid email address.",
+        "business_type": "Please select your business type.",
+        "branch_count": "Branches must be zero or more.",
+        "user_count": "Users must be zero or more.",
+        "submit_failed": "We couldn't send your request right now. Please try again."
+      }
+    }
+  },
+  "buyModal": {
+    "badge": "14-Day Free Trial Request",
+    "title": {
+      "before": "Start your",
+      "highlight": "14-day free trial"
+    },
+    "success_message": "Your request has been submitted. We'll contact you shortly.",
+    "progress": {
+      "step": "Step",
+      "of": "of",
+      "complete": "Complete"
+    },
+    "steps": {
+      "duration": {
+        "title": "Choose your subscription duration",
+        "subtitle": "Longer commitments mean better savings.",
+        "months": "months",
+        "save": "Save",
+        "most_popular": "MOST POPULAR"
+      },
+      "personal": {
+        "title": "Contact information",
+        "subtitle": "Help us get to know you",
+        "fields": {
+          "full_name": {
+            "label": "Full Name*",
+            "placeholder": "Ahmad Khalid"
+          },
+          "email": {
+            "label": "Business Email*",
+            "placeholder": "finance@company.com"
+          },
+          "phone": {
+            "label": "Phone Number*",
+            "placeholder": "+962 7 9xxx xxxx"
+          }
+        }
+      },
+      "clinic": {
+        "title": "Business information",
+        "subtitle": "Tell us about your company",
+        "fields": {
+          "clinic_name": {
+            "label": "Business Name*",
+            "placeholder": "Fawtartak Trading"
+          },
+          "country": {
+            "label": "Country*",
+            "placeholder": "Jordan"
+          },
+          "city": {
+            "label": "City*",
+            "placeholder": "Amman"
+          },
+          "area": {
+            "label": "Area*",
+            "placeholder": "Abdoun"
+          },
+          "location": {
+            "label": "Detailed Address*",
+            "placeholder": "Building, street, landmarks"
+          }
+        }
+      },
+      "review": {
+        "title": "Review and submit",
+        "subtitle": "One last step before we start",
+        "fields": {
+          "notes": {
+            "label": "Additional Notes",
+            "placeholder": "Any requirements or questions"
+          }
+        },
+        "summary": {
+          "title": "Order summary",
+          "plan": "Plan",
+          "duration": "Duration",
+          "months": "months",
+          "regular_price": "Regular price",
+          "your_price": "Your price",
+          "total_price": "Total price"
+        }
+      }
+    },
+    "navigation": {
+      "previous": "Previous",
+      "continue": "Continue",
+      "start_trial": "Submit Request",
+      "submitting": "Submitting"
+    },
+    "trust_indicators": {
+      "response": "24h response",
+      "setup": "Guided setup",
+      "commitment": "No commitment"
+    },
+    "errors": {
+      "name": "Full name required",
+      "email": "Business email required",
+      "phone": "Phone number required",
+      "business_name": "Business name required",
+      "country": "Country required",
+      "city": "City required",
+      "area": "Area required",
+      "location": "Detailed address required",
+      "notes": "Notes required"
+    }
+  },
+  "problems": {
+    "badge": "Problems Fawtartak Solves",
+    "heading": {
+      "line1": "Everyday sales friction.",
+      "line2": "Solved."
+    },
+    "description": "Fawtartak removes the operational bottlenecks that slow Jordanian businesses.",
+    "labels": {
+      "problem": "Problem",
+      "solution": "Solution"
+    },
+    "slides": [
+      {
+        "title": "Manual invoicing",
+        "problem": "Manual invoices and scattered data slow down sales.",
+        "solution": "Create compliant invoices fast with structured, Fawtara-ready formats."
+      },
+      {
+        "title": "Slow checkout",
+        "problem": "Disconnected POS and receipts create long lines and errors.",
+        "solution": "Built-in POS for quick sales, receipts, and refunds."
+      },
+      {
+        "title": "Inventory blind spots",
+        "problem": "Stock is hard to track across items and storages.",
+        "solution": "Lightweight inventory with categories, multi-storage, and low-stock alerts."
+      },
+      {
+        "title": "Client balances",
+        "problem": "Difficult to track client accounts and statements.",
+        "solution": "Unified client profiles, balances, and exportable statements."
+      },
+      {
+        "title": "Compliance risk",
+        "problem": "Keeping up with Jordan's e-invoicing rules is time-consuming.",
+        "solution": "Fawtartak is built for Fawtara compliance and audit-ready records."
+      }
+    ]
+  },
+  "faq": {
+    "badge": "FAQ",
+    "heading": {
+      "line1": "Questions?",
+      "highlight": "We have answers"
+    },
+    "description": "Everything you need to know about Fawtartak for Jordanian businesses.",
+    "items": [
+      {
+        "question": "Is Fawtartak compliant with Fawtara?",
+        "answer": "Yes. Fawtartak is designed to align with Jordan's e-invoicing requirements and Fawtara workflows."
+      },
+      {
+        "question": "How long does setup take?",
+        "answer": "Most businesses can get started the same day with guided onboarding from our team."
+      },
+      {
+        "question": "Do I need technical experience?",
+        "answer": "No. The interface is simple and we provide training and support."
+      },
+      {
+        "question": "Can I use it for multiple users and roles?",
+        "answer": "Yes. Add unlimited users and control permissions by role."
+      },
+      {
+        "question": "What reports can I export?",
+        "answer": "Statements of account, sales summaries, and client reports are exportable and easy to share."
+      }
+    ],
+    "cta": {
+      "title": "Still have questions?",
+      "subtitle": "Talk to our team",
+      "button": "Contact Us"
+    }
+  },
+  "contact": {
+    "badge": "CONTACT US",
+    "heading": {
+      "line1": "Let's power your",
+      "highlight": "sales"
+    },
+    "description": "Tell us about your business and we'll help you get started in Jordan.",
+    "info": {
+      "phone": {
+        "title": "Call Sales"
+      },
+      "email": {
+        "title": "Email Us"
+      }
+    },
+    "form": {
+      "title": "Send us a message",
+      "subtitle": "We'll get back to you within 24 hours.",
+      "fields": {
+        "name": {
+          "label": "Full Name*",
+          "placeholder": "Ahmad Al-Khaldi"
+        },
+        "email": {
+          "label": "Business Email*",
+          "placeholder": "name@company.com"
+        },
+        "phone": {
+          "label": "Phone Number*",
+          "placeholder": "+962 7 9xxx xxxx"
+        },
+        "message": {
+          "label": "Message*",
+          "placeholder": "Tell us about your sales workflow"
+        }
+      },
+      "success": "Your message has been sent successfully. We'll get back to you shortly.",
+      "errors": {
+        "submit_failed": "We couldn't send your message right now. Please try again."
+      },
+      "submit": {
+        "default": "Send Message",
+        "loading": "Sending"
+      }
+    },
+    "trust": {
+      "quick_response": "Quick response",
+      "secure": "Secure communication"
+    },
+    "phone": "+962 79 831 0374",
+    "email": "sales@fawtartak.com"
+  },
+  "footer": {
+    "description": "Fawtartak is the cloud sales and e-invoicing platform built for Jordanian businesses.",
+    "navigation": {
+      "title": "Quick Links",
+      "items": [
+        "Home",
+        "Features",
+        "About",
+        "Pricing",
+        "Problems",
+        "FAQ",
+        "Contact"
+      ]
+    },
+    "modules": {
+      "title": "Modules",
+      "items": [
+        "Sales and Invoicing",
+        "Items and Inventory",
+        "Clients and Accounts",
+        "Reports and Analytics",
+        "Roles and Users",
+        "Point of Sale (POS)"
+      ]
+    },
+    "contact": {
+      "title": "Get In Touch",
+      "phone_label": "Phone",
+      "email_label": "Email",
+      "cta": "Start 14-Day Free Trial"
+    },
+    "trust": {
+      "ssl": "Data Encrypted",
+      "gdpr": "Fawtara Compliant",
+      "support": "Local Support"
+    },
+    "legal": {
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service"
+    },
+    "copyright": {
+      "before": "",
+      "after": "All rights reserved."
+    }
+  },
+  "appointments": {
+    "hero": {
+      "badge": "Module Overview",
+      "title": {
+        "line1": "Sales and",
+        "highlight": "Invoicing"
+      },
+      "description": "Issue compliant invoices quickly in line with the requirements of the Income and Sales Tax Department.",
+      "pills": [
+        "Fawtara Ready",
+        "Fast Issuance",
+        "Refunds and Adjustments"
+      ]
+    },
+    "section1": {
+      "badge": "Sales Invoices",
+      "title": {
+        "line1": "Create Sales",
+        "highlight": "Invoices"
+      },
+      "description": "Generate structured sales invoices quickly with customer data, items, and totals in one flow.",
+      "features": [
+        "Sales, refund, shared and unshared invoice types",
+        "Fast item search and quantity entry",
+        "Automatic totals and tax calculation",
+        "Ready for Fawtara submission"
+      ],
+      "image_alt": "Sales invoices placeholder"
+    },
+    "section2": {
+      "badge": "Refunds",
+      "title": {
+        "line1": "Process",
+        "highlight": "Refunds"
+      },
+      "description": "Handle refunds and adjustments with full traceability and fast issuance for daily operations.",
+      "features": [
+        "Refund and adjustment invoice types",
+        "Linked to original sales invoices",
+        "Clear status tracking and audit trails",
+        "Fawtara-ready outputs"
+      ],
+      "image_alt": "Refunds placeholder"
+    }
+  },
+  "patients": {
+    "hero": {
+      "badge": "Module Overview",
+      "title": {
+        "before": "Items and",
+        "highlight": "Inventory"
+      },
+      "description": "Keep a lightweight catalog of items, categories, and storages with simple stock controls."
+    },
+    "stats": [
+      "Item catalog",
+      "Multi-storage",
+      "Low-stock alerts"
+    ],
+    "sections": [
+      {
+        "badge": "Overview",
+        "title": "Item catalog setup",
+        "description": "Create items with prices, units, and tax settings for fast invoicing.",
+        "features": [
+          "Quick item creation",
+          "Price and tax fields",
+          "SKU or barcode optional",
+          "Fast search"
+        ]
+      },
+      {
+        "badge": "Categories",
+        "title": "Simple categories",
+        "description": "Organize items by category for clean reporting and easy POS filters.",
+        "features": [
+          "Category tags",
+          "Bulk updates",
+          "POS filtering",
+          "Clear organization"
+        ]
+      },
+      {
+        "badge": "Storages",
+        "title": "Multiple storages",
+        "description": "Track stock by storage or branch without complexity.",
+        "features": [
+          "Storage locations",
+          "Transfer tracking",
+          "Per-storage quantities",
+          "Unified overview"
+        ]
+      },
+      {
+        "badge": "Alerts",
+        "title": "Low-stock alerts",
+        "description": "Get notified before items run out so sales never stop.",
+        "features": [
+          "Thresholds per item",
+          "Alert lists",
+          "Quick reorder view",
+          "Stock status"
+        ]
+      },
+      {
+        "badge": "Top-ups",
+        "title": "Stock top-ups",
+        "description": "Add stock with quick adjustments and traceable entries.",
+        "features": [
+          "Manual top-ups",
+          "Reason notes",
+          "Batch updates",
+          "History log"
+        ]
+      },
+      {
+        "badge": "Updates",
+        "title": "Fast updates",
+        "description": "Update prices, names, and availability instantly across the system.",
+        "features": [
+          "Bulk edits",
+          "Active or inactive items",
+          "Instant sync",
+          "No heavy valuation"
+        ]
+      }
+    ],
+    "cta": {
+      "badge": "Lightweight Inventory",
+      "title": {
+        "before": "Keep stock",
+        "highlight": "under control"
+      },
+      "description": "All the essentials without complicated valuation or budgeting.",
+      "button": "Contact Sales",
+      "trust": [
+        "Simple by design",
+        "Fast daily workflow",
+        "No heavy setup"
+      ]
+    }
+  },
+  "financial": {
+    "hero": {
+      "badge": "Module Overview",
+      "title": {
+        "before": "Clients and",
+        "highlight": "Accounts"
+      },
+      "description": "Manage client accounts, balances, and statements with clear reporting and tracking."
+    },
+    "stats": [
+      "Client accounts",
+      "Client balances",
+      "Statements of account"
+    ],
+    "payments": {
+      "badge": "Client Balances",
+      "title": {
+        "before": "Client",
+        "highlight": "Accounts"
+      },
+      "description": "Monitor balances and invoices per client with clear payment status.",
+      "features": [
+        "Client profiles with balance view",
+        "Payment status tracking",
+        "Outstanding balance alerts",
+        "Account history"
+      ]
+    },
+    "invoices": {
+      "badge": "Statements and Reports",
+      "title": {
+        "before": "Statements of",
+        "highlight": "Account"
+      },
+      "description": "Generate statements, sales summaries, and client reports ready to share.",
+      "features": [
+        "Statements of account",
+        "Sales summaries",
+        "Client reports",
+        "Export and share"
+      ]
+    },
+    "expenses": {
+      "badge": "Client Reporting",
+      "title": {
+        "before": "Account",
+        "highlight": "tracking"
+      },
+      "description": "Track client activity, balances, and statements with exportable summaries.",
+      "features": [
+        "Account activity logs",
+        "Client balance tracking",
+        "Statement generation",
+        "Exportable reports"
+      ]
+    },
+    "cta": {
+      "badge": "Financial Clarity",
+      "title": {
+        "before": "Keep balances",
+        "highlight": "clear"
+      },
+      "description": "Track client accounts, balances, and statements in one view.",
+      "trust": [
+        "Clear balances",
+        "Exportable reports",
+        "Client history"
+      ],
+      "button": "Start 14-Day Free Trial"
+    }
+  },
+  "insights": {
+    "hero": {
+      "badge": "Module Overview",
+      "title": {
+        "before": "Reports and",
+        "highlight": "Analytics"
+      },
+      "description": "Modern dashboards with clear charts for sales, invoices, clients, and performance."
+    },
+    "stats": [
+      "Dashboards",
+      "Sales insights",
+      "Client performance"
+    ],
+    "sections": {
+      "dashboard": {
+        "badge": "Daily Overview",
+        "title": {
+          "before": "Sales",
+          "highlight": "Dashboard"
+        },
+        "description": "Monitor today's sales, invoices, and POS activity in one view.",
+        "features": [
+          "Daily sales totals",
+          "Invoice status snapshot",
+          "Top items and clients",
+          "Quick actions"
+        ]
+      },
+      "statistics": {
+        "badge": "Performance",
+        "title": {
+          "before": "Business",
+          "highlight": "Analytics"
+        },
+        "description": "Track trends over time and compare periods for smarter decisions.",
+        "features": [
+          "Trend charts",
+          "Period comparisons",
+          "Category breakdowns",
+          "Goal tracking"
+        ]
+      },
+      "details": {
+        "badge": "Reports",
+        "title": {
+          "before": "Exportable",
+          "highlight": "Reports"
+        },
+        "description": "Generate statements of account, sales summaries, and client reports you can share.",
+        "features": [
+          "Statements of account",
+          "Sales summaries",
+          "Client reports",
+          "Export to PDF or Excel"
+        ]
+      }
+    },
+    "cta": {
+      "badge": "Actionable Insights",
+      "title": {
+        "before": "Decisions made",
+        "highlight": "simple"
+      },
+      "description": "Clear charts and exportable reports built for Jordanian businesses.",
+      "button": "Contact Sales",
+      "trust": [
+        "Real-time updates",
+        "Shareable reports",
+        "Clean dashboards"
+      ]
+    }
+  },
+  "operations": {
+    "hero": {
+      "badge": "Module Overview",
+      "title": {
+        "before": "Roles and",
+        "highlight": "Users"
+      },
+      "description": "Unlimited users with detailed permission control for every role.",
+      "cards": [
+        "Staff control",
+        "Secure access",
+        "Activity tracking"
+      ]
+    },
+    "stats": [
+      "Unlimited users",
+      "Granular permissions",
+      "Audit ready"
+    ],
+    "sections": {
+      "staff": {
+        "badge": "Roles and Teams",
+        "title": {
+          "before": "Role",
+          "highlight": "Management"
+        },
+        "description": "Create roles for cashiers, sales, accountants, and managers in seconds.",
+        "features": [
+          "Role templates",
+          "Team assignments",
+          "User invitations",
+          "Status controls"
+        ]
+      },
+      "users": {
+        "badge": "Permissions",
+        "title": {
+          "before": "Granular",
+          "highlight": "Access"
+        },
+        "description": "Control add, edit, and delete permissions per role to protect sensitive data.",
+        "features": [
+          "Per-role permissions",
+          "Module-level access",
+          "Secure login",
+          "Approval-ready workflows"
+        ]
+      },
+      "storage": {
+        "badge": "Activity and Security",
+        "title": {
+          "before": "Audit and",
+          "highlight": "Visibility"
+        },
+        "description": "Track user activity and changes for accountability and compliance.",
+        "features": [
+          "Activity logs",
+          "Change history",
+          "Login records",
+          "Compliance-friendly trails"
+        ]
+      }
+    },
+    "cta": {
+      "badge": "Control and Security",
+      "title": {
+        "before": "Manage access",
+        "highlight": "with confidence"
+      },
+      "description": "Clear roles and permissions built for Jordanian businesses.",
+      "button": "Start 14-Day Free Trial",
+      "trust": [
+        "Unlimited users",
+        "Clear permissions",
+        "Audit ready"
+      ]
+    }
+  },
+  "tools": {
+    "hero": {
+      "badge": "Module Overview",
+      "title": {
+        "before": "Point of sale",
+        "highlight": "(POS)"
+      },
+      "description": "A built-in POS for quick in-store sales, receipts, and refunds."
+    },
+    "stats": [
+      "Fast checkout",
+      "Receipts and refunds",
+      "Barcode search",
+      "Daily totals"
+    ],
+    "sections": {
+      "theme": {
+        "badge": "Fast Sales",
+        "title": {
+          "before": "Quick",
+          "highlight": "Checkout"
+        },
+        "description": "Process sales in seconds with a clean, touch-friendly interface.",
+        "features": [
+          "One-screen checkout",
+          "Item shortcuts",
+          "Customer selection",
+          "Instant totals"
+        ]
+      },
+      "language": {
+        "badge": "Receipts",
+        "title": {
+          "before": "Receipts and",
+          "highlight": "Refunds"
+        },
+        "description": "Issue receipts and process refunds without leaving the POS.",
+        "features": [
+          "Digital and printed receipts",
+          "Refund workflows",
+          "Discounts and adjustments",
+          "Notes per transaction"
+        ]
+      },
+      "cloud": {
+        "badge": "Items and Search",
+        "title": {
+          "before": "Fast item",
+          "highlight": "lookup"
+        },
+        "description": "Search by name, SKU, or barcode to keep lines moving.",
+        "features": [
+          "Barcode support",
+          "Category filters",
+          "Quick add items",
+          "Price overrides with permission"
+        ]
+      },
+      "scalability": {
+        "badge": "Daily Close",
+        "title": {
+          "before": "Shift and",
+          "highlight": "Totals"
+        },
+        "description": "Track cash, card, and totals for accurate daily closing.",
+        "features": [
+          "Sales totals by cashier",
+          "Payment method breakdown",
+          "End-of-day summary",
+          "Exportable POS reports"
+        ]
+      }
+    },
+    "cta": {
+      "badge": "POS Ready",
+      "title": {
+        "before": "Sell faster",
+        "highlight": "every day"
+      },
+      "description": "Built-in POS that stays connected to invoices and inventory.",
+      "button": "Contact Sales",
+      "trust": [
+        "Fast checkout",
+        "Receipt ready",
+        "Inventory sync"
+      ]
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "dark_mode": "Dark mode",
+    "language": "Language",
+    "contact": "Contact"
+  }
+}

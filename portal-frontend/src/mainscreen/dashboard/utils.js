@@ -1,9 +1,7 @@
-import i18n from "../../i18n";
+import { getPortalLanguage, getPortalLocale, formatPortalDate, formatPortalNumber } from "../../utils/portalFormatting";
 
 export const TIME_ZONE = "Asia/Amman";
 
-const getPortalLanguage = () => (i18n.resolvedLanguage === "ar" ? "ar" : "en");
-const getPortalLocale = () => (getPortalLanguage() === "ar" ? "ar-JO" : "en-US");
 const getPortalCurrencyLabel = () => (getPortalLanguage() === "ar" ? "د.أ" : "JD");
 
 export const getJordanToday = () => {
@@ -25,27 +23,27 @@ export const getJordanToday = () => {
 export const getCurrentYearStart = () => `${getJordanToday().slice(0, 4)}-01-01`;
 
 export const money = (value) =>
-  `${Number(value || 0).toLocaleString(getPortalLocale(), {
+  `${formatPortalNumber(value, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })} ${getPortalCurrencyLabel()}`;
+  }, getPortalLocale())} ${getPortalCurrencyLabel()}`;
 
 export const compactMoney = (value) => {
   const numericValue = Number(value || 0);
 
-  return new Intl.NumberFormat(getPortalLocale(), {
+  return formatPortalNumber(numericValue, {
     notation: Math.abs(numericValue) >= 1000 ? "compact" : "standard",
     maximumFractionDigits: Math.abs(numericValue) >= 1000 ? 1 : 2,
     minimumFractionDigits: Math.abs(numericValue) >= 1000 ? 0 : 2,
-  }).format(numericValue);
+  }, getPortalLocale());
 };
 
 export const formatHourLabel = (hourIndex) =>
-  new Intl.DateTimeFormat(getPortalLocale(), {
+  formatPortalDate(new Date(`2026-01-01T${String(hourIndex).padStart(2, "0")}:00:00`), {
     hour: "numeric",
     hour12: true,
     timeZone: TIME_ZONE,
-  }).format(new Date(`2026-01-01T${String(hourIndex).padStart(2, "0")}:00:00`));
+  }, getPortalLocale());
 
 const normalizeDateValue = (value, defaultTime = "T12:00:00") => {
   if (!value) {
@@ -75,12 +73,12 @@ export const formatDayLabel = (dateString) => {
     return String(dateString || "-");
   }
 
-  return new Intl.DateTimeFormat(getPortalLocale(), {
+  return formatPortalDate(dateValue, {
     weekday: "short",
     day: "numeric",
     month: "short",
     timeZone: TIME_ZONE,
-  }).format(dateValue);
+  }, getPortalLocale());
 };
 
 export const formatDayMonthLabel = (dateString) => {
@@ -90,11 +88,11 @@ export const formatDayMonthLabel = (dateString) => {
     return String(dateString || "-");
   }
 
-  return new Intl.DateTimeFormat(getPortalLocale(), {
+  return formatPortalDate(dateValue, {
     day: "numeric",
     month: "short",
     timeZone: TIME_ZONE,
-  }).format(dateValue);
+  }, getPortalLocale());
 };
 
 export const formatMonthLabel = (dateString) => {
@@ -104,11 +102,11 @@ export const formatMonthLabel = (dateString) => {
     return String(dateString || "-");
   }
 
-  return new Intl.DateTimeFormat(getPortalLocale(), {
+  return formatPortalDate(dateValue, {
     month: "short",
     year: "2-digit",
     timeZone: TIME_ZONE,
-  }).format(dateValue);
+  }, getPortalLocale());
 };
 
 export const formatMonthNameLabel = (dateString) => {
@@ -118,10 +116,10 @@ export const formatMonthNameLabel = (dateString) => {
     return String(dateString || "-");
   }
 
-  return new Intl.DateTimeFormat(getPortalLocale(), {
+  return formatPortalDate(dateValue, {
     month: "short",
     timeZone: TIME_ZONE,
-  }).format(dateValue);
+  }, getPortalLocale());
 };
 
 export const formatMonthShortYearLabel = (dateString) => {
@@ -131,11 +129,11 @@ export const formatMonthShortYearLabel = (dateString) => {
     return String(dateString || "-");
   }
 
-  return new Intl.DateTimeFormat(getPortalLocale(), {
+  return formatPortalDate(dateValue, {
     month: "short",
     year: "2-digit",
     timeZone: TIME_ZONE,
-  }).format(dateValue);
+  }, getPortalLocale());
 };
 
 export const formatShortDate = (dateString) => {
@@ -145,12 +143,12 @@ export const formatShortDate = (dateString) => {
     return String(dateString || "-");
   }
 
-  return new Intl.DateTimeFormat(getPortalLocale(), {
+  return formatPortalDate(dateValue, {
     day: "2-digit",
     month: "short",
     year: "numeric",
     timeZone: TIME_ZONE,
-  }).format(dateValue);
+  }, getPortalLocale());
 };
 
 export const formatStatusLabel = (status) =>

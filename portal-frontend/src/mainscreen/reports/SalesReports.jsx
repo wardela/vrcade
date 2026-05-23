@@ -469,6 +469,8 @@ const getInvoiceGroupColor = (rows) => {
       </label>
       <input
         type="date"
+        lang="en"
+        dir="ltr"
         value={dateFrom}
         onChange={(e) => setDateFrom(e.target.value)}
         className="h-10 px-3 border rounded-md text-sm"
@@ -482,6 +484,8 @@ const getInvoiceGroupColor = (rows) => {
       </label>
       <input
         type="date"
+        lang="en"
+        dir="ltr"
         value={dateTo}
         onChange={(e) => setDateTo(e.target.value)}
         className="h-10 px-3 border rounded-md text-sm"

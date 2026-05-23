@@ -10,6 +10,7 @@ import {
   fetchPortalPosSessionSummary,
   forceClosePortalPosSession,
 } from "../../api/portalApi";
+import { formatPortalDate, formatPortalNumber } from "../../utils/portalFormatting";
 import SessionSummaryPrint from "./SessionSummaryPrint";
 import { useReactToPrint } from "../reports/usePortalReactToPrint";
 import { prepareCompanyWithLogo } from "../../utils/companyLogo";
@@ -20,18 +21,18 @@ const formatDateTime = (value) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "—";
 
-  return new Intl.DateTimeFormat(undefined, {
+  return formatPortalDate(parsed, {
     year: "numeric",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(parsed);
+  });
 };
 
 const formatCurrency = (value) => `${Number(value || 0).toFixed(3)} JOD`;
 const formatCount = (value) =>
-  Number(value || 0).toLocaleString(undefined, {
+  formatPortalNumber(value, {
     minimumFractionDigits: Number(value || 0) % 1 === 0 ? 0 : 3,
     maximumFractionDigits: 3,
   });
@@ -455,6 +456,8 @@ function SummaryTimeFrameModal({
             {t("POSMonitor.labels.from")}
             <FieldInput
               type="datetime-local"
+              lang="en"
+              dir="ltr"
               value={from}
               onChange={(event) => setFrom(event.target.value)}
               className="text-[15px] sm:text-sm"
@@ -467,6 +470,8 @@ function SummaryTimeFrameModal({
             {t("POSMonitor.labels.to")}
             <FieldInput
               type="datetime-local"
+              lang="en"
+              dir="ltr"
               value={to}
               onChange={(event) => setTo(event.target.value)}
               className="text-[15px] sm:text-sm"

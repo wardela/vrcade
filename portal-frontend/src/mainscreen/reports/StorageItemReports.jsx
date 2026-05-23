@@ -316,6 +316,8 @@ useEffect(() => {
         </label>
         <input
           type="date"
+          lang="en"
+          dir="ltr"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
           className="px-3 py-2 border rounded-md text-sm"
@@ -331,6 +333,8 @@ useEffect(() => {
         </label>
         <input
           type="date"
+          lang="en"
+          dir="ltr"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
           className="px-3 py-2 border rounded-md text-sm"
